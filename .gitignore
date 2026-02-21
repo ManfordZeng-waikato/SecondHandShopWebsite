@@ -1,0 +1,100 @@
+# ----------------------------------------
+# Security first: secrets and env files
+# ----------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.pfx
+*.p12
+*.key
+*.crt
+*.cer
+*.snk
+secrets.json
+appsettings.*.local.json
+appsettings.Local.json
+appsettings.Development.local.json
+
+# ----------------------------------------
+# .NET / C#
+# ----------------------------------------
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+[Pp]ublish/
+[Aa]rtifacts/
+TestResults/
+*.nupkg
+*.snupkg
+*.user
+*.suo
+*.cache
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.deps.json
+*.runtimeconfig.dev.json
+project.lock.json
+project.fragment.lock.json
+
+# Entity Framework local artifacts
+*.dbmdl
+
+# ----------------------------------------
+# Node.js / React / TypeScript
+# ----------------------------------------
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+.svelte-kit/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ----------------------------------------
+# IDE / Editor
+# ----------------------------------------
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ----------------------------------------
+# OS files
+# ----------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ----------------------------------------
+# Logs and temp files
+# ----------------------------------------
+*.log
+logs/
+tmp/
+temp/
+*.tmp

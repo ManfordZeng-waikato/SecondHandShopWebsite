@@ -1,0 +1,6 @@
+@SecondHandShop.WebApi_HostAddress = http://localhost:5288
+
+GET {{SecondHandShop.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

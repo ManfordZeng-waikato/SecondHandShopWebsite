@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SecondHandShop.Application/SecondHandShop.Application.csproj" />
+    <Project Path="src/SecondHandShop.Domain/SecondHandShop.Domain.csproj" />
+    <Project Path="src/SecondHandShop.Infrastructure/SecondHandShop.Infrastructure.csproj" />
+    <Project Path="src/SecondHandShop.WebApi/SecondHandShop.WebApi.csproj" />
+  </Folder>
+</Solution>

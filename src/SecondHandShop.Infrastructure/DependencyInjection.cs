@@ -1,0 +1,32 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SecondHandShop.Application.Abstractions.Common;
+using SecondHandShop.Application.Abstractions.Messaging;
+using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Infrastructure.Persistence;
+using SecondHandShop.Infrastructure.Persistence.Repositories;
+using SecondHandShop.Infrastructure.Services;
+
+namespace SecondHandShop.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? "Server=(localdb)\\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;";
+
+        services.AddDbContext<SecondHandShopDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<SecondHandShopDbContext>());
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IInquiryRepository, InquiryRepository>();
+        services.AddScoped<IClock, SystemClock>();
+        services.AddScoped<IEmailSender, NoOpEmailSender>();
+
+        return services;
+    }
+}
