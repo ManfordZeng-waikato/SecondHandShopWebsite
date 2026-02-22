@@ -31,7 +31,7 @@ export function HomePage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4">Available products</Typography>
+      <Typography variant="h4">Product List</Typography>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 3 }}>
           <CategorySidebar

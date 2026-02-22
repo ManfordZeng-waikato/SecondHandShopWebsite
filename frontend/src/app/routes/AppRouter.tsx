@@ -6,6 +6,7 @@ import { AdminNewProductPage } from '../../pages/AdminNewProductPage';
 import { AdminProductsPage } from '../../pages/AdminProductsPage';
 import { HomePage } from '../../pages/HomePage';
 import { InquiryPage } from '../../pages/InquiryPage';
+import { MyStoryPage } from '../../pages/MyStoryPage';
 import { NotFoundPage } from '../../pages/NotFoundPage';
 import { ProductDetailPage } from '../../pages/ProductDetailPage';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute';
@@ -19,6 +20,14 @@ export function AppRouter() {
           element={
             <MainLayout>
               <HomePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/my-story"
+          element={
+            <MainLayout>
+              <MyStoryPage />
             </MainLayout>
           }
         />
