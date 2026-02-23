@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.UseCases.Inquiries;
 using SecondHandShop.Infrastructure.Persistence;
 using SecondHandShop.Infrastructure.Persistence.Repositories;
 using SecondHandShop.Infrastructure.Services;
@@ -23,7 +24,9 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<SecondHandShopDbContext>());
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IInquiryRepository, InquiryRepository>();
+        services.AddScoped<IInquiryService, InquiryService>();
         services.AddScoped<IClock, SystemClock>();
         services.AddScoped<IEmailSender, NoOpEmailSender>();
 
