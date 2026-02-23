@@ -4,7 +4,7 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#111111',
+      main: '#272727',
     },
     secondary: {
       main: '#616161',
@@ -35,10 +35,10 @@ export const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#111111',
+          backgroundColor: '#272727',
           color: '#ffffff',
           boxShadow: 'none',
-          borderBottom: '1px solid #2b2b2b',
+          borderBottom: '1px solid #3f3f3f',
         },
       },
     },
@@ -61,10 +61,10 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         containedPrimary: {
-          backgroundColor: '#111111',
+          backgroundColor: '#272727',
           color: '#ffffff',
           '&:hover': {
-            backgroundColor: '#2b2b2b',
+            backgroundColor: '#333333',
           },
         },
       },
