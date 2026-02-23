@@ -10,6 +10,7 @@ public class Inquiry
 
     public Guid Id { get; private set; } = Guid.NewGuid();
     public Guid ProductId { get; private set; }
+    public Guid CustomerId { get; private set; }
     public string? CustomerName { get; private set; }
     public string? Email { get; private set; }
     public string? PhoneNumber { get; private set; }
@@ -23,6 +24,7 @@ public class Inquiry
 
     public static Inquiry Create(
         Guid productId,
+        Guid customerId,
         string? customerName,
         string? email,
         string? phoneNumber,
@@ -40,6 +42,7 @@ public class Inquiry
         {
             Id = Guid.NewGuid(),
             ProductId = productId,
+            CustomerId = customerId,
             CustomerName = Normalize(customerName),
             Email = Normalize(email),
             PhoneNumber = Normalize(phoneNumber),

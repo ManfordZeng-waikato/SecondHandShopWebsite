@@ -47,7 +47,7 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         builder.HasOne<AdminUser>()
             .WithMany()
             .HasForeignKey(x => x.UpdatedByAdminUserId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.ProductId, x.SortOrder });
 

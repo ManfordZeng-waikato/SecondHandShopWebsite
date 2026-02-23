@@ -10,6 +10,7 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
 {
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
@@ -18,6 +19,7 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
     {
         modelBuilder.ApplyConfiguration(new AdminUserConfiguration());
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
+        modelBuilder.ApplyConfiguration(new CustomerConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());
         modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
         modelBuilder.ApplyConfiguration(new InquiryConfiguration());

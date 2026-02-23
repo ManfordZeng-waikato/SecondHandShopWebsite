@@ -45,7 +45,13 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne<Customer>()
+            .WithMany()
+            .HasForeignKey(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => new { x.ProductId, x.CreatedAt });
+        builder.HasIndex(x => new { x.CustomerId, x.CreatedAt });
 
         builder.ToTable(x =>
         {

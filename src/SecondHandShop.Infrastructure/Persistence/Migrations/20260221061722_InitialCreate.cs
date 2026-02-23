@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -53,8 +53,7 @@ namespace SecondHandShop.Infrastructure.Persistence.Migrations
                         name: "FK_Categories_AdminUsers_UpdatedByAdminUserId",
                         column: x => x.UpdatedByAdminUserId,
                         principalTable: "AdminUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Categories_Categories_ParentCategoryId",
                         column: x => x.ParentCategoryId,
@@ -96,8 +95,7 @@ namespace SecondHandShop.Infrastructure.Persistence.Migrations
                         name: "FK_Products_AdminUsers_UpdatedByAdminUserId",
                         column: x => x.UpdatedByAdminUserId,
                         principalTable: "AdminUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Products_Categories_CategoryId",
                         column: x => x.CategoryId,
@@ -164,8 +162,7 @@ namespace SecondHandShop.Infrastructure.Persistence.Migrations
                         name: "FK_ProductImages_AdminUsers_UpdatedByAdminUserId",
                         column: x => x.UpdatedByAdminUserId,
                         principalTable: "AdminUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ProductImages_Products_ProductId",
                         column: x => x.ProductId,

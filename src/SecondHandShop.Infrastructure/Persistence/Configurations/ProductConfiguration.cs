@@ -57,7 +57,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasOne<AdminUser>()
             .WithMany()
             .HasForeignKey(x => x.UpdatedByAdminUserId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.Slug)
             .IsUnique();
