@@ -17,6 +17,7 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? "Server=(localdb)\\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;";
+        var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseSqlServer(connectionString));
@@ -28,7 +29,13 @@ public static class DependencyInjection
         services.AddScoped<IInquiryRepository, InquiryRepository>();
         services.AddScoped<IInquiryService, InquiryService>();
         services.AddScoped<IClock, SystemClock>();
-        services.AddScoped<IEmailSender, NoOpEmailSender>();
+        services.AddSingleton(smtpOptions);
+        services.AddScoped<NoOpEmailSender>();
+        services.AddScoped<SmtpEmailSender>();
+        services.AddScoped<IEmailSender>(provider =>
+            smtpOptions.Enabled
+                ? provider.GetRequiredService<SmtpEmailSender>()
+                : provider.GetRequiredService<NoOpEmailSender>());
 
         return services;
     }
