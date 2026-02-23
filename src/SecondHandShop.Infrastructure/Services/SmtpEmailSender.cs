@@ -21,9 +21,9 @@ public class SmtpEmailSender(
         };
 
         logger.LogInformation(
-            "Sending inquiry email. InquiryId={InquiryId}, ProductId={ProductId}, To={To}",
-            message.InquiryId,
+            "Sending inquiry email. ProductId={ProductId}, InquiryId={InquiryId}, To={To}",
             message.ProductId,
+            message.InquiryId,
             options.AdminInboxEmail);
 
         // SmtpClient has no cancellation-aware API, so cancellation is checked explicitly before sending.
@@ -42,7 +42,6 @@ public class SmtpEmailSender(
             Product:
             - Title: {message.ProductTitle}
             - URL: {productUrl}
-            - ProductId: {message.ProductId}
 
             Customer:
             - Name: {message.CustomerName ?? "(not provided)"}
@@ -51,8 +50,6 @@ public class SmtpEmailSender(
 
             Message:
             {message.Message}
-
-            InquiryId: {message.InquiryId}
             """;
 
         var mailMessage = new MailMessage

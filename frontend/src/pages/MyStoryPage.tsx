@@ -28,7 +28,7 @@ export function MyStoryPage() {
             Please drop by for a visit, I would love to show you around Pat's Shed.
           </Typography>
           <Typography variant="h6" sx={{ color: '#3f3f3f' }} fontWeight={400}>
-            Looking forward to seeing you soon!
+             Looking forward to seeing you soon!
           </Typography>
         </Stack>
       </Paper>
