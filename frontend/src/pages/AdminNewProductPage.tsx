@@ -16,8 +16,14 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { ProductCondition } from '../entities/product/types';
-import { createProduct } from '../features/admin/api/adminApi';
+import {
+  addProductImage,
+  createProduct,
+  createProductImageUploadUrl,
+  uploadImageToR2,
+} from '../features/admin/api/adminApi';
 import { fetchCategories } from '../features/catalog/api/catalogApi';
+import { env } from '../shared/config/env';
 
 interface NewProductFormState {
   title: string;
@@ -42,6 +48,7 @@ const conditionOptions: ProductCondition[] = ['LikeNew', 'Good', 'Fair', 'NeedsR
 export function AdminNewProductPage() {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const categoriesQuery = useQuery({
@@ -51,9 +58,6 @@ export function AdminNewProductPage() {
 
   const createProductMutation = useMutation({
     mutationFn: createProduct,
-    onSuccess: () => {
-      navigate('/admin/products');
-    },
   });
 
   if (categoriesQuery.isLoading) {
@@ -87,7 +91,7 @@ export function AdminNewProductPage() {
     }
 
     try {
-      await createProductMutation.mutateAsync({
+      const createdProduct = await createProductMutation.mutateAsync({
         title: formState.title.trim(),
         slug: formState.slug.trim(),
         description: formState.description.trim(),
@@ -95,6 +99,28 @@ export function AdminNewProductPage() {
         condition: formState.condition,
         categoryId: formState.categoryId,
       });
+
+      if (!env.useMockApi) {
+        for (let index = 0; index < selectedFiles.length; index += 1) {
+          const file = selectedFiles[index];
+          const uploadConfig = await createProductImageUploadUrl(
+            createdProduct.id,
+            file.name,
+            file.type || 'application/octet-stream',
+          );
+
+          await uploadImageToR2(uploadConfig.uploadUrl, file);
+          await addProductImage(createdProduct.id, {
+            objectKey: uploadConfig.objectKey,
+            url: uploadConfig.publicUrl,
+            altText: formState.title.trim(),
+            sortOrder: index,
+            isPrimary: index === 0,
+          });
+        }
+      }
+
+      navigate('/admin/products');
     } catch {
       setError('Failed to create product. Please try again.');
     }
@@ -160,6 +186,21 @@ export function AdminNewProductPage() {
             ))}
           </Select>
         </FormControl>
+        <Button variant="outlined" component="label">
+          Select product images
+          <input
+            hidden
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
+          />
+        </Button>
+        <Typography variant="body2" color="text.secondary">
+          {selectedFiles.length > 0
+            ? `${selectedFiles.length} image(s) selected`
+            : 'No images selected. You can upload one or more images later.'}
+        </Typography>
         <Box>
           <Button type="submit" variant="contained" disabled={createProductMutation.isPending}>
             {createProductMutation.isPending ? 'Creating...' : 'Create product'}

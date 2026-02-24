@@ -19,3 +19,48 @@ export async function updateProductStatus(productId: string, status: ProductStat
 
   await httpClient.put(`/api/admin/products/${productId}/status`, { status });
 }
+
+export interface ProductImageUploadUrlResult {
+  uploadUrl: string;
+  objectKey: string;
+  publicUrl: string;
+  expiresAtUtc: string;
+}
+
+export interface AddProductImageInput {
+  objectKey: string;
+  url: string;
+  altText?: string;
+  sortOrder: number;
+  isPrimary: boolean;
+}
+
+export async function createProductImageUploadUrl(
+  productId: string,
+  fileName: string,
+  contentType: string,
+): Promise<ProductImageUploadUrlResult> {
+  const response = await httpClient.post<ProductImageUploadUrlResult>(
+    `/api/admin/products/${productId}/images/presigned-url`,
+    { fileName, contentType },
+  );
+  return response.data;
+}
+
+export async function uploadImageToR2(uploadUrl: string, file: File): Promise<void> {
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload image to object storage: ${response.status}`);
+  }
+}
+
+export async function addProductImage(productId: string, input: AddProductImageInput): Promise<void> {
+  await httpClient.post(`/api/admin/products/${productId}/images`, input);
+}
