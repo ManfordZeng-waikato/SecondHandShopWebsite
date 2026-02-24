@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.UseCases.Catalog;
 using SecondHandShop.Domain.Enums;
 
@@ -38,6 +39,10 @@ public class AdminProductsController(IAdminCatalogService adminCatalogService) :
         catch (InvalidOperationException ex)
         {
             return Conflict(new ErrorResponse(ex.Message));
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new ErrorResponse("Concurrent update detected. The product may already have a primary image."));
         }
         catch (ArgumentException ex)
         {
