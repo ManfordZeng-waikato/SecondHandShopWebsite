@@ -105,6 +105,28 @@ public class AdminCatalogService(
         _ = await productRepository.GetByIdAsync(request.ProductId, cancellationToken)
             ?? throw new KeyNotFoundException($"Product '{request.ProductId}' was not found.");
 
+        if (string.IsNullOrWhiteSpace(request.ObjectKey))
+        {
+            throw new ArgumentException("ObjectKey is required.", nameof(request));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Url))
+        {
+            throw new ArgumentException("Url is required.", nameof(request));
+        }
+
+        var expectedKeyPrefix = $"products/{request.ProductId:N}/";
+        if (!request.ObjectKey.StartsWith(expectedKeyPrefix, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("ObjectKey does not belong to the target product.");
+        }
+
+        var expectedUrl = objectStorageService.BuildPublicUrl(request.ObjectKey);
+        if (!string.Equals(request.Url.Trim(), expectedUrl, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Image Url does not match ObjectKey public url.");
+        }
+
         if (request.SortOrder < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(request), "SortOrder must be zero or greater.");
