@@ -14,6 +14,14 @@ public class AdminCatalogService(
     IUnitOfWork unitOfWork,
     IClock clock) : IAdminCatalogService
 {
+    private const int MaxImagesPerProduct = 5;
+    private static readonly HashSet<string> AllowedImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    };
+
     public async Task<Guid> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken = default)
     {
         var existingProduct = await productRepository.GetBySlugAsync(request.Slug.Trim().ToLowerInvariant(), cancellationToken);
@@ -87,6 +95,11 @@ public class AdminCatalogService(
             throw new ArgumentException("ContentType is required.", nameof(request));
         }
 
+        if (!AllowedImageContentTypes.Contains(request.ContentType.Trim()))
+        {
+            throw new InvalidOperationException("Only JPEG, PNG and WEBP images are allowed.");
+        }
+
         var objectKey = BuildObjectKey(request.ProductId, request.FileName);
         var uploadResult = await objectStorageService.CreatePresignedUploadUrlAsync(
             new PresignedUploadUrlRequest(objectKey, request.ContentType.Trim(), TimeSpan.FromMinutes(10)),
@@ -133,6 +146,11 @@ public class AdminCatalogService(
         }
 
         var images = await productImageRepository.ListByProductIdAsync(request.ProductId, cancellationToken);
+        if (images.Count >= MaxImagesPerProduct)
+        {
+            throw new InvalidOperationException($"A product can have at most {MaxImagesPerProduct} images.");
+        }
+
         if (request.IsPrimary && images.Any(x => x.IsPrimary))
         {
             throw new InvalidOperationException("Product already has a primary image.");

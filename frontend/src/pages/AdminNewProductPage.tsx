@@ -44,6 +44,7 @@ const initialFormState: NewProductFormState = {
 };
 
 const conditionOptions: ProductCondition[] = ['LikeNew', 'Good', 'Fair', 'NeedsRepair'];
+const maxImagesPerProduct = 5;
 
 export function AdminNewProductPage() {
   const navigate = useNavigate();
@@ -87,6 +88,11 @@ export function AdminNewProductPage() {
 
     if (!Number.isFinite(price) || price <= 0) {
       setError('Price must be a positive number.');
+      return;
+    }
+
+    if (selectedFiles.length > maxImagesPerProduct) {
+      setError(`You can upload up to ${maxImagesPerProduct} images for a product.`);
       return;
     }
 
@@ -193,13 +199,15 @@ export function AdminNewProductPage() {
             type="file"
             accept="image/*"
             multiple
-            onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
+            onChange={(event) =>
+              setSelectedFiles(Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct))
+            }
           />
         </Button>
         <Typography variant="body2" color="text.secondary">
           {selectedFiles.length > 0
             ? `${selectedFiles.length} image(s) selected`
-            : 'No images selected. You can upload one or more images later.'}
+            : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
         <Box>
           <Button type="submit" variant="contained" disabled={createProductMutation.isPending}>
