@@ -50,6 +50,7 @@ export function AdminNewProductPage() {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const categoriesQuery = useQuery({
@@ -74,6 +75,7 @@ export function AdminNewProductPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setUploadProgress(null);
 
     const price = Number(formState.price);
     if (!formState.title.trim() || !formState.slug.trim() || !formState.description.trim()) {
@@ -107,27 +109,43 @@ export function AdminNewProductPage() {
       });
 
       if (!env.useMockApi) {
+        setUploadProgress({ uploaded: 0, total: selectedFiles.length });
         for (let index = 0; index < selectedFiles.length; index += 1) {
           const file = selectedFiles[index];
-          const uploadConfig = await createProductImageUploadUrl(
-            createdProduct.id,
-            file.name,
-            file.type || 'application/octet-stream',
-          );
+          try {
+            const uploadConfig = await createProductImageUploadUrl(
+              createdProduct.id,
+              file.name,
+              file.type || 'application/octet-stream',
+            );
 
-          await uploadImageToR2(uploadConfig.uploadUrl, file);
-          await addProductImage(createdProduct.id, {
-            objectKey: uploadConfig.objectKey,
-            url: uploadConfig.publicUrl,
-            altText: formState.title.trim(),
-            sortOrder: index,
-            isPrimary: index === 0,
-          });
+            await uploadImageToR2(uploadConfig.uploadUrl, file);
+            await addProductImage(createdProduct.id, {
+              objectKey: uploadConfig.objectKey,
+              url: uploadConfig.publicUrl,
+              altText: formState.title.trim(),
+              sortOrder: index,
+              isPrimary: index === 0,
+            });
+            setUploadProgress({ uploaded: index + 1, total: selectedFiles.length });
+          } catch {
+            throw new Error(`IMAGE_UPLOAD_PARTIAL:${createdProduct.id}:${index}`);
+          }
         }
       }
 
       navigate('/admin/products');
-    } catch {
+    } catch (submissionError) {
+      const message = submissionError instanceof Error ? submissionError.message : '';
+      if (message.startsWith('IMAGE_UPLOAD_PARTIAL:')) {
+        const [, productId, failedIndexText] = message.split(':');
+        const uploadedCount = Number.parseInt(failedIndexText, 10);
+        setError(
+          `Product was created successfully (ID: ${productId}), but image upload stopped after ${uploadedCount}/${selectedFiles.length} images. You can continue managing images later.`,
+        );
+        return;
+      }
+
       setError('Failed to create product. Please try again.');
     }
   };
@@ -209,6 +227,11 @@ export function AdminNewProductPage() {
             ? `${selectedFiles.length} image(s) selected`
             : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
+        {uploadProgress && uploadProgress.total > 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Uploading images: {uploadProgress.uploaded}/{uploadProgress.total}
+          </Typography>
+        )}
         <Box>
           <Button type="submit" variant="contained" disabled={createProductMutation.isPending}>
             {createProductMutation.isPending ? 'Creating...' : 'Create product'}
