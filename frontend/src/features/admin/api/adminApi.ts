@@ -20,16 +20,14 @@ export async function updateProductStatus(productId: string, status: ProductStat
   await httpClient.put(`/api/admin/products/${productId}/status`, { status });
 }
 
-export interface ProductImageUploadUrlResult {
-  uploadUrl: string;
+export interface PresignedUploadResult {
   objectKey: string;
-  publicUrl: string;
-  expiresAtUtc: string;
+  putUrl: string;
+  expiresInSeconds: number;
 }
 
 export interface AddProductImageInput {
   objectKey: string;
-  url: string;
   altText?: string;
   sortOrder: number;
   isPrimary: boolean;
@@ -39,28 +37,47 @@ export async function createProductImageUploadUrl(
   productId: string,
   fileName: string,
   contentType: string,
-): Promise<ProductImageUploadUrlResult> {
-  const response = await httpClient.post<ProductImageUploadUrlResult>(
+): Promise<PresignedUploadResult> {
+  const response = await httpClient.post<PresignedUploadResult>(
     `/api/admin/products/${productId}/images/presigned-url`,
     { fileName, contentType },
   );
   return response.data;
 }
 
-export async function uploadImageToR2(uploadUrl: string, file: File): Promise<void> {
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-    },
-    body: file,
-  });
+const MAX_UPLOAD_RETRIES = 2;
 
-  if (!response.ok) {
-    throw new Error(`Failed to upload image to object storage: ${response.status}`);
+export async function uploadImageToR2(putUrl: string, file: File): Promise<void> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
+    try {
+      const response = await fetch(putUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+
+      if (response.ok) return;
+
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error(`Upload rejected (${response.status}). The presigned URL may have expired.`);
+      }
+
+      lastError = new Error(`Upload failed with status ${response.status}`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('rejected')) throw err;
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
   }
+
+  throw lastError ?? new Error('Upload failed after retries');
 }
 
 export async function addProductImage(productId: string, input: AddProductImageInput): Promise<void> {
   await httpClient.post(`/api/admin/products/${productId}/images`, input);
+}
+
+export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
+  await httpClient.delete(`/api/admin/products/${productId}/images/${imageId}`);
 }

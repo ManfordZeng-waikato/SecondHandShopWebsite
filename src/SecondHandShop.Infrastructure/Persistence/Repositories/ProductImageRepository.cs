@@ -16,8 +16,18 @@ public class ProductImageRepository(SecondHandShopDbContext dbContext) : IProduc
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<ProductImage?> GetByIdAsync(Guid imageId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.ProductImages.FindAsync([imageId], cancellationToken);
+    }
+
     public async Task AddAsync(ProductImage productImage, CancellationToken cancellationToken = default)
     {
         await dbContext.ProductImages.AddAsync(productImage, cancellationToken);
+    }
+
+    public void Remove(ProductImage productImage)
+    {
+        dbContext.ProductImages.Remove(productImage);
     }
 }

@@ -17,7 +17,7 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
 
         builder.Property(x => x.Url)
             .HasMaxLength(1024)
-            .IsRequired();
+            .HasDefaultValue(string.Empty);
 
         builder.Property(x => x.AltText)
             .HasMaxLength(300);

@@ -15,6 +15,8 @@ public class AdminCatalogService(
     IClock clock) : IAdminCatalogService
 {
     private const int MaxImagesPerProduct = 5;
+    private const int PresignExpiryMinutes = 5;
+
     private static readonly HashSet<string> AllowedImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg",
@@ -101,16 +103,16 @@ public class AdminCatalogService(
         }
 
         var objectKey = BuildObjectKey(request.ProductId, request.FileName);
+        var expiry = TimeSpan.FromMinutes(PresignExpiryMinutes);
+
         var uploadResult = await objectStorageService.CreatePresignedUploadUrlAsync(
-            new PresignedUploadUrlRequest(objectKey, request.ContentType.Trim(), TimeSpan.FromMinutes(10)),
+            new PresignedUploadUrlRequest(objectKey, request.ContentType.Trim(), expiry),
             cancellationToken);
-        var publicUrl = objectStorageService.BuildPublicUrl(objectKey);
 
         return new CreateProductImageUploadUrlResponse(
             uploadResult.UploadUrl,
             objectKey,
-            publicUrl,
-            uploadResult.ExpiresAtUtc);
+            (int)expiry.TotalSeconds);
     }
 
     public async Task AddProductImageAsync(AddProductImageRequest request, CancellationToken cancellationToken = default)
@@ -123,21 +125,10 @@ public class AdminCatalogService(
             throw new ArgumentException("ObjectKey is required.", nameof(request));
         }
 
-        if (string.IsNullOrWhiteSpace(request.Url))
-        {
-            throw new ArgumentException("Url is required.", nameof(request));
-        }
-
         var expectedKeyPrefix = $"products/{request.ProductId:N}/";
         if (!request.ObjectKey.StartsWith(expectedKeyPrefix, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("ObjectKey does not belong to the target product.");
-        }
-
-        var expectedUrl = objectStorageService.BuildPublicUrl(request.ObjectKey);
-        if (!string.Equals(request.Url.Trim(), expectedUrl, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Image Url does not match ObjectKey public url.");
         }
 
         if (request.SortOrder < 0)
@@ -159,7 +150,6 @@ public class AdminCatalogService(
         var image = ProductImage.Create(
             request.ProductId,
             request.ObjectKey,
-            request.Url,
             request.AltText,
             request.SortOrder,
             request.IsPrimary,
@@ -168,6 +158,30 @@ public class AdminCatalogService(
 
         await productImageRepository.AddAsync(image, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteProductImageAsync(
+        Guid productId,
+        Guid imageId,
+        Guid? adminUserId,
+        CancellationToken cancellationToken = default)
+    {
+        _ = await productRepository.GetByIdAsync(productId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Product '{productId}' was not found.");
+
+        var image = await productImageRepository.GetByIdAsync(imageId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Image '{imageId}' was not found.");
+
+        if (image.ProductId != productId)
+        {
+            throw new InvalidOperationException("Image does not belong to the specified product.");
+        }
+
+        productImageRepository.Remove(image);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // R2 object is intentionally NOT deleted here to allow recovery.
+        // A background cleanup job can purge orphaned R2 objects later.
     }
 
     private static string BuildObjectKey(Guid productId, string fileName)

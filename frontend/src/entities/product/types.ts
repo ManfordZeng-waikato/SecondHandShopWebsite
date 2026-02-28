@@ -3,7 +3,8 @@ export type ProductCondition = 'LikeNew' | 'Good' | 'Fair' | 'NeedsRepair';
 
 export interface ProductImage {
   id: string;
-  url: string;
+  objectKey: string;
+  displayUrl: string;
   altText?: string;
   sortOrder: number;
   isPrimary: boolean;

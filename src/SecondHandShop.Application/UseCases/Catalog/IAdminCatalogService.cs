@@ -6,10 +6,14 @@ public interface IAdminCatalogService
 {
     Task<Guid> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken = default);
     Task UpdateProductStatusAsync(Guid productId, ProductStatus status, Guid? adminUserId, CancellationToken cancellationToken = default);
+
     Task<CreateProductImageUploadUrlResponse> CreateProductImageUploadUrlAsync(
         CreateProductImageUploadUrlRequest request,
         CancellationToken cancellationToken = default);
+
     Task AddProductImageAsync(AddProductImageRequest request, CancellationToken cancellationToken = default);
+
+    Task DeleteProductImageAsync(Guid productId, Guid imageId, Guid? adminUserId, CancellationToken cancellationToken = default);
 }
 
 public sealed record CreateProductRequest(
@@ -28,15 +32,13 @@ public sealed record CreateProductImageUploadUrlRequest(
     Guid? AdminUserId);
 
 public sealed record CreateProductImageUploadUrlResponse(
-    string UploadUrl,
+    string PutUrl,
     string ObjectKey,
-    string PublicUrl,
-    DateTime ExpiresAtUtc);
+    int ExpiresInSeconds);
 
 public sealed record AddProductImageRequest(
     Guid ProductId,
     string ObjectKey,
-    string Url,
     string? AltText,
     int SortOrder,
     bool IsPrimary,

@@ -28,6 +28,7 @@ const conditionColors: Record<ProductCondition, string> = {
 
 export function ProductCard({ product }: { product: Product }) {
   const primaryImage = product.images.find((item) => item.isPrimary) ?? product.images[0];
+  const imageUrl = primaryImage?.displayUrl || 'https://picsum.photos/seed/fallback/800/500';
 
   return (
     <Card
@@ -53,7 +54,7 @@ export function ProductCard({ product }: { product: Product }) {
           <CardMedia
             component="img"
             height="220"
-            image={primaryImage?.url ?? 'https://picsum.photos/seed/fallback/800/500'}
+            image={imageUrl}
             alt={primaryImage?.altText ?? product.title}
             sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 1.5 }}
           />

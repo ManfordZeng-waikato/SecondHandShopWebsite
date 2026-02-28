@@ -7,6 +7,8 @@ namespace SecondHandShop.Infrastructure.Services;
 
 public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageService
 {
+    private static readonly TimeSpan DefaultPresignExpiry = TimeSpan.FromMinutes(5);
+
     public async Task<PresignedUploadUrlResult> CreatePresignedUploadUrlAsync(
         PresignedUploadUrlRequest request,
         CancellationToken cancellationToken = default)
@@ -23,17 +25,11 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
             throw new ArgumentException("Content type is required.", nameof(request));
         }
 
-        var endpoint = $"https://{options.AccountId}.r2.cloudflarestorage.com";
-        var credentials = new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey);
-        var config = new AmazonS3Config
-        {
-            ServiceURL = endpoint,
-            ForcePathStyle = true
-        };
+        using var client = CreateS3Client();
 
-        using var client = new AmazonS3Client(credentials, config);
+        var expiry = request.ExpiresIn <= TimeSpan.Zero ? DefaultPresignExpiry : request.ExpiresIn;
+        var expiresAtUtc = DateTime.UtcNow.Add(expiry);
 
-        var expiresAtUtc = DateTime.UtcNow.Add(request.ExpiresIn <= TimeSpan.Zero ? TimeSpan.FromMinutes(10) : request.ExpiresIn);
         var preSignedRequest = new GetPreSignedUrlRequest
         {
             BucketName = options.BucketName,
@@ -47,10 +43,44 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
         return new PresignedUploadUrlResult(url, expiresAtUtc);
     }
 
-    public string BuildPublicUrl(string objectKey)
+    public async Task DeleteObjectAsync(string objectKey, CancellationToken cancellationToken = default)
     {
         options.Validate();
-        var trimmedBaseUrl = options.PublicBaseUrl.TrimEnd('/');
+
+        if (string.IsNullOrWhiteSpace(objectKey))
+        {
+            throw new ArgumentException("Object key is required.", nameof(objectKey));
+        }
+
+        using var client = CreateS3Client();
+
+        await client.DeleteObjectAsync(new DeleteObjectRequest
+        {
+            BucketName = options.BucketName,
+            Key = objectKey
+        }, cancellationToken);
+    }
+
+    public string BuildDisplayUrl(string objectKey)
+    {
+        if (string.IsNullOrWhiteSpace(options.WorkerBaseUrl))
+        {
+            throw new InvalidOperationException("R2:WorkerBaseUrl is required.");
+        }
+
+        var trimmedBaseUrl = options.WorkerBaseUrl.TrimEnd('/');
         return $"{trimmedBaseUrl}/{objectKey}";
+    }
+
+    private AmazonS3Client CreateS3Client()
+    {
+        var endpoint = $"https://{options.AccountId}.r2.cloudflarestorage.com";
+        var credentials = new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey);
+        var config = new AmazonS3Config
+        {
+            ServiceURL = endpoint,
+            ForcePathStyle = true
+        };
+        return new AmazonS3Client(credentials, config);
     }
 }

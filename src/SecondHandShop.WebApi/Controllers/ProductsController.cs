@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Abstractions.Storage;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -8,7 +9,8 @@ namespace SecondHandShop.WebApi.Controllers;
 public class ProductsController(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
-    IProductImageRepository productImageRepository) : ControllerBase
+    IProductImageRepository productImageRepository,
+    IObjectStorageService objectStorageService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ProductResponse>>> ListAsync(
@@ -45,7 +47,7 @@ public class ProductsController(
         return Ok(ToProductResponse(product, images, categoryMap));
     }
 
-    private static ProductResponse ToProductResponse(
+    private ProductResponse ToProductResponse(
         Domain.Entities.Product product,
         IReadOnlyList<Domain.Entities.ProductImage> images,
         IReadOnlyDictionary<Guid, string> categoryMap)
@@ -67,7 +69,8 @@ public class ProductsController(
                 .ThenBy(x => x.CreatedAt)
                 .Select(x => new ProductImageResponse(
                     x.Id,
-                    x.Url,
+                    x.CloudStorageKey,
+                    objectStorageService.BuildDisplayUrl(x.CloudStorageKey),
                     x.AltText,
                     x.SortOrder,
                     x.IsPrimary))
@@ -93,7 +96,8 @@ public sealed record ProductResponse(
 
 public sealed record ProductImageResponse(
     Guid Id,
-    string Url,
+    string ObjectKey,
+    string DisplayUrl,
     string? AltText,
     int SortOrder,
     bool IsPrimary);

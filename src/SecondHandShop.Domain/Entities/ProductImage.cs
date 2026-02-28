@@ -11,7 +11,13 @@ public class ProductImage : AuditableEntity
     public Guid Id { get; private set; } = Guid.NewGuid();
     public Guid ProductId { get; private set; }
     public string CloudStorageKey { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Legacy column kept for backward compatibility during migration.
+    /// New records store empty string. Display URLs are computed at runtime via Worker.
+    /// </summary>
     public string Url { get; private set; } = string.Empty;
+
     public string? AltText { get; private set; }
     public int SortOrder { get; private set; }
     public bool IsPrimary { get; private set; }
@@ -19,7 +25,6 @@ public class ProductImage : AuditableEntity
     public static ProductImage Create(
         Guid productId,
         string cloudStorageKey,
-        string url,
         string? altText,
         int sortOrder,
         bool isPrimary,
@@ -31,17 +36,12 @@ public class ProductImage : AuditableEntity
             throw new ArgumentException("Cloud storage key is required.", nameof(cloudStorageKey));
         }
 
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            throw new ArgumentException("Image URL is required.", nameof(url));
-        }
-
         var image = new ProductImage
         {
             Id = Guid.NewGuid(),
             ProductId = productId,
             CloudStorageKey = cloudStorageKey.Trim(),
-            Url = url.Trim(),
+            Url = string.Empty,
             AltText = string.IsNullOrWhiteSpace(altText) ? null : altText.Trim(),
             SortOrder = sortOrder,
             IsPrimary = isPrimary
@@ -53,7 +53,6 @@ public class ProductImage : AuditableEntity
 
     public void Update(
         string cloudStorageKey,
-        string url,
         string? altText,
         int sortOrder,
         bool isPrimary,
@@ -65,13 +64,8 @@ public class ProductImage : AuditableEntity
             throw new ArgumentException("Cloud storage key is required.", nameof(cloudStorageKey));
         }
 
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            throw new ArgumentException("Image URL is required.", nameof(url));
-        }
-
         CloudStorageKey = cloudStorageKey.Trim();
-        Url = url.Trim();
+        Url = string.Empty;
         AltText = string.IsNullOrWhiteSpace(altText) ? null : altText.Trim();
         SortOrder = sortOrder;
         IsPrimary = isPrimary;

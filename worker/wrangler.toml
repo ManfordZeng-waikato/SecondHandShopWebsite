@@ -1,0 +1,13 @@
+name = "secondhandshop-images"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "patshed"
+# preview_bucket_name = "YOUR_PREVIEW_BUCKET_NAME"
+
+# Custom domain (recommended): add a route or custom domain in Cloudflare dashboard
+# then image URLs become: https://img.yourdomain.com/<objectKey>
+# [routes]
+# route = "img.yourdomain.com/*"

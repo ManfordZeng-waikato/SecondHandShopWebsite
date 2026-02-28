@@ -23,7 +23,6 @@ import {
   uploadImageToR2,
 } from '../features/admin/api/adminApi';
 import { fetchCategories } from '../features/catalog/api/catalogApi';
-import { env } from '../shared/config/env';
 
 interface NewProductFormState {
   title: string;
@@ -109,21 +108,20 @@ export function AdminNewProductPage() {
         categoryId: formState.categoryId,
       });
 
-      if (!env.useMockApi) {
+      if (selectedFiles.length > 0) {
         setUploadProgress({ uploaded: 0, total: selectedFiles.length });
         for (let index = 0; index < selectedFiles.length; index += 1) {
           const file = selectedFiles[index];
           try {
-            const uploadConfig = await createProductImageUploadUrl(
+            const presigned = await createProductImageUploadUrl(
               createdProduct.id,
               file.name,
               file.type || 'application/octet-stream',
             );
 
-            await uploadImageToR2(uploadConfig.uploadUrl, file);
+            await uploadImageToR2(presigned.putUrl, file);
             await addProductImage(createdProduct.id, {
-              objectKey: uploadConfig.objectKey,
-              url: uploadConfig.publicUrl,
+              objectKey: presigned.objectKey,
               altText: formState.title.trim(),
               sortOrder: index,
               isPrimary: index === primaryIndex,

@@ -93,10 +93,9 @@ public class AdminProductsController(IAdminCatalogService adminCatalogService) :
                 cancellationToken);
 
             return Ok(new CreateImageUploadUrlResponse(
-                response.UploadUrl,
                 response.ObjectKey,
-                response.PublicUrl,
-                response.ExpiresAtUtc));
+                response.PutUrl,
+                response.ExpiresInSeconds));
         }
         catch (KeyNotFoundException ex)
         {
@@ -124,7 +123,6 @@ public class AdminProductsController(IAdminCatalogService adminCatalogService) :
                 new AddProductImageRequest(
                     productId,
                     request.ObjectKey,
-                    request.Url,
                     request.AltText,
                     request.SortOrder,
                     request.IsPrimary,
@@ -144,6 +142,28 @@ public class AdminProductsController(IAdminCatalogService adminCatalogService) :
         catch (ArgumentException ex)
         {
             return BadRequest(new ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpDelete("{productId:guid}/images/{imageId:guid}")]
+    public async Task<IActionResult> DeleteImageAsync(
+        Guid productId,
+        Guid imageId,
+        [FromQuery] Guid? adminUserId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await adminCatalogService.DeleteProductImageAsync(productId, imageId, adminUserId, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new ErrorResponse(ex.Message));
         }
     }
 
@@ -179,14 +199,12 @@ public sealed record CreateImageUploadUrlRequest(
     Guid? AdminUserId);
 
 public sealed record CreateImageUploadUrlResponse(
-    string UploadUrl,
     string ObjectKey,
-    string PublicUrl,
-    DateTime ExpiresAtUtc);
+    string PutUrl,
+    int ExpiresInSeconds);
 
 public sealed record AddProductImageApiRequest(
     string ObjectKey,
-    string Url,
     string? AltText,
     int SortOrder,
     bool IsPrimary,

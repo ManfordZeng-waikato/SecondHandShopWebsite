@@ -6,7 +6,9 @@ public interface IObjectStorageService
         PresignedUploadUrlRequest request,
         CancellationToken cancellationToken = default);
 
-    string BuildPublicUrl(string objectKey);
+    Task DeleteObjectAsync(string objectKey, CancellationToken cancellationToken = default);
+
+    string BuildDisplayUrl(string objectKey);
 }
 
 public sealed record PresignedUploadUrlRequest(

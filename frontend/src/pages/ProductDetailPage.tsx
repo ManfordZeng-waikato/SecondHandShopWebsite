@@ -36,13 +36,14 @@ export function ProductDetailPage() {
   }
 
   const primaryImage = productQuery.data.images.find((item) => item.isPrimary) ?? productQuery.data.images[0];
+  const imageUrl = primaryImage?.displayUrl || 'https://picsum.photos/seed/no-image/1000/500';
 
   return (
     <Card>
       <CardMedia
         component="img"
         height="400"
-        image={primaryImage?.url ?? 'https://picsum.photos/seed/no-image/1000/500'}
+        image={imageUrl}
         alt={primaryImage?.altText ?? productQuery.data.title}
         sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 2 }}
       />

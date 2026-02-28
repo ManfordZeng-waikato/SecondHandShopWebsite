@@ -39,7 +39,8 @@ export const mockProducts: Product[] = [
     images: [
       {
         id: 'img-iphone-1',
-        url: 'https://picsum.photos/seed/iphone13/800/500',
+        objectKey: 'products/mock/iphone13.jpg',
+        displayUrl: 'https://picsum.photos/seed/iphone13/800/500',
         altText: 'iPhone 13 front view',
         sortOrder: 1,
         isPrimary: true,
@@ -61,7 +62,8 @@ export const mockProducts: Product[] = [
     images: [
       {
         id: 'img-chair-1',
-        url: 'https://picsum.photos/seed/chair01/800/500',
+        objectKey: 'products/mock/chair01.jpg',
+        displayUrl: 'https://picsum.photos/seed/chair01/800/500',
         altText: 'Office chair side view',
         sortOrder: 1,
         isPrimary: true,
@@ -83,7 +85,8 @@ export const mockProducts: Product[] = [
     images: [
       {
         id: 'img-micro-1',
-        url: 'https://picsum.photos/seed/micro001/800/500',
+        objectKey: 'products/mock/micro001.jpg',
+        displayUrl: 'https://picsum.photos/seed/micro001/800/500',
         altText: 'Microwave on table',
         sortOrder: 1,
         isPrimary: true,
