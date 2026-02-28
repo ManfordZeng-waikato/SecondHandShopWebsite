@@ -227,6 +227,50 @@ export function AdminNewProductPage() {
             ? `${selectedFiles.length} image(s) selected`
             : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
+        {selectedFiles.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+            {selectedFiles.map((file, index) => (
+              <Box
+                key={`${file.name}-${file.size}`}
+                sx={{
+                  position: 'relative',
+                  width: 120,
+                  height: 120,
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: index === 0 ? 'primary.main' : 'divider',
+                }}
+              >
+                <Box
+                  component="img"
+                  src={URL.createObjectURL(file)}
+                  alt={file.name}
+                  onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                {index === 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      textAlign: 'center',
+                      fontSize: '0.65rem',
+                      py: 0.25,
+                    }}
+                  >
+                    Primary
+                  </Typography>
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
         {uploadProgress && uploadProgress.total > 0 && (
           <Typography variant="body2" color="text.secondary">
             Uploading images: {uploadProgress.uploaded}/{uploadProgress.total}
