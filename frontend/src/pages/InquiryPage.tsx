@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -6,6 +6,7 @@ import {
   Button,
   CircularProgress,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -35,6 +36,7 @@ export function InquiryPage() {
   const { id } = useParams<{ id: string }>();
   const [formState, setFormState] = useState<InquiryFormState>(initialState);
   const [error, setError] = useState<string | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   const productsQuery = useQuery({
     queryKey: ['products'],
@@ -44,9 +46,24 @@ export function InquiryPage() {
   const inquiryMutation = useMutation({
     mutationFn: createInquiry,
     onSuccess: () => {
-      navigate('/');
+      setSuccessOpen(true);
+      setFormState(initialState);
     },
   });
+
+  useEffect(() => {
+    if (!successOpen) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      navigate('/');
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [navigate, successOpen]);
 
   if (productsQuery.isLoading) {
     return <CircularProgress />;
@@ -68,6 +85,7 @@ export function InquiryPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setSuccessOpen(false);
 
     if (!formState.message.trim()) {
       setError('Message is required.');
@@ -138,6 +156,16 @@ export function InquiryPage() {
           </Button>
         </Box>
       </Stack>
+      <Snackbar
+        open={successOpen}
+        autoHideDuration={1500}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={() => setSuccessOpen(false)}
+      >
+        <Alert onClose={() => setSuccessOpen(false)} severity="success" sx={{ width: '100%' }}>
+          Inquiry submitted successfully.
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 }
