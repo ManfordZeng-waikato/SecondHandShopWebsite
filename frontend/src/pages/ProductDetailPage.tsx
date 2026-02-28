@@ -41,9 +41,10 @@ export function ProductDetailPage() {
     <Card>
       <CardMedia
         component="img"
-        height="300"
+        height="400"
         image={primaryImage?.url ?? 'https://picsum.photos/seed/no-image/1000/500'}
         alt={primaryImage?.altText ?? productQuery.data.title}
+        sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 2 }}
       />
       <CardContent>
         <Stack spacing={2}>

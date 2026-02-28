@@ -10,9 +10,10 @@ export function ProductCard({ product }: { product: Product }) {
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardMedia
         component="img"
-        height="180"
+        height="200"
         image={primaryImage?.url ?? 'https://picsum.photos/seed/fallback/800/500'}
         alt={primaryImage?.altText ?? product.title}
+        sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 1 }}
       />
       <CardContent sx={{ flexGrow: 1 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
