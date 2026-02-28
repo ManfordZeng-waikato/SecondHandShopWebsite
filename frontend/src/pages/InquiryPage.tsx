@@ -30,6 +30,12 @@ const initialState: InquiryFormState = {
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phonePattern = /^[0-9+\-\s()]+$/;
+
+const MAX_NAME_LENGTH = 120;
+const MAX_EMAIL_LENGTH = 256;
+const MAX_PHONE_LENGTH = 40;
+const MAX_MESSAGE_LENGTH = 3000;
 
 export function InquiryPage() {
   const navigate = useNavigate();
@@ -77,6 +83,8 @@ export function InquiryPage() {
   const targetProduct = products.find((product) => product.id === id);
   const normalizedEmailInput = formState.email.trim();
   const isEmailFormatInvalid = normalizedEmailInput.length > 0 && !emailPattern.test(normalizedEmailInput);
+  const normalizedPhoneInput = formState.phoneNumber.trim();
+  const isPhoneFormatInvalid = normalizedPhoneInput.length > 0 && !phonePattern.test(normalizedPhoneInput);
 
   if (!targetProduct) {
     return <Alert severity="warning">Product not found for inquiry.</Alert>;
@@ -100,6 +108,32 @@ export function InquiryPage() {
     const normalizedEmail = formState.email.trim();
     if (normalizedEmail && !emailPattern.test(normalizedEmail)) {
       setError('Please enter a valid email address.');
+      return;
+    }
+
+    const normalizedPhone = formState.phoneNumber.trim();
+    if (normalizedPhone && !phonePattern.test(normalizedPhone)) {
+      setError('Phone number can only contain digits, +, -, spaces, and parentheses.');
+      return;
+    }
+
+    if (formState.customerName.length > MAX_NAME_LENGTH) {
+      setError(`Name must be ${MAX_NAME_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    if (normalizedEmail.length > MAX_EMAIL_LENGTH) {
+      setError(`Email must be ${MAX_EMAIL_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    if (normalizedPhone.length > MAX_PHONE_LENGTH) {
+      setError(`Phone number must be ${MAX_PHONE_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    if (formState.message.length > MAX_MESSAGE_LENGTH) {
+      setError(`Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`);
       return;
     }
 
@@ -128,6 +162,7 @@ export function InquiryPage() {
           label="Your name"
           value={formState.customerName}
           onChange={(event) => setFormState((prev) => ({ ...prev, customerName: event.target.value }))}
+          slotProps={{ htmlInput: { maxLength: MAX_NAME_LENGTH } }}
         />
         <TextField
           label="Email"
@@ -136,11 +171,15 @@ export function InquiryPage() {
           onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
           error={isEmailFormatInvalid}
           helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
+          slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
         />
         <TextField
           label="Phone number"
           value={formState.phoneNumber}
           onChange={(event) => setFormState((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+          error={isPhoneFormatInvalid}
+          helperText={isPhoneFormatInvalid ? 'Phone number can only contain digits, +, -, spaces, and parentheses.' : ' '}
+          slotProps={{ htmlInput: { maxLength: MAX_PHONE_LENGTH } }}
         />
         <TextField
           label="Message"
@@ -149,6 +188,8 @@ export function InquiryPage() {
           required
           multiline
           minRows={4}
+          slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
+          helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
         />
         <Box>
           <Button type="submit" variant="contained" disabled={inquiryMutation.isPending}>

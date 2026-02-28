@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
@@ -38,12 +39,25 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
     }
 }
 
-public sealed record CreateInquiryRequest(
-    Guid ProductId,
-    string? CustomerName,
-    string? Email,
-    string? PhoneNumber,
-    string Message);
+public sealed record CreateInquiryRequest
+{
+    public required Guid ProductId { get; init; }
+
+    [MaxLength(120)]
+    public string? CustomerName { get; init; }
+
+    [MaxLength(256)]
+    [RegularExpression(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", ErrorMessage = "Invalid email format.")]
+    public string? Email { get; init; }
+
+    [MaxLength(40)]
+    [RegularExpression(@"^[0-9+\-\s()]+$", ErrorMessage = "Phone number can only contain digits, +, -, spaces, and parentheses.")]
+    public string? PhoneNumber { get; init; }
+
+    [Required]
+    [MaxLength(3000)]
+    public required string Message { get; init; }
+}
 
 public sealed record CreateInquiryResponse(Guid InquiryId);
 

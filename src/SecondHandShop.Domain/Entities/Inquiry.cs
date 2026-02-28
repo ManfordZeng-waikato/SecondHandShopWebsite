@@ -1,9 +1,16 @@
+using System.Text.RegularExpressions;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Domain.Entities;
 
-public class Inquiry
+public partial class Inquiry
 {
+    [GeneratedRegex(@"^[^\s@]+@[^\s@]+\.[^\s@]+$")]
+    private static partial Regex EmailRegex();
+
+    [GeneratedRegex(@"^[0-9+\-\s()]+$")]
+    private static partial Regex PhoneRegex();
+
     private Inquiry()
     {
     }
@@ -82,6 +89,16 @@ public class Inquiry
         if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phoneNumber))
         {
             throw new ArgumentException("At least one contact method (email or phone) is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(email) && !EmailRegex().IsMatch(email.Trim()))
+        {
+            throw new ArgumentException("Invalid email format.", nameof(email));
+        }
+
+        if (!string.IsNullOrWhiteSpace(phoneNumber) && !PhoneRegex().IsMatch(phoneNumber.Trim()))
+        {
+            throw new ArgumentException("Phone number can only contain digits, +, -, spaces, and parentheses.", nameof(phoneNumber));
         }
     }
 
