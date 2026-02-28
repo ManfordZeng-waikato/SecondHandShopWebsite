@@ -28,6 +28,8 @@ const initialState: InquiryFormState = {
   message: '',
 };
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function InquiryPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -56,6 +58,8 @@ export function InquiryPage() {
 
   const products = productsQuery.data ?? [];
   const targetProduct = products.find((product) => product.id === id);
+  const normalizedEmailInput = formState.email.trim();
+  const isEmailFormatInvalid = normalizedEmailInput.length > 0 && !emailPattern.test(normalizedEmailInput);
 
   if (!targetProduct) {
     return <Alert severity="warning">Product not found for inquiry.</Alert>;
@@ -75,11 +79,17 @@ export function InquiryPage() {
       return;
     }
 
+    const normalizedEmail = formState.email.trim();
+    if (normalizedEmail && !emailPattern.test(normalizedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     try {
       await inquiryMutation.mutateAsync({
         productId: targetProduct.id,
         customerName: formState.customerName || undefined,
-        email: formState.email || undefined,
+        email: normalizedEmail || undefined,
         phoneNumber: formState.phoneNumber || undefined,
         message: formState.message,
       });
@@ -106,6 +116,8 @@ export function InquiryPage() {
           type="email"
           value={formState.email}
           onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
+          error={isEmailFormatInvalid}
+          helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
         />
         <TextField
           label="Phone number"
