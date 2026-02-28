@@ -50,6 +50,7 @@ export function AdminNewProductPage() {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [primaryIndex, setPrimaryIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,7 +126,7 @@ export function AdminNewProductPage() {
               url: uploadConfig.publicUrl,
               altText: formState.title.trim(),
               sortOrder: index,
-              isPrimary: index === 0,
+              isPrimary: index === primaryIndex,
             });
             setUploadProgress({ uploaded: index + 1, total: selectedFiles.length });
           } catch {
@@ -217,9 +218,10 @@ export function AdminNewProductPage() {
             type="file"
             accept="image/*"
             multiple
-            onChange={(event) =>
-              setSelectedFiles(Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct))
-            }
+            onChange={(event) => {
+              setSelectedFiles(Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct));
+              setPrimaryIndex(0);
+            }}
           />
         </Button>
         <Typography variant="body2" color="text.secondary">
@@ -228,47 +230,60 @@ export function AdminNewProductPage() {
             : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
         {selectedFiles.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-            {selectedFiles.map((file, index) => (
-              <Box
-                key={`${file.name}-${file.size}`}
-                sx={{
-                  position: 'relative',
-                  width: 120,
-                  height: 120,
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: index === 0 ? 'primary.main' : 'divider',
-                }}
-              >
-                <Box
-                  component="img"
-                  src={URL.createObjectURL(file)}
-                  alt={file.name}
-                  onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                {index === 0 && (
-                  <Typography
-                    variant="caption"
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Click an image to set it as the primary image for product listing.
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              {selectedFiles.map((file, index) => {
+                const isPrimary = index === primaryIndex;
+                return (
+                  <Box
+                    key={`${file.name}-${file.size}`}
+                    onClick={() => setPrimaryIndex(index)}
                     sx={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
-                      textAlign: 'center',
-                      fontSize: '0.65rem',
-                      py: 0.25,
+                      position: 'relative',
+                      width: 120,
+                      height: 120,
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: '2px solid',
+                      borderColor: isPrimary ? 'primary.main' : 'divider',
+                      cursor: 'pointer',
+                      opacity: isPrimary ? 1 : 0.7,
+                      transition: 'all 0.2s',
+                      '&:hover': { opacity: 1, borderColor: 'primary.light' },
                     }}
                   >
-                    Primary
-                  </Typography>
-                )}
-              </Box>
-            ))}
+                    <Box
+                      component="img"
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {isPrimary && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          textAlign: 'center',
+                          fontSize: '0.65rem',
+                          py: 0.25,
+                        }}
+                      >
+                        Primary
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
         )}
         {uploadProgress && uploadProgress.total > 0 && (
