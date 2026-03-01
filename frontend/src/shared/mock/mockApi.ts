@@ -47,15 +47,7 @@ export async function createMockProduct(input: CreateProductInput): Promise<{ id
     status: 'Available',
     categoryId: input.categoryId,
     categoryName: matchedCategory?.name,
-    images: [
-      {
-        id: crypto.randomUUID(),
-        url: 'https://picsum.photos/seed/new-product/800/500',
-        altText: `${input.title} preview`,
-        sortOrder: 1,
-        isPrimary: true,
-      },
-    ],
+    images: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

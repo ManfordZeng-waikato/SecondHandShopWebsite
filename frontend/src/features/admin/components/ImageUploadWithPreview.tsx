@@ -3,15 +3,19 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
+  Fade,
+  IconButton,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import PhotoIcon from '@mui/icons-material/Photo';
-import ContentCutIcon from '@mui/icons-material/ContentCut';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { removeBackgroundPreview } from '../api/adminApi';
 
 export type ImageChoice = 'original' | 'cutout';
@@ -31,6 +35,13 @@ interface ImageUploadWithPreviewProps {
   onSetPrimary: () => void;
   disabled?: boolean;
 }
+
+const CHECKERED_BG = {
+  backgroundImage:
+    'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)',
+  backgroundSize: '12px 12px',
+  backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
+} as const;
 
 export function ImageUploadWithPreview({
   file,
@@ -117,196 +128,274 @@ export function ImageUploadWithPreview({
     }
   };
 
-  const handleChoiceChange = (_: unknown, value: ImageChoice | null) => {
-    if (value) setChoice(value);
-  };
+  const hasCutout = !!cutoutUrl;
+  const activeUrl = choice === 'cutout' && cutoutUrl ? cutoutUrl : originalUrl;
 
   return (
     <Box
       sx={{
+        borderRadius: 3,
+        overflow: 'hidden',
+        width: 260,
+        bgcolor: 'background.paper',
+        boxShadow: isPrimary ? 4 : 1,
         border: '2px solid',
-        borderColor: isPrimary ? 'primary.main' : 'divider',
-        borderRadius: 2,
-        p: 1.5,
-        position: 'relative',
-        width: 280,
-        transition: 'border-color 0.2s',
+        borderColor: isPrimary ? 'primary.main' : 'transparent',
+        transition: 'box-shadow 0.3s, border-color 0.3s',
+        '&:hover': { boxShadow: 3 },
       }}
     >
-      {isPrimary && (
-        <Typography
-          variant="caption"
+      {/* Main preview */}
+      <Box
+        sx={{
+          position: 'relative',
+          width: '100%',
+          height: 200,
+          bgcolor: '#f5f5f5',
+          ...(choice === 'cutout' && hasCutout ? CHECKERED_BG : {}),
+        }}
+      >
+        {activeUrl && (
+          <Fade in>
+            <Box
+              component="img"
+              src={activeUrl}
+              alt={file.name}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          </Fade>
+        )}
+
+        {/* Top-left: primary badge */}
+        {isPrimary && (
+          <Chip
+            icon={<StarIcon sx={{ fontSize: 14 }} />}
+            label="Primary"
+            size="small"
+            color="primary"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              fontWeight: 600,
+              fontSize: '0.7rem',
+              height: 24,
+            }}
+          />
+        )}
+
+        {/* Top-right: remove button */}
+        <Tooltip title="Remove this image">
+          <IconButton
+            size="small"
+            onClick={onRemove}
+            disabled={disabled}
+            sx={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              color: '#fff',
+              '&:hover': { bgcolor: 'error.main' },
+              width: 28,
+              height: 28,
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+
+        {/* Bottom: current version indicator */}
+        <Box
           sx={{
             position: 'absolute',
-            top: -10,
-            left: 12,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            px: 1,
-            borderRadius: 1,
-            fontSize: '0.65rem',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+            px: 1.5,
+            py: 0.75,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          Primary
-        </Typography>
-      )}
-
-      <Stack spacing={1.5} alignItems="center">
-        {/* Preview area */}
-        <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'center' }}>
-          <PreviewThumbnail
-            label="Original"
-            url={originalUrl}
-            isSelected={choice === 'original'}
-            onClick={() => setChoice('original')}
-          />
-          {cutoutUrl ? (
-            <PreviewThumbnail
-              label="No background"
-              url={cutoutUrl}
-              isSelected={choice === 'cutout'}
-              onClick={() => setChoice('cutout')}
-              checkered
-            />
-          ) : (
-            <Box
-              sx={{
-                width: 120,
-                height: 120,
-                borderRadius: 1,
-                border: '1px dashed',
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'action.hover',
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" textAlign="center" px={1}>
-                {removeBgLoading ? <CircularProgress size={24} /> : 'Click below to remove background'}
-              </Typography>
-            </Box>
-          )}
+          <Typography variant="caption" sx={{ color: '#fff', fontWeight: 500 }}>
+            {choice === 'cutout' ? 'Background removed' : 'Original'}
+          </Typography>
+          <CheckCircleIcon sx={{ color: '#4caf50', fontSize: 16 }} />
         </Box>
 
+        {/* Loading overlay */}
+        {removeBgLoading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bgcolor: 'rgba(255,255,255,0.85)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+            }}
+          >
+            <CircularProgress size={32} />
+            <Typography variant="caption" color="text.secondary">
+              Removing background...
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Controls area */}
+      <Stack spacing={1} sx={{ p: 1.5 }}>
+        {/* Error message */}
         {removeBgError && (
-          <Alert severity="warning" sx={{ width: '100%', py: 0 }}>
-            <Typography variant="caption">{removeBgError}</Typography>
+          <Alert severity="warning" sx={{ py: 0, '& .MuiAlert-message': { fontSize: '0.75rem' } }}>
+            {removeBgError}
           </Alert>
         )}
 
-        {/* Choice toggle */}
-        {cutoutUrl && (
-          <ToggleButtonGroup
-            value={choice}
-            exclusive
-            onChange={handleChoiceChange}
-            size="small"
-            fullWidth
-            disabled={disabled}
-          >
-            <ToggleButton value="original">
-              <PhotoIcon fontSize="small" sx={{ mr: 0.5 }} />
-              Original
-            </ToggleButton>
-            <ToggleButton value="cutout">
-              <ContentCutIcon fontSize="small" sx={{ mr: 0.5 }} />
-              No BG
-            </ToggleButton>
-          </ToggleButtonGroup>
+        {/* Version selector (appears after background removal) */}
+        {hasCutout && (
+          <Box sx={{ display: 'flex', gap: 0.75 }}>
+            <VersionOption
+              label="Original"
+              thumbnailUrl={originalUrl}
+              isSelected={choice === 'original'}
+              onClick={() => setChoice('original')}
+              disabled={disabled}
+            />
+            <VersionOption
+              label="No BG"
+              thumbnailUrl={cutoutUrl}
+              isSelected={choice === 'cutout'}
+              onClick={() => setChoice('cutout')}
+              disabled={disabled}
+              checkered
+            />
+          </Box>
         )}
 
         {/* Action buttons */}
-        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={removeBgLoading ? <CircularProgress size={14} /> : <AutoFixHighIcon />}
-            onClick={handleRemoveBg}
-            disabled={disabled || removeBgLoading || !!cutoutUrl}
-            fullWidth
-          >
-            {removeBgLoading ? 'Processing...' : cutoutUrl ? 'Done' : 'Remove BG'}
-          </Button>
-          {!isPrimary && (
-            <Button size="small" variant="text" onClick={onSetPrimary} disabled={disabled}>
-              Set primary
+        <Box sx={{ display: 'flex', gap: 0.75 }}>
+          {!hasCutout && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<AutoFixHighIcon />}
+              onClick={handleRemoveBg}
+              disabled={disabled || removeBgLoading}
+              fullWidth
+              sx={{ textTransform: 'none', fontWeight: 500 }}
+            >
+              Remove background
             </Button>
           )}
-        </Box>
 
-        <Button
-          size="small"
-          color="error"
-          onClick={onRemove}
-          disabled={disabled}
-          sx={{ alignSelf: 'flex-end' }}
-        >
-          Remove
-        </Button>
+          {!isPrimary && (
+            <Tooltip title="Set as the main display image">
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<StarBorderIcon />}
+                onClick={onSetPrimary}
+                disabled={disabled}
+                fullWidth={hasCutout}
+                sx={{ textTransform: 'none', minWidth: 'auto', color: 'text.secondary' }}
+              >
+                Set as primary
+              </Button>
+            </Tooltip>
+          )}
+        </Box>
       </Stack>
     </Box>
   );
 }
 
-function PreviewThumbnail({
+function VersionOption({
   label,
-  url,
+  thumbnailUrl,
   isSelected,
   onClick,
+  disabled = false,
   checkered = false,
 }: {
   label: string;
-  url: string | null;
+  thumbnailUrl: string | null;
   isSelected: boolean;
   onClick: () => void;
+  disabled?: boolean;
   checkered?: boolean;
 }) {
   return (
     <Box
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       sx={{
-        width: 120,
-        height: 120,
-        borderRadius: 1,
-        overflow: 'hidden',
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.75,
+        p: 0.75,
+        borderRadius: 1.5,
         border: '2px solid',
-        borderColor: isSelected ? 'primary.main' : 'transparent',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'border-color 0.2s',
-        ...(checkered && {
-          backgroundImage:
-            'linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)',
-          backgroundSize: '16px 16px',
-          backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px',
-        }),
+        borderColor: isSelected ? 'primary.main' : 'divider',
+        bgcolor: isSelected ? 'primary.50' : 'transparent',
+        cursor: disabled ? 'default' : 'pointer',
+        transition: 'all 0.2s',
+        opacity: disabled ? 0.5 : 1,
+        '&:hover': disabled
+          ? {}
+          : {
+              borderColor: isSelected ? 'primary.main' : 'primary.light',
+              bgcolor: isSelected ? 'primary.50' : 'action.hover',
+            },
       }}
     >
-      {url && (
-        <Box
-          component="img"
-          src={url}
-          alt={label}
-          sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
-      )}
-      <Typography
-        variant="caption"
+      <Box
         sx={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          bgcolor: isSelected ? 'primary.main' : 'rgba(0,0,0,0.5)',
-          color: '#fff',
-          textAlign: 'center',
-          fontSize: '0.6rem',
-          py: 0.2,
+          width: 36,
+          height: 36,
+          borderRadius: 1,
+          overflow: 'hidden',
+          flexShrink: 0,
+          bgcolor: '#f0f0f0',
+          ...(checkered ? CHECKERED_BG : {}),
         }}
       >
-        {label}
-      </Typography>
+        {thumbnailUrl && (
+          <Box
+            component="img"
+            src={thumbnailUrl}
+            alt={label}
+            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        )}
+      </Box>
+      <Stack spacing={0} sx={{ minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: isSelected ? 600 : 400,
+            color: isSelected ? 'primary.main' : 'text.secondary',
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </Typography>
+        {isSelected && (
+          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'success.main', lineHeight: 1.2 }}>
+            Selected
+          </Typography>
+        )}
+      </Stack>
     </Box>
   );
 }

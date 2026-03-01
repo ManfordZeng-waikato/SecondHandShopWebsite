@@ -104,11 +104,21 @@ export function AdminNewProductPage() {
   const categories = categoriesQuery.data ?? [];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct);
-    setSelectedFiles(files);
-    setPrimaryIndex(0);
-    imageResultsRef.current.clear();
-    setError(null);
+    const newFiles = Array.from(event.target.files ?? []);
+    if (newFiles.length === 0) return;
+
+    setSelectedFiles((prev) => {
+      const remaining = maxImagesPerProduct - prev.length;
+      if (remaining <= 0) {
+        setError(`You can upload up to ${maxImagesPerProduct} images for a product.`);
+        return prev;
+      }
+      setError(null);
+      return [...prev, ...newFiles.slice(0, remaining)];
+    });
+
+    // Reset the input so the same file can be re-selected if needed
+    event.target.value = '';
   };
 
   const handleRemoveFile = (index: number) => {
@@ -324,17 +334,13 @@ export function AdminNewProductPage() {
         </Button>
         <Typography variant="body2" color="text.secondary">
           {selectedFiles.length > 0
-            ? `${selectedFiles.length} image(s) selected — you can remove background before uploading.`
+            ? `${selectedFiles.length} image(s) selected`
             : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
 
         {selectedFiles.length > 0 && (
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              For each image you can optionally remove the background.
-              Choose which version to use, then click "Create product" to upload.
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5 }}>
               {selectedFiles.map((file, index) => (
                 <ImageUploadWithPreview
                   key={`${file.name}-${file.size}-${file.lastModified}`}
