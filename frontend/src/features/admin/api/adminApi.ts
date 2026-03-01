@@ -81,3 +81,46 @@ export async function addProductImage(productId: string, input: AddProductImageI
 export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
   await httpClient.delete(`/api/admin/products/${productId}/images/${imageId}`);
 }
+
+export async function removeBackgroundPreview(file: File): Promise<Blob> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await httpClient.post<Blob>(
+    '/api/admin/images/remove-background-preview',
+    formData,
+    {
+      responseType: 'blob',
+      timeout: 60_000,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  );
+  return response.data;
+}
+
+export async function uploadBlobToR2(putUrl: string, blob: Blob, contentType: string): Promise<void> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
+    try {
+      const response = await fetch(putUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: blob,
+      });
+
+      if (response.ok) return;
+
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error(`Upload rejected (${response.status}). The presigned URL may have expired.`);
+      }
+
+      lastError = new Error(`Upload failed with status ${response.status}`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('rejected')) throw err;
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  throw lastError ?? new Error('Upload failed after retries');
+}

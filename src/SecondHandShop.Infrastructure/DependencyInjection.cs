@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SecondHandShop.Application.Abstractions.Common;
+using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
@@ -21,6 +22,7 @@ public static class DependencyInjection
             ?? "Server=(localdb)\\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;";
         var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
         var r2Options = R2Options.FromConfiguration(configuration);
+        var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseSqlServer(connectionString));
@@ -35,6 +37,11 @@ public static class DependencyInjection
         services.AddScoped<IInquiryService, InquiryService>();
         services.AddSingleton(r2Options);
         services.AddScoped<IObjectStorageService, R2ObjectStorageService>();
+        services.AddSingleton(removeBgOptions);
+        services.AddHttpClient<IBackgroundRemovalService, RemoveBgService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(removeBgOptions.TimeoutSeconds);
+        });
         services.AddScoped<IClock, SystemClock>();
         services.AddSingleton(smtpOptions);
         services.AddScoped<NoOpEmailSender>();

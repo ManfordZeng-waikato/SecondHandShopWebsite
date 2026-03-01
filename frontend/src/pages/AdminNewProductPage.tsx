@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -20,9 +20,14 @@ import {
   addProductImage,
   createProduct,
   createProductImageUploadUrl,
+  uploadBlobToR2,
   uploadImageToR2,
 } from '../features/admin/api/adminApi';
 import { fetchCategories } from '../features/catalog/api/catalogApi';
+import {
+  ImageUploadWithPreview,
+  type ImageUploadResult,
+} from '../features/admin/components/ImageUploadWithPreview';
 
 interface NewProductFormState {
   title: string;
@@ -52,6 +57,9 @@ export function AdminNewProductPage() {
   const [primaryIndex, setPrimaryIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const imageResultsRef = useRef<Map<number, ImageUploadResult>>(new Map());
 
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
@@ -62,6 +70,10 @@ export function AdminNewProductPage() {
     mutationFn: createProduct,
   });
 
+  const handleImageResult = useCallback((index: number, result: ImageUploadResult) => {
+    imageResultsRef.current.set(index, result);
+  }, []);
+
   if (categoriesQuery.isLoading) {
     return <CircularProgress />;
   }
@@ -71,6 +83,36 @@ export function AdminNewProductPage() {
   }
 
   const categories = categoriesQuery.data ?? [];
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct);
+    setSelectedFiles(files);
+    setPrimaryIndex(0);
+    imageResultsRef.current.clear();
+    setError(null);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      imageResultsRef.current.delete(index);
+      const rebuilt = new Map<number, ImageUploadResult>();
+      let newIdx = 0;
+      for (let i = 0; i < prev.length; i++) {
+        if (i === index) continue;
+        const existing = imageResultsRef.current.get(i);
+        if (existing) rebuilt.set(newIdx, existing);
+        newIdx++;
+      }
+      imageResultsRef.current = rebuilt;
+      return next;
+    });
+    setPrimaryIndex((prev) => {
+      if (index < prev) return prev - 1;
+      if (index === prev) return 0;
+      return prev;
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,6 +140,8 @@ export function AdminNewProductPage() {
       return;
     }
 
+    setSubmitting(true);
+
     try {
       const createdProduct = await createProductMutation.mutateAsync({
         title: formState.title.trim(),
@@ -110,16 +154,30 @@ export function AdminNewProductPage() {
 
       if (selectedFiles.length > 0) {
         setUploadProgress({ uploaded: 0, total: selectedFiles.length });
+
         for (let index = 0; index < selectedFiles.length; index += 1) {
           const file = selectedFiles[index];
+          const imageResult = imageResultsRef.current.get(index);
+
           try {
+            const useCutout = imageResult?.choice === 'cutout' && imageResult.blob;
+            const contentType = useCutout ? 'image/png' : (file.type || 'image/jpeg');
+            const fileName = useCutout
+              ? `${file.name.replace(/\.[^.]+$/, '')}-nobg.png`
+              : file.name;
+
             const presigned = await createProductImageUploadUrl(
               createdProduct.id,
-              file.name,
-              file.type || 'application/octet-stream',
+              fileName,
+              contentType,
             );
 
-            await uploadImageToR2(presigned.putUrl, file);
+            if (useCutout) {
+              await uploadBlobToR2(presigned.putUrl, imageResult!.blob, contentType);
+            } else {
+              await uploadImageToR2(presigned.putUrl, file);
+            }
+
             await addProductImage(createdProduct.id, {
               objectKey: presigned.objectKey,
               altText: formState.title.trim(),
@@ -146,11 +204,15 @@ export function AdminNewProductPage() {
       }
 
       setError('Failed to create product. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const isFormBusy = createProductMutation.isPending || submitting;
+
   return (
-    <Paper sx={{ p: 3, maxWidth: 700 }}>
+    <Paper sx={{ p: 3, maxWidth: 900 }}>
       <Stack spacing={2} component="form" onSubmit={handleSubmit}>
         <Typography variant="h5">Create new product</Typography>
         {error && <Alert severity="error">{error}</Alert>}
@@ -209,89 +271,57 @@ export function AdminNewProductPage() {
             ))}
           </Select>
         </FormControl>
-        <Button variant="outlined" component="label">
+
+        <Button variant="outlined" component="label" disabled={isFormBusy}>
           Select product images
           <input
             hidden
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             multiple
-            onChange={(event) => {
-              setSelectedFiles(Array.from(event.target.files ?? []).slice(0, maxImagesPerProduct));
-              setPrimaryIndex(0);
-            }}
+            onChange={handleFileSelect}
           />
         </Button>
         <Typography variant="body2" color="text.secondary">
           {selectedFiles.length > 0
-            ? `${selectedFiles.length} image(s) selected`
+            ? `${selectedFiles.length} image(s) selected — you can remove background before uploading.`
             : `No images selected. You can upload up to ${maxImagesPerProduct} images.`}
         </Typography>
+
         {selectedFiles.length > 0 && (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Click an image to set it as the primary image for product listing.
+              For each image you can optionally remove the background.
+              Choose which version to use, then click "Create product" to upload.
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              {selectedFiles.map((file, index) => {
-                const isPrimary = index === primaryIndex;
-                return (
-                  <Box
-                    key={`${file.name}-${file.size}`}
-                    onClick={() => setPrimaryIndex(index)}
-                    sx={{
-                      position: 'relative',
-                      width: 120,
-                      height: 120,
-                      borderRadius: 1,
-                      overflow: 'hidden',
-                      border: '2px solid',
-                      borderColor: isPrimary ? 'primary.main' : 'divider',
-                      cursor: 'pointer',
-                      opacity: isPrimary ? 1 : 0.7,
-                      transition: 'all 0.2s',
-                      '&:hover': { opacity: 1, borderColor: 'primary.light' },
-                    }}
-                  >
-                    <Box
-                      component="img"
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
-                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    {isPrimary && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          textAlign: 'center',
-                          fontSize: '0.65rem',
-                          py: 0.25,
-                        }}
-                      >
-                        Primary
-                      </Typography>
-                    )}
-                  </Box>
-                );
-              })}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              {selectedFiles.map((file, index) => (
+                <ImageUploadWithPreview
+                  key={`${file.name}-${file.size}-${file.lastModified}`}
+                  file={file}
+                  isPrimary={index === primaryIndex}
+                  onSetPrimary={() => setPrimaryIndex(index)}
+                  onRemove={() => handleRemoveFile(index)}
+                  onResult={(result) => handleImageResult(index, result)}
+                  disabled={isFormBusy}
+                />
+              ))}
             </Box>
           </Box>
         )}
+
         {uploadProgress && uploadProgress.total > 0 && (
-          <Typography variant="body2" color="text.secondary">
-            Uploading images: {uploadProgress.uploaded}/{uploadProgress.total}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CircularProgress size={18} />
+            <Typography variant="body2" color="text.secondary">
+              Uploading images: {uploadProgress.uploaded}/{uploadProgress.total}
+            </Typography>
+          </Box>
         )}
+
         <Box>
-          <Button type="submit" variant="contained" disabled={createProductMutation.isPending}>
-            {createProductMutation.isPending ? 'Creating...' : 'Create product'}
+          <Button type="submit" variant="contained" disabled={isFormBusy}>
+            {isFormBusy ? 'Creating...' : 'Create product'}
           </Button>
         </Box>
       </Stack>
