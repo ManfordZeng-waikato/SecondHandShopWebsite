@@ -56,6 +56,27 @@ export async function createMockProduct(input: CreateProductInput): Promise<{ id
   return { id: createdProduct.id };
 }
 
+export async function getMockProductsForAdmin(status?: ProductStatus) {
+  await wait();
+  const filtered = status
+    ? productsStore.filter((item) => item.status === status)
+    : productsStore;
+
+  return filtered.map((item) => ({
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    price: item.price,
+    condition: item.condition,
+    status: item.status,
+    categoryName: item.categoryName,
+    imageCount: item.images.length,
+    primaryImageUrl: item.images.find((img) => img.isPrimary)?.displayUrl ?? item.images[0]?.displayUrl,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }));
+}
+
 export async function updateMockProductStatus(
   productId: string,
   status: ProductStatus,

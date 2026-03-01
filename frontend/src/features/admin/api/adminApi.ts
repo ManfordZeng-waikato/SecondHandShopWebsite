@@ -1,7 +1,32 @@
 import type { CreateProductInput, ProductStatus } from '../../../entities/product/types';
 import { httpClient } from '../../../shared/api/httpClient';
 import { env } from '../../../shared/config/env';
-import { createMockProduct, updateMockProductStatus } from '../../../shared/mock/mockApi';
+import { createMockProduct, getMockProductsForAdmin, updateMockProductStatus } from '../../../shared/mock/mockApi';
+
+export interface AdminProductListItem {
+  id: string;
+  title: string;
+  slug: string;
+  price: number;
+  condition: string;
+  status: ProductStatus;
+  categoryName?: string;
+  imageCount: number;
+  primaryImageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchAdminProducts(status?: ProductStatus): Promise<AdminProductListItem[]> {
+  if (env.useMockApi) {
+    return getMockProductsForAdmin(status);
+  }
+
+  const response = await httpClient.get<AdminProductListItem[]>('/api/admin/products', {
+    params: status ? { status } : undefined,
+  });
+  return response.data;
+}
 
 export async function createProduct(input: CreateProductInput): Promise<{ id: string }> {
   if (env.useMockApi) {
