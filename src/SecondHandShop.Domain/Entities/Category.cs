@@ -1,4 +1,5 @@
 using SecondHandShop.Domain.Common;
+using static SecondHandShop.Domain.Common.SlugValidator;
 
 namespace SecondHandShop.Domain.Entities;
 
@@ -28,10 +29,7 @@ public class Category : AuditableEntity
             throw new ArgumentException("Category name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(slug))
-        {
-            throw new ArgumentException("Category slug is required.", nameof(slug));
-        }
+        SlugValidator.EnsureValid(slug, nameof(slug));
 
         var category = new Category
         {
@@ -61,10 +59,7 @@ public class Category : AuditableEntity
             throw new ArgumentException("Category name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(slug))
-        {
-            throw new ArgumentException("Category slug is required.", nameof(slug));
-        }
+        SlugValidator.EnsureValid(slug, nameof(slug));
 
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();

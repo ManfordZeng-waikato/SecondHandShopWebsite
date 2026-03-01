@@ -1,4 +1,5 @@
 using SecondHandShop.Domain.Common;
+using static SecondHandShop.Domain.Common.SlugValidator;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Domain.Entities;
@@ -37,10 +38,7 @@ public class Product : AuditableEntity
             throw new ArgumentException("Product title is required.", nameof(title));
         }
 
-        if (string.IsNullOrWhiteSpace(slug))
-        {
-            throw new ArgumentException("Product slug is required.", nameof(slug));
-        }
+        SlugValidator.EnsureValid(slug, nameof(slug));
 
         var product = new Product
         {
@@ -75,10 +73,7 @@ public class Product : AuditableEntity
             throw new ArgumentException("Product title is required.", nameof(title));
         }
 
-        if (string.IsNullOrWhiteSpace(slug))
-        {
-            throw new ArgumentException("Product slug is required.", nameof(slug));
-        }
+        SlugValidator.EnsureValid(slug, nameof(slug));
 
         Title = title.Trim();
         Slug = slug.Trim().ToLowerInvariant();

@@ -50,9 +50,28 @@ const initialFormState: NewProductFormState = {
 const conditionOptions: ProductCondition[] = ['LikeNew', 'Good', 'Fair', 'NeedsRepair'];
 const maxImagesPerProduct = 5;
 
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function toSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function isValidSlug(slug: string): boolean {
+  return slug === '' || SLUG_REGEX.test(slug);
+}
+
 export function AdminNewProductPage() {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [primaryIndex, setPrimaryIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
@@ -122,6 +141,11 @@ export function AdminNewProductPage() {
     const price = Number(formState.price);
     if (!formState.title.trim() || !formState.slug.trim() || !formState.description.trim()) {
       setError('Title, slug and description are required.');
+      return;
+    }
+
+    if (!isValidSlug(formState.slug.trim())) {
+      setError('Slug can only contain lowercase letters, numbers, and hyphens (e.g. "vintage-leather-bag").');
       return;
     }
 
@@ -219,12 +243,28 @@ export function AdminNewProductPage() {
         <TextField
           label="Title"
           value={formState.title}
-          onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
+          onChange={(event) => {
+            const title = event.target.value;
+            setFormState((prev) => ({
+              ...prev,
+              title,
+              slug: slugManuallyEdited ? prev.slug : toSlug(title),
+            }));
+          }}
         />
         <TextField
           label="Slug"
           value={formState.slug}
-          onChange={(event) => setFormState((prev) => ({ ...prev, slug: event.target.value }))}
+          onChange={(event) => {
+            setSlugManuallyEdited(true);
+            setFormState((prev) => ({ ...prev, slug: event.target.value }));
+          }}
+          error={!isValidSlug(formState.slug)}
+          helperText={
+            !isValidSlug(formState.slug)
+              ? 'Slug can only contain lowercase letters, numbers, and hyphens (e.g. "vintage-leather-bag")'
+              : 'Auto-generated from title. Edit to customize.'
+          }
         />
         <TextField
           label="Description"
