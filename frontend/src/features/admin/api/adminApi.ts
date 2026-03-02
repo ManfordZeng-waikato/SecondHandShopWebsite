@@ -3,6 +3,19 @@ import { httpClient } from '../../../shared/api/httpClient';
 import { env } from '../../../shared/config/env';
 import { createMockProduct, getMockProductsForAdmin, updateMockProductStatus } from '../../../shared/mock/mockApi';
 
+export interface LoginResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export async function loginAdmin(userName: string, password: string): Promise<LoginResponse> {
+  const response = await httpClient.post<LoginResponse>('/api/admin/auth/login', {
+    userName,
+    password,
+  });
+  return response.data;
+}
+
 export interface AdminProductListItem {
   id: string;
   title: string;

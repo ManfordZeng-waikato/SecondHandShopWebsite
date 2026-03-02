@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { loginAsAdmin } from '../features/admin/auth/adminSession';
+import { saveAdminSession } from '../features/admin/auth/adminSession';
+import { loginAdmin } from '../features/admin/api/adminApi';
+import axios from 'axios';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
@@ -9,19 +11,33 @@ export function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const redirectPath = (location.state as { from?: string } | null)?.from ?? '/admin/products';
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError(null);
 
     if (!username.trim() || !password.trim()) {
       setError('Please enter both username and password.');
       return;
     }
 
-    loginAsAdmin();
-    navigate(redirectPath, { replace: true });
+    setLoading(true);
+    try {
+      const { token, expiresAt } = await loginAdmin(username, password);
+      saveAdminSession(token, expiresAt);
+      navigate(redirectPath, { replace: true });
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setError('Invalid username or password.');
+      } else {
+        setError('Login failed. Please try again later.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,23 +45,22 @@ export function AdminLoginPage() {
       <Paper sx={{ p: 3, width: 420 }}>
         <Stack spacing={2} component="form" onSubmit={handleSubmit}>
           <Typography variant="h5">Admin login</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Placeholder login only. Real authentication will be integrated later.
-          </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
+            disabled={loading}
           />
           <TextField
             label="Password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            disabled={loading}
           />
-          <Button type="submit" variant="contained">
-            Enter admin dashboard
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Sign in'}
           </Button>
         </Stack>
       </Paper>
