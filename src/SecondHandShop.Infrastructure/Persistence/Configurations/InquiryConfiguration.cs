@@ -31,6 +31,7 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
         builder.Property(x => x.EmailDeliveryStatus)
             .HasConversion<byte>()
             .HasDefaultValue(EmailDeliveryStatus.Pending)
+            .HasSentinel((EmailDeliveryStatus)0)
             .IsRequired();
 
         builder.Property(x => x.DeliveryError)

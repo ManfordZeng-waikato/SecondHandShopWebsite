@@ -31,11 +31,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.Condition)
             .HasConversion<byte>()
             .HasDefaultValue(ProductCondition.Good)
+            .HasSentinel((ProductCondition)0)
             .IsRequired();
 
         builder.Property(x => x.Status)
             .HasConversion<byte>()
             .HasDefaultValue(ProductStatus.Available)
+            .HasSentinel((ProductStatus)0)
             .IsRequired();
 
         builder.Property(x => x.CreatedAt)
