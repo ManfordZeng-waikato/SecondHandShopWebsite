@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
@@ -9,6 +10,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/admin/products")]
+[Authorize(Policy = "AdminOnly")]
 public class AdminProductsController(
     IAdminCatalogService adminCatalogService,
     IProductRepository productRepository,

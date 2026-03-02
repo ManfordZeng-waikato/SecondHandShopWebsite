@@ -100,3 +100,5 @@ temp/
 *.tmp
 src/SecondHandShop.WebApi/appsettings.Development.json
 src/SecondHandShop.WebApi/appsettings.Development.json
+src/SecondHandShop.WebApi/appsettings.json
+src/SecondHandShop.WebApi/appsettings.json

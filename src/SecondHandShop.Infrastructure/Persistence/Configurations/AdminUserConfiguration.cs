@@ -19,10 +19,33 @@ public class AdminUserConfiguration : IEntityTypeConfiguration<AdminUser>
             .HasMaxLength(256)
             .IsRequired();
 
+        builder.Property(x => x.UserName)
+            .HasMaxLength(120)
+            .HasDefaultValue(string.Empty)
+            .IsRequired();
+
+        builder.Property(x => x.PasswordHash)
+            .HasMaxLength(512)
+            .HasDefaultValue(string.Empty)
+            .IsRequired();
+
+        builder.Property(x => x.Role)
+            .HasMaxLength(50)
+            .HasDefaultValue(string.Empty)
+            .IsRequired();
+
         builder.Property(x => x.IsActive)
+            .IsRequired();
+
+        builder.Property(x => x.CreatedAt)
+            .HasDefaultValueSql("SYSDATETIMEOFFSET()")
             .IsRequired();
 
         builder.HasIndex(x => x.Email)
             .IsUnique();
+
+        builder.HasIndex(x => x.UserName)
+            .IsUnique()
+            .HasFilter("[UserName] <> ''");
     }
 }

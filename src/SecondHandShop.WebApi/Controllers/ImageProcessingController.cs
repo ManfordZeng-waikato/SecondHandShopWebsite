@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Infrastructure.Services;
@@ -6,6 +7,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/admin/images")]
+[Authorize(Policy = "AdminOnly")]
 public class ImageProcessingController(
     IBackgroundRemovalService backgroundRemovalService,
     RemoveBgOptions removeBgOptions) : ControllerBase
