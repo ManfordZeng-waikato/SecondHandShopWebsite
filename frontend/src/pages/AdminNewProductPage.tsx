@@ -225,7 +225,7 @@ export function AdminNewProductPage() {
         }
       }
 
-      navigate('/admin/products');
+      navigate('/lord/products');
     } catch (submissionError) {
       const message = submissionError instanceof Error ? submissionError.message : '';
       if (message.startsWith('IMAGE_UPLOAD_PARTIAL:')) {

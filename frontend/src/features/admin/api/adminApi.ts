@@ -4,16 +4,19 @@ import { env } from '../../../shared/config/env';
 import { createMockProduct, getMockProductsForAdmin, updateMockProductStatus } from '../../../shared/mock/mockApi';
 
 export interface LoginResponse {
-  token: string;
   expiresAt: string;
 }
 
 export async function loginAdmin(userName: string, password: string): Promise<LoginResponse> {
-  const response = await httpClient.post<LoginResponse>('/api/admin/auth/login', {
+  const response = await httpClient.post<LoginResponse>('/api/lord/auth/login', {
     userName,
     password,
   });
   return response.data;
+}
+
+export async function logoutAdmin(): Promise<void> {
+  await httpClient.post('/api/lord/auth/logout');
 }
 
 export interface AdminProductListItem {
@@ -35,7 +38,7 @@ export async function fetchAdminProducts(status?: ProductStatus): Promise<AdminP
     return getMockProductsForAdmin(status);
   }
 
-  const response = await httpClient.get<AdminProductListItem[]>('/api/admin/products', {
+  const response = await httpClient.get<AdminProductListItem[]>('/api/lord/products', {
     params: status ? { status } : undefined,
   });
   return response.data;
@@ -46,7 +49,7 @@ export async function createProduct(input: CreateProductInput): Promise<{ id: st
     return createMockProduct(input);
   }
 
-  const response = await httpClient.post<{ id: string }>('/api/admin/products', input);
+  const response = await httpClient.post<{ id: string }>('/api/lord/products', input);
   return response.data;
 }
 
@@ -55,7 +58,7 @@ export async function updateProductStatus(productId: string, status: ProductStat
     return updateMockProductStatus(productId, status);
   }
 
-  await httpClient.put(`/api/admin/products/${productId}/status`, { status });
+  await httpClient.put(`/api/lord/products/${productId}/status`, { status });
 }
 
 export interface PresignedUploadResult {
@@ -77,7 +80,7 @@ export async function createProductImageUploadUrl(
   contentType: string,
 ): Promise<PresignedUploadResult> {
   const response = await httpClient.post<PresignedUploadResult>(
-    `/api/admin/products/${productId}/images/presigned-url`,
+    `/api/lord/products/${productId}/images/presigned-url`,
     { fileName, contentType },
   );
   return response.data;
@@ -113,11 +116,11 @@ export async function uploadImageToR2(putUrl: string, file: File): Promise<void>
 }
 
 export async function addProductImage(productId: string, input: AddProductImageInput): Promise<void> {
-  await httpClient.post(`/api/admin/products/${productId}/images`, input);
+  await httpClient.post(`/api/lord/products/${productId}/images`, input);
 }
 
 export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
-  await httpClient.delete(`/api/admin/products/${productId}/images/${imageId}`);
+  await httpClient.delete(`/api/lord/products/${productId}/images/${imageId}`);
 }
 
 export async function removeBackgroundPreview(file: File): Promise<Blob> {
@@ -125,7 +128,7 @@ export async function removeBackgroundPreview(file: File): Promise<Blob> {
   formData.append('file', file);
 
   const response = await httpClient.post<Blob>(
-    '/api/admin/images/remove-background-preview',
+    '/api/lord/images/remove-background-preview',
     formData,
     {
       responseType: 'blob',

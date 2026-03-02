@@ -2,13 +2,18 @@ import type { PropsWithChildren } from 'react';
 import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { clearAdminSession } from '../../features/admin/auth/adminSession';
+import { logoutAdmin } from '../../features/admin/api/adminApi';
 
 export function AdminLayout({ children }: PropsWithChildren) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    clearAdminSession();
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await logoutAdmin();
+    } finally {
+      clearAdminSession();
+      navigate('/lord/login');
+    }
   };
 
   return (
@@ -19,10 +24,10 @@ export function AdminLayout({ children }: PropsWithChildren) {
             Admin Dashboard
           </Typography>
           <Stack direction="row" spacing={1}>
-            <Button color="inherit" component={RouterLink} to="/admin/products">
+            <Button color="inherit" component={RouterLink} to="/lord/products">
               Products
             </Button>
-            <Button color="inherit" component={RouterLink} to="/admin/products/new">
+            <Button color="inherit" component={RouterLink} to="/lord/products/new">
               New product
             </Button>
             <Button color="inherit" onClick={handleLogout}>

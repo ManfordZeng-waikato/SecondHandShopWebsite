@@ -6,7 +6,7 @@ using SecondHandShop.Infrastructure.Services;
 namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
-[Route("api/admin/images")]
+[Route("api/lord/images")]
 [Authorize(Policy = "AdminOnly")]
 public class ImageProcessingController(
     IBackgroundRemovalService backgroundRemovalService,

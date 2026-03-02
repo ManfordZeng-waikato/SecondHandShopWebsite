@@ -13,7 +13,7 @@ export function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const redirectPath = (location.state as { from?: string } | null)?.from ?? '/admin/products';
+  const redirectPath = (location.state as { from?: string } | null)?.from ?? '/lord/products';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -26,8 +26,8 @@ export function AdminLoginPage() {
 
     setLoading(true);
     try {
-      const { token, expiresAt } = await loginAdmin(username, password);
-      saveAdminSession(token, expiresAt);
+      const { expiresAt } = await loginAdmin(username, password);
+      saveAdminSession(expiresAt);
       navigate(redirectPath, { replace: true });
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {

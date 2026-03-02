@@ -48,7 +48,7 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/admin/login"
+          path="/lord/login"
           element={
             <MainLayout>
               <AdminLoginPage />
@@ -57,7 +57,7 @@ export function AppRouter() {
         />
         <Route element={<ProtectedAdminRoute />}>
           <Route
-            path="/admin/products"
+            path="/lord/products"
             element={
               <AdminLayout>
                 <AdminProductsPage />
@@ -65,7 +65,7 @@ export function AppRouter() {
             }
           />
           <Route
-            path="/admin/products/new"
+            path="/lord/products/new"
             element={
               <AdminLayout>
                 <AdminNewProductPage />

@@ -5,7 +5,7 @@ export function ProtectedAdminRoute() {
   const location = useLocation();
 
   if (!isAdminLoggedIn()) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/lord/login" replace state={{ from: location.pathname }} />;
   }
 
   return <Outlet />;

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
-[Route("api/admin/ping")]
+[Route("api/lord/ping")]
 [Authorize(Policy = "AdminOnly")]
 public class AdminPingController : ControllerBase
 {

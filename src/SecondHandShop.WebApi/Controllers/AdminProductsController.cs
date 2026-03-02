@@ -9,7 +9,7 @@ using SecondHandShop.Domain.Enums;
 namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
-[Route("api/admin/products")]
+[Route("api/lord/products")]
 [Authorize(Policy = "AdminOnly")]
 public class AdminProductsController(
     IAdminCatalogService adminCatalogService,
@@ -78,7 +78,7 @@ public class AdminProductsController(
                     request.AdminUserId),
                 cancellationToken);
 
-            return Created($"/api/admin/products/{productId}", new CreateProductResponse(productId));
+            return Created($"/api/lord/products/{productId}", new CreateProductResponse(productId));
         }
         catch (KeyNotFoundException ex)
         {
