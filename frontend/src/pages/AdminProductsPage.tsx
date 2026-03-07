@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Avatar,
   Box,
+  Chip,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -15,15 +17,24 @@ import {
 import ImageIcon from '@mui/icons-material/Image';
 import type { ProductStatus } from '../entities/product/types';
 import { fetchAdminProducts, updateProductStatus } from '../features/admin/api/adminApi';
+import { fetchCategories } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
 
 const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
 
 export function AdminProductsPage() {
   const queryClient = useQueryClient();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const productsQuery = useQuery({
-    queryKey: ['admin-products'],
-    queryFn: () => fetchAdminProducts(),
+    queryKey: ['admin-products', selectedCategoryId],
+    queryFn: () => fetchAdminProducts(undefined, selectedCategoryId),
   });
 
   const statusMutation = useMutation({
@@ -33,6 +44,8 @@ export function AdminProductsPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
   });
+
+  const categories = categoriesQuery.data ?? [];
 
   if (productsQuery.isLoading) {
     return <CircularProgress />;
@@ -47,8 +60,61 @@ export function AdminProductsPage() {
   return (
     <Stack spacing={2}>
       <Typography variant="h4">Manage products</Typography>
+
+      {/* Category filter */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <Chip
+          label="All categories"
+          variant={!selectedCategoryId ? 'filled' : 'outlined'}
+          onClick={() => setSelectedCategoryId(undefined)}
+          sx={{
+            fontWeight: !selectedCategoryId ? 700 : 500,
+            bgcolor: !selectedCategoryId ? 'primary.main' : 'transparent',
+            color: !selectedCategoryId ? 'primary.contrastText' : 'text.primary',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: !selectedCategoryId ? 'primary.dark' : 'action.hover',
+            },
+            transition: 'all 0.2s ease',
+          }}
+        />
+        {categories.map((cat) => {
+          const isActive = selectedCategoryId === cat.id;
+          return (
+            <Chip
+              key={cat.id}
+              label={cat.name}
+              variant={isActive ? 'filled' : 'outlined'}
+              onClick={() => setSelectedCategoryId(isActive ? undefined : cat.id)}
+              sx={{
+                fontWeight: isActive ? 700 : 500,
+                bgcolor: isActive ? 'primary.main' : 'transparent',
+                color: isActive ? 'primary.contrastText' : 'text.primary',
+                borderColor: 'divider',
+                '&:hover': {
+                  bgcolor: isActive ? 'primary.dark' : 'action.hover',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            />
+          );
+        })}
+      </Box>
+
+      {/* Product count */}
+      <Typography variant="body2" color="text.secondary">
+        {products.length} {products.length === 1 ? 'product' : 'products'}
+        {selectedCategoryId && categories.length > 0
+          ? ` in ${categories.find((c) => c.id === selectedCategoryId)?.name ?? 'selected category'}`
+          : ''}
+      </Typography>
+
       {products.length === 0 && (
-        <Typography color="text.secondary">No products yet. Create one to get started.</Typography>
+        <Typography color="text.secondary">
+          {selectedCategoryId
+            ? 'No products found in this category.'
+            : 'No products yet. Create one to get started.'}
+        </Typography>
       )}
       {products.map((product) => (
         <Paper key={product.id} sx={{ p: 2 }}>

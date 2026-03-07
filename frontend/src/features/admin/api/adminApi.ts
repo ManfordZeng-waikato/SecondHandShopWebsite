@@ -33,13 +33,20 @@ export interface AdminProductListItem {
   updatedAt: string;
 }
 
-export async function fetchAdminProducts(status?: ProductStatus): Promise<AdminProductListItem[]> {
+export async function fetchAdminProducts(
+  status?: ProductStatus,
+  categoryId?: string,
+): Promise<AdminProductListItem[]> {
   if (env.useMockApi) {
     return getMockProductsForAdmin(status);
   }
 
+  const params: Record<string, string> = {};
+  if (status) params.status = status;
+  if (categoryId) params.categoryId = categoryId;
+
   const response = await httpClient.get<AdminProductListItem[]>('/api/lord/products', {
-    params: status ? { status } : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
   });
   return response.data;
 }

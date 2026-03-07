@@ -17,6 +17,7 @@ public interface IProductRepository
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListForAdminAsync(
         ProductStatus? status,
+        Guid? categoryId = null,
         CancellationToken cancellationToken = default);
     Task AddAsync(Product product, CancellationToken cancellationToken = default);
 }

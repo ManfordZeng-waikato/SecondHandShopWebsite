@@ -21,6 +21,7 @@ public class AdminProductsController(
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AdminProductListItem>>> ListAsync(
         [FromQuery] string? status,
+        [FromQuery] Guid? categoryId,
         CancellationToken cancellationToken)
     {
         ProductStatus? statusFilter = null;
@@ -29,7 +30,7 @@ public class AdminProductsController(
             statusFilter = parsed;
         }
 
-        var products = await productRepository.ListForAdminAsync(statusFilter, cancellationToken);
+        var products = await productRepository.ListForAdminAsync(statusFilter, categoryId, cancellationToken);
         var categories = await categoryRepository.ListActiveAsync(cancellationToken);
         var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
 

@@ -118,13 +118,18 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         return new PagedResult<ProductListItemDto>(items, page, pageSize, totalCount);
     }
 
-    public async Task<IReadOnlyList<Product>> ListForAdminAsync(ProductStatus? status, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Product>> ListForAdminAsync(
+        ProductStatus? status,
+        Guid? categoryId = null,
+        CancellationToken cancellationToken = default)
     {
         var query = dbContext.Products.AsNoTracking();
+
         if (status.HasValue)
-        {
             query = query.Where(x => x.Status == status.Value);
-        }
+
+        if (categoryId.HasValue)
+            query = query.Where(x => x.CategoryId == categoryId.Value);
 
         return await query
             .OrderByDescending(x => x.UpdatedAt)
