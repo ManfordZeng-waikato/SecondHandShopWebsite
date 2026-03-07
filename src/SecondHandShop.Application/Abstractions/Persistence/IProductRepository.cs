@@ -1,3 +1,5 @@
+using SecondHandShop.Application.Contracts.Catalog;
+using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -9,6 +11,9 @@ public interface IProductRepository
     Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListForPublicAsync(
         Guid? categoryId,
+        CancellationToken cancellationToken = default);
+    Task<PagedResult<ProductListItemDto>> ListPagedForPublicAsync(
+        ProductQueryParameters parameters,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListForAdminAsync(
         ProductStatus? status,

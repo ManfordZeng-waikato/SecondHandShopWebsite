@@ -9,6 +9,7 @@ import { InquiryPage } from '../../pages/InquiryPage';
 import { MyStoryPage } from '../../pages/MyStoryPage';
 import { NotFoundPage } from '../../pages/NotFoundPage';
 import { ProductDetailPage } from '../../pages/ProductDetailPage';
+import { ProductsPage } from '../../pages/ProductsPage';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute';
 
 export function AppRouter() {
@@ -20,6 +21,14 @@ export function AppRouter() {
           element={
             <MainLayout>
               <HomePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <MainLayout>
+              <ProductsPage />
             </MainLayout>
           }
         />

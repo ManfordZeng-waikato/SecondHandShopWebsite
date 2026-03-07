@@ -169,6 +169,11 @@ export function AdminNewProductPage() {
       return;
     }
 
+    if (selectedFiles.length === 0) {
+      setError('At least one product image is required.');
+      return;
+    }
+
     if (selectedFiles.length > maxImagesPerProduct) {
       setError(`You can upload up to ${maxImagesPerProduct} images for a product.`);
       return;
@@ -323,7 +328,7 @@ export function AdminNewProductPage() {
         </FormControl>
 
         <Button variant="outlined" component="label" disabled={isFormBusy}>
-          Select product images
+          Select product images *
           <input
             hidden
             type="file"

@@ -1,5 +1,6 @@
 export type ProductStatus = 'Available' | 'Sold' | 'OffShelf';
 export type ProductCondition = 'LikeNew' | 'Good' | 'Fair' | 'NeedsRepair';
+export type ProductSortOption = 'newest' | 'price_asc' | 'price_desc';
 
 export interface ProductImage {
   id: string;
@@ -23,6 +24,38 @@ export interface Product {
   images: ProductImage[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductListItem {
+  id: string;
+  title: string;
+  slug: string;
+  price: number;
+  coverImageUrl: string | null;
+  categoryName: string | null;
+  status: ProductStatus;
+  condition: ProductCondition;
+  createdAt: string;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface ProductQueryParams {
+  page?: number;
+  pageSize?: number;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  status?: string;
+  sort?: ProductSortOption;
 }
 
 export interface CreateProductInput {

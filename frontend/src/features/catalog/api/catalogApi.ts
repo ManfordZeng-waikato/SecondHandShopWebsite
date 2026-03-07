@@ -1,5 +1,10 @@
 import type { Category } from '../../../entities/category/types';
-import type { Product } from '../../../entities/product/types';
+import type {
+  PagedResult,
+  Product,
+  ProductListItem,
+  ProductQueryParams,
+} from '../../../entities/product/types';
 import { httpClient } from '../../../shared/api/httpClient';
 import { env } from '../../../shared/config/env';
 import { getMockCategories, getMockProductBySlug, getMockProducts } from '../../../shared/mock/mockApi';
@@ -21,6 +26,17 @@ export async function fetchProducts(categoryId?: string): Promise<Product[]> {
   const response = await httpClient.get<Product[]>('/api/products', {
     params: categoryId ? { categoryId } : undefined,
   });
+  return response.data;
+}
+
+export async function fetchProductsPaged(
+  params: ProductQueryParams,
+  signal?: AbortSignal,
+): Promise<PagedResult<ProductListItem>> {
+  const response = await httpClient.get<PagedResult<ProductListItem>>(
+    '/api/products/search',
+    { params, signal },
+  );
   return response.data;
 }
 

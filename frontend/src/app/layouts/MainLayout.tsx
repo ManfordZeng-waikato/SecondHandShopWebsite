@@ -12,8 +12,8 @@ export function MainLayout({ children }: PropsWithChildren) {
             Pat's Shed
           </Typography>
           <Stack direction="row" spacing={1}>
-            <Button color="inherit" component={RouterLink} to="/">
-              Product List
+            <Button color="inherit" component={RouterLink} to="/products">
+              Products
             </Button>
             <Button color="inherit" component={RouterLink} to="/my-story">
               My Story

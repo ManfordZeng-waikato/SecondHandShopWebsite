@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   Box,
   Card,
@@ -8,9 +9,36 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { Link as RouterLink } from 'react-router-dom';
-import type { Product, ProductCondition } from '../../../entities/product/types';
+import type {
+  Product,
+  ProductCondition,
+  ProductListItem,
+} from '../../../entities/product/types';
 import { StatusChip } from '../../../shared/components/StatusChip';
+
+type ProductCardItem = Product | ProductListItem;
+
+function isFullProduct(item: ProductCardItem): item is Product {
+  return 'images' in item;
+}
+
+function getImageUrl(item: ProductCardItem): string {
+  if (isFullProduct(item)) {
+    const primary = item.images.find((i) => i.isPrimary) ?? item.images[0];
+    return primary?.displayUrl || '';
+  }
+  return item.coverImageUrl || '';
+}
+
+function getImageAlt(item: ProductCardItem): string {
+  if (isFullProduct(item)) {
+    const primary = item.images.find((i) => i.isPrimary) ?? item.images[0];
+    return primary?.altText ?? item.title;
+  }
+  return item.title;
+}
 
 const conditionLabels: Record<ProductCondition, string> = {
   LikeNew: 'Like New',
@@ -26,9 +54,26 @@ const conditionColors: Record<ProductCondition, string> = {
   NeedsRepair: '#c62828',
 };
 
-export function ProductCard({ product }: { product: Product }) {
-  const primaryImage = product.images.find((item) => item.isPrimary) ?? product.images[0];
-  const imageUrl = primaryImage?.displayUrl || 'https://picsum.photos/seed/fallback/800/500';
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-NZ', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+const isSold = (item: ProductCardItem) => item.status === 'Sold';
+
+export const ProductCard = memo(function ProductCard({
+  product,
+}: {
+  product: ProductCardItem;
+}) {
+  const imageUrl = getImageUrl(product);
+  const imageAlt = getImageAlt(product);
+  const sold = isSold(product);
+  const description = isFullProduct(product) ? product.description : undefined;
 
   return (
     <Card
@@ -38,27 +83,43 @@ export function ProductCard({ product }: { product: Product }) {
         flexDirection: 'column',
         borderRadius: 3,
         overflow: 'hidden',
-        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          transform: 'translateY(-3px)',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
         },
       }}
     >
       <CardActionArea
         component={RouterLink}
         to={`/products/${product.slug}`}
-        sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+        }}
       >
         <Box sx={{ position: 'relative' }}>
           <CardMedia
             component="img"
             height="220"
             image={imageUrl}
-            alt={primaryImage?.altText ?? product.title}
-            sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 1.5 }}
+            alt={imageAlt}
+            loading="lazy"
+            sx={{
+              objectFit: 'contain',
+              bgcolor: 'grey.100',
+              p: 1.5,
+              ...(sold && { filter: 'grayscale(35%)', opacity: 0.8 }),
+            }}
           />
-          {product.condition !== 'Good' && (
+
+          <Box sx={{ position: 'absolute', top: 10, left: 10 }}>
+            <StatusChip status={product.status} />
+          </Box>
+
+          {product.condition && (
             <Box sx={{ position: 'absolute', bottom: 10, right: 10 }}>
               <Chip
                 label={conditionLabels[product.condition]}
@@ -75,38 +136,48 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </Box>
 
-        <CardContent sx={{ flexGrow: 1, p: 2, '&:last-child': { pb: 2 } }}>
+        <CardContent
+          sx={{ flexGrow: 1, p: 2, '&:last-child': { pb: 2 } }}
+        >
           <Typography
             variant="subtitle1"
             fontWeight={700}
-            noWrap
-            gutterBottom
-            sx={{ lineHeight: 1.3 }}
-          >
-            {product.title}
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
             sx={{
+              lineHeight: 1.3,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              lineHeight: 1.5,
-              minHeight: '3em',
-              mb: 1,
+              minHeight: '2.6em',
             }}
           >
-            {product.description}
+            {product.title}
           </Typography>
 
-          <Box sx={{ mb: 1.5 }}>
-            <StatusChip status={product.status} />
-          </Box>
+          {description && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                lineHeight: 1.5,
+                minHeight: '3em',
+                mt: 0.5,
+              }}
+            >
+              {description}
+            </Typography>
+          )}
 
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            mt={1}
+          >
             <Typography variant="h6" fontWeight={800} color="primary.main">
               ${product.price.toFixed(2)}
             </Typography>
@@ -116,8 +187,22 @@ export function ProductCard({ product }: { product: Product }) {
               </Typography>
             )}
           </Stack>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            mt={0.5}
+          >
+            <AccessTimeIcon
+              sx={{ fontSize: 14, color: 'text.disabled' }}
+            />
+            <Typography variant="caption" color="text.disabled">
+              {formatDate(product.createdAt)}
+            </Typography>
+          </Stack>
         </CardContent>
       </CardActionArea>
     </Card>
   );
-}
+});

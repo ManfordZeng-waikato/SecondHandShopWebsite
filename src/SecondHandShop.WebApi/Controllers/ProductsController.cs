@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
+using SecondHandShop.Application.Contracts.Catalog;
+using SecondHandShop.Application.Contracts.Common;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -27,6 +29,34 @@ public class ProductsController(
             var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
             response.Add(ToProductResponse(product, images, categoryMap));
         }
+
+        return Ok(response);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<PagedResult<ProductListItemResponse>>> SearchAsync(
+        [FromQuery] ProductQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await productRepository.ListPagedForPublicAsync(parameters, cancellationToken);
+
+        var items = result.Items
+            .Select(dto => new ProductListItemResponse(
+                dto.Id,
+                dto.Title,
+                dto.Slug,
+                dto.Price,
+                dto.CoverImageKey is not null
+                    ? objectStorageService.BuildDisplayUrl(dto.CoverImageKey)
+                    : null,
+                dto.CategoryName,
+                dto.Status,
+                dto.Condition,
+                dto.CreatedAt))
+            .ToList();
+
+        var response = new PagedResult<ProductListItemResponse>(
+            items, result.Page, result.PageSize, result.TotalCount);
 
         return Ok(response);
     }
@@ -101,3 +131,14 @@ public sealed record ProductImageResponse(
     string? AltText,
     int SortOrder,
     bool IsPrimary);
+
+public sealed record ProductListItemResponse(
+    Guid Id,
+    string Title,
+    string Slug,
+    decimal Price,
+    string? CoverImageUrl,
+    string? CategoryName,
+    string Status,
+    string Condition,
+    DateTime CreatedAt);

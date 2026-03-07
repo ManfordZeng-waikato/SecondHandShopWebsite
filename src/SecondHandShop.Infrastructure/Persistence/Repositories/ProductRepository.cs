@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Contracts.Catalog;
+using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -32,6 +34,88 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         return await query
             .OrderByDescending(x => x.UpdatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<ProductListItemDto>> ListPagedForPublicAsync(
+        ProductQueryParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.Status == ProductStatus.Available || p.Status == ProductStatus.Sold)
+            .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
+
+        if (!string.IsNullOrWhiteSpace(parameters.Category))
+        {
+            var categorySlug = parameters.Category.Trim().ToLowerInvariant();
+            query = query.Where(p =>
+                dbContext.Categories.Any(c => c.Id == p.CategoryId && c.Slug == categorySlug));
+        }
+
+        if (parameters.MinPrice.HasValue)
+            query = query.Where(p => p.Price >= parameters.MinPrice.Value);
+
+        if (parameters.MaxPrice.HasValue)
+            query = query.Where(p => p.Price <= parameters.MaxPrice.Value);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Status)
+            && Enum.TryParse<ProductStatus>(parameters.Status, ignoreCase: true, out var statusEnum)
+            && statusEnum is ProductStatus.Available or ProductStatus.Sold)
+        {
+            query = query.Where(p => p.Status == statusEnum);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var page = parameters.SafePage;
+        var pageSize = parameters.SafePageSize;
+
+        IOrderedQueryable<Product> orderedQuery = parameters.Sort switch
+        {
+            "price_asc" => query.OrderBy(p => p.Price).ThenByDescending(p => p.CreatedAt),
+            "price_desc" => query.OrderByDescending(p => p.Price).ThenByDescending(p => p.CreatedAt),
+            _ => query.OrderByDescending(p => p.CreatedAt),
+        };
+
+        var projected = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new
+            {
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.Status,
+                p.Condition,
+                p.CreatedAt,
+                CoverImageKey = dbContext.ProductImages
+                    .Where(i => i.ProductId == p.Id)
+                    .OrderByDescending(i => i.IsPrimary)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.CloudStorageKey)
+                    .FirstOrDefault(),
+                CategoryName = dbContext.Categories
+                    .Where(c => c.Id == p.CategoryId)
+                    .Select(c => c.Name)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        var items = projected
+            .Select(p => new ProductListItemDto(
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.CoverImageKey,
+                p.CategoryName,
+                p.Status.ToString(),
+                p.Condition.ToString(),
+                p.CreatedAt))
+            .ToList();
+
+        return new PagedResult<ProductListItemDto>(items, page, pageSize, totalCount);
     }
 
     public async Task<IReadOnlyList<Product>> ListForAdminAsync(ProductStatus? status, CancellationToken cancellationToken = default)
