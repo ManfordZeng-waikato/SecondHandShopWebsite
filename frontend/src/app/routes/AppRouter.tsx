@@ -19,7 +19,7 @@ export function AppRouter() {
         <Route
           path="/"
           element={
-            <MainLayout>
+            <MainLayout fullWidth>
               <HomePage />
             </MainLayout>
           }
