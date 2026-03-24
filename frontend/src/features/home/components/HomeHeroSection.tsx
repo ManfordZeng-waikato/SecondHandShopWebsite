@@ -83,7 +83,7 @@ export function HomeHeroSection() {
                 mb: 4,
               }}
             >
-              Quality pre-loved furniture, homewares &amp; more — curated with care from the Waikato.
+              Quality Second Hand Furniture &amp; Antiques.
             </Typography>
 
             <Button

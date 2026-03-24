@@ -3,6 +3,7 @@ import { Box, Container, Link, Stack, Typography } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
+import PhoneIcon from '@mui/icons-material/Phone';
 import { Navbar } from '../components/Navbar';
 
 interface MainLayoutProps extends PropsWithChildren {
@@ -77,6 +78,15 @@ export function MainLayout({ children, fullWidth }: MainLayoutProps) {
               >
                 <InstagramIcon fontSize="small" />
                 Instagram
+              </Link>
+              <Link
+                href="tel:+6421735836"
+                underline="hover"
+                color="text.primary"
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: '0.95rem', fontWeight: 500 }}
+              >
+                <PhoneIcon fontSize="small" />
+                021 735 836
               </Link>
             </Stack>
           </Stack>
