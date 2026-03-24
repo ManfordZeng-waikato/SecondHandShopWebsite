@@ -5,7 +5,6 @@ import {
   CardActionArea,
   CardContent,
   CardMedia,
-  Chip,
   Stack,
   Typography,
 } from '@mui/material';
@@ -13,7 +12,6 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { Link as RouterLink } from 'react-router-dom';
 import type {
   Product,
-  ProductCondition,
   ProductListItem,
 } from '../../../entities/product/types';
 import { StatusChip } from '../../../shared/components/StatusChip';
@@ -39,20 +37,6 @@ function getImageAlt(item: ProductCardItem): string {
   }
   return item.title;
 }
-
-const conditionLabels: Record<ProductCondition, string> = {
-  LikeNew: 'Like New',
-  Good: 'Good',
-  Fair: 'Fair',
-  NeedsRepair: 'Needs Repair',
-};
-
-const conditionColors: Record<ProductCondition, string> = {
-  LikeNew: '#2e7d32',
-  Good: '#1565c0',
-  Fair: '#e65100',
-  NeedsRepair: '#c62828',
-};
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -118,22 +102,6 @@ export const ProductCard = memo(function ProductCard({
           <Box sx={{ position: 'absolute', top: 10, left: 10 }}>
             <StatusChip status={product.status} />
           </Box>
-
-          {product.condition && (
-            <Box sx={{ position: 'absolute', bottom: 10, right: 10 }}>
-              <Chip
-                label={conditionLabels[product.condition]}
-                size="small"
-                sx={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  height: 22,
-                  color: '#fff',
-                  bgcolor: conditionColors[product.condition],
-                }}
-              />
-            </Box>
-          )}
         </Box>
 
         <CardContent

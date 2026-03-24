@@ -46,7 +46,7 @@ public class AdminProductsController(
                 product.Title,
                 product.Slug,
                 product.Price,
-                product.Condition.ToString(),
+                product.Condition?.ToString(),
                 product.Status.ToString(),
                 categoryName,
                 images.Count,
@@ -61,9 +61,14 @@ public class AdminProductsController(
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] CreateAdminProductRequest request, CancellationToken cancellationToken)
     {
-        if (!TryParseCondition(request.Condition, out var condition))
+        ProductCondition? condition = null;
+        if (!string.IsNullOrWhiteSpace(request.Condition))
         {
-            return BadRequest(new ErrorResponse($"Unsupported product condition '{request.Condition}'."));
+            if (!TryParseCondition(request.Condition, out var parsed))
+            {
+                return BadRequest(new ErrorResponse($"Unsupported product condition '{request.Condition}'."));
+            }
+            condition = parsed;
         }
 
         try
@@ -74,9 +79,9 @@ public class AdminProductsController(
                     request.Slug,
                     request.Description,
                     request.Price,
-                    condition,
                     request.CategoryId,
-                    request.AdminUserId),
+                    request.AdminUserId,
+                    condition),
                 cancellationToken);
 
             return Created($"/api/lord/products/{productId}", new CreateProductResponse(productId));
@@ -232,9 +237,9 @@ public sealed record CreateAdminProductRequest(
     string Slug,
     string Description,
     decimal Price,
-    string Condition,
     Guid CategoryId,
-    Guid? AdminUserId);
+    Guid? AdminUserId,
+    string? Condition = null);
 
 public sealed record CreateProductResponse(Guid Id);
 
@@ -264,7 +269,7 @@ public sealed record AdminProductListItem(
     string Title,
     string Slug,
     decimal Price,
-    string Condition,
+    string? Condition,
     string Status,
     string? CategoryName,
     int ImageCount,

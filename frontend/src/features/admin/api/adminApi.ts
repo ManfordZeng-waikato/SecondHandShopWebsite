@@ -24,7 +24,6 @@ export interface AdminProductListItem {
   title: string;
   slug: string;
   price: number;
-  condition: string;
   status: ProductStatus;
   categoryName?: string;
   imageCount: number;

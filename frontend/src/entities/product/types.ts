@@ -1,5 +1,4 @@
 export type ProductStatus = 'Available' | 'Sold' | 'OffShelf';
-export type ProductCondition = 'LikeNew' | 'Good' | 'Fair' | 'NeedsRepair';
 export type ProductSortOption = 'newest' | 'price_asc' | 'price_desc';
 
 export interface ProductImage {
@@ -17,7 +16,6 @@ export interface Product {
   slug: string;
   description: string;
   price: number;
-  condition: ProductCondition;
   status: ProductStatus;
   categoryId: string;
   categoryName?: string;
@@ -34,7 +32,6 @@ export interface ProductListItem {
   coverImageUrl: string | null;
   categoryName: string | null;
   status: ProductStatus;
-  condition: ProductCondition;
   createdAt: string;
 }
 
@@ -64,6 +61,5 @@ export interface CreateProductInput {
   slug: string;
   description: string;
   price: number;
-  condition: ProductCondition;
   categoryId: string;
 }

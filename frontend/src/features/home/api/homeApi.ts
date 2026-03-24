@@ -11,7 +11,6 @@ const MOCK_FEATURED: ProductListItem[] = [
     coverImageUrl: 'https://picsum.photos/seed/oak-table/400/300',
     categoryName: 'Furniture',
     status: 'Available',
-    condition: 'Good',
     createdAt: '2026-03-20T10:00:00Z',
   },
   {
@@ -22,7 +21,6 @@ const MOCK_FEATURED: ProductListItem[] = [
     coverImageUrl: 'https://picsum.photos/seed/lounge-chair/400/300',
     categoryName: 'Furniture',
     status: 'Available',
-    condition: 'LikeNew',
     createdAt: '2026-03-18T14:30:00Z',
   },
   {
@@ -33,7 +31,6 @@ const MOCK_FEATURED: ProductListItem[] = [
     coverImageUrl: 'https://picsum.photos/seed/bookshelf/400/300',
     categoryName: 'Furniture',
     status: 'Available',
-    condition: 'Good',
     createdAt: '2026-03-15T09:00:00Z',
   },
   {
@@ -44,7 +41,6 @@ const MOCK_FEATURED: ProductListItem[] = [
     coverImageUrl: 'https://picsum.photos/seed/table-lamp/400/300',
     categoryName: 'Home Appliances',
     status: 'Sold',
-    condition: 'LikeNew',
     createdAt: '2026-03-12T11:00:00Z',
   },
   {
@@ -55,7 +51,6 @@ const MOCK_FEATURED: ProductListItem[] = [
     coverImageUrl: 'https://picsum.photos/seed/pine-table/400/300',
     categoryName: 'Furniture',
     status: 'Available',
-    condition: 'Fair',
     createdAt: '2026-03-10T16:00:00Z',
   },
 ];

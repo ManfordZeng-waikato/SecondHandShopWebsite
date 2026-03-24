@@ -43,10 +43,10 @@ public class AdminCatalogService(
             request.Slug,
             request.Description,
             request.Price,
-            request.Condition,
             request.CategoryId,
             request.AdminUserId,
-            clock.UtcNow);
+            clock.UtcNow,
+            request.Condition);
 
         await productRepository.AddAsync(product, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

@@ -21,9 +21,9 @@ public sealed record CreateProductRequest(
     string Slug,
     string Description,
     decimal Price,
-    ProductCondition Condition,
     Guid CategoryId,
-    Guid? AdminUserId);
+    Guid? AdminUserId,
+    ProductCondition? Condition = null);
 
 public sealed record CreateProductImageUploadUrlRequest(
     Guid ProductId,

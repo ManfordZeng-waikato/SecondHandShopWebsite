@@ -111,7 +111,7 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
                 p.CoverImageKey,
                 p.CategoryName,
                 p.Status.ToString(),
-                p.Condition.ToString(),
+                p.Condition?.ToString(),
                 p.CreatedAt))
             .ToList();
 

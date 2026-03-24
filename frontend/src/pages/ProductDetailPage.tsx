@@ -92,7 +92,6 @@ export function ProductDetailPage() {
           </Stack>
           <Typography variant="h6">${productQuery.data.price.toFixed(2)}</Typography>
           <Typography color="text.secondary">{productQuery.data.description}</Typography>
-          <Typography variant="body2">Condition: {productQuery.data.condition}</Typography>
           <Box>
             <Button
               variant="contained"

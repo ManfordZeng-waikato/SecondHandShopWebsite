@@ -29,10 +29,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .IsRequired();
 
         builder.Property(x => x.Condition)
-            .HasConversion<byte>()
-            .HasDefaultValue(ProductCondition.Good)
-            .HasSentinel((ProductCondition)0)
-            .IsRequired();
+            .HasConversion<byte?>()
+            .IsRequired(false);
 
         builder.Property(x => x.Status)
             .HasConversion<byte>()

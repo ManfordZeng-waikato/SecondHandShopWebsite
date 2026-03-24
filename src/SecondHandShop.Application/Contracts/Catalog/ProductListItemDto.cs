@@ -8,5 +8,5 @@ public sealed record ProductListItemDto(
     string? CoverImageKey,
     string? CategoryName,
     string Status,
-    string Condition,
+    string? Condition,
     DateTime CreatedAt);

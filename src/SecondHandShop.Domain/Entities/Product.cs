@@ -15,7 +15,7 @@ public class Product : AuditableEntity
     public string Slug { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
-    public ProductCondition Condition { get; private set; }
+    public ProductCondition? Condition { get; private set; }
     public ProductStatus Status { get; private set; } = ProductStatus.Available;
     public Guid CategoryId { get; private set; }
     public DateTime? SoldAt { get; private set; }
@@ -26,10 +26,10 @@ public class Product : AuditableEntity
         string slug,
         string description,
         decimal price,
-        ProductCondition condition,
         Guid categoryId,
         Guid? createdByAdminUserId,
-        DateTime utcNow)
+        DateTime utcNow,
+        ProductCondition? condition = null)
     {
         ValidatePrice(price);
 
@@ -61,10 +61,10 @@ public class Product : AuditableEntity
         string slug,
         string description,
         decimal price,
-        ProductCondition condition,
         Guid categoryId,
         Guid? updatedByAdminUserId,
-        DateTime utcNow)
+        DateTime utcNow,
+        ProductCondition? condition = null)
     {
         ValidatePrice(price);
 

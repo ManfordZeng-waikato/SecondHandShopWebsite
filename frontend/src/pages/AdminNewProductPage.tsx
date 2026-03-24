@@ -15,7 +15,6 @@ import {
   Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import type { ProductCondition } from '../entities/product/types';
 import {
   addProductImage,
   createProduct,
@@ -34,7 +33,6 @@ interface NewProductFormState {
   slug: string;
   description: string;
   price: string;
-  condition: ProductCondition;
   categoryId: string;
 }
 
@@ -43,11 +41,8 @@ const initialFormState: NewProductFormState = {
   slug: '',
   description: '',
   price: '',
-  condition: 'Good',
   categoryId: '',
 };
-
-const conditionOptions: ProductCondition[] = ['LikeNew', 'Good', 'Fair', 'NeedsRepair'];
 const maxImagesPerProduct = 5;
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -187,7 +182,6 @@ export function AdminNewProductPage() {
         slug: formState.slug.trim(),
         description: formState.description.trim(),
         price,
-        condition: formState.condition,
         categoryId: formState.categoryId,
       });
 
@@ -294,23 +288,6 @@ export function AdminNewProductPage() {
           value={formState.price}
           onChange={(event) => setFormState((prev) => ({ ...prev, price: event.target.value }))}
         />
-        <FormControl>
-          <InputLabel id="condition-select-label">Condition</InputLabel>
-          <Select
-            labelId="condition-select-label"
-            value={formState.condition}
-            label="Condition"
-            onChange={(event) =>
-              setFormState((prev) => ({ ...prev, condition: event.target.value as ProductCondition }))
-            }
-          >
-            {conditionOptions.map((condition) => (
-              <MenuItem key={condition} value={condition}>
-                {condition}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
         <FormControl>
           <InputLabel id="category-select-label">Category</InputLabel>
           <Select
