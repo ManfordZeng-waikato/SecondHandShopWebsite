@@ -43,6 +43,7 @@ export interface PagedResult<T> {
   totalPages: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  isFallback: boolean;
 }
 
 export interface ProductQueryParams {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.Contracts.Catalog;
@@ -34,11 +35,20 @@ public class ProductsController(
     }
 
     [HttpGet("search")]
+    [EnableRateLimiting("SearchRateLimit")]
     public async Task<ActionResult<PagedResult<ProductListItemResponse>>> SearchAsync(
         [FromQuery] ProductQueryParameters parameters,
         CancellationToken cancellationToken)
     {
         var result = await productRepository.ListPagedForPublicAsync(parameters, cancellationToken);
+
+        var isFallback = false;
+        if (result.TotalCount == 0 && parameters.SafeSearch is not null)
+        {
+            var fallbackParams = parameters with { Search = null, Page = 1 };
+            result = await productRepository.ListPagedForPublicAsync(fallbackParams, cancellationToken);
+            isFallback = true;
+        }
 
         var items = result.Items
             .Select(dto => new ProductListItemResponse(
@@ -56,7 +66,7 @@ public class ProductsController(
             .ToList();
 
         var response = new PagedResult<ProductListItemResponse>(
-            items, result.Page, result.PageSize, result.TotalCount);
+            items, result.Page, result.PageSize, result.TotalCount, isFallback);
 
         return Ok(response);
     }

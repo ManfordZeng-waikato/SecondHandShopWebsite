@@ -10,6 +10,7 @@ import {
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   fetchCategories,
   fetchProductsPaged,
@@ -119,10 +120,29 @@ export function ProductsPage() {
           </Stack>
         ) : result ? (
           <>
-            <Typography variant="body2" color="text.secondary" mb={2}>
-              {result.totalCount}{' '}
-              {result.totalCount === 1 ? 'item' : 'items'} found
-            </Typography>
+            {result.isFallback && params.search ? (
+              <Alert
+                icon={<InfoOutlinedIcon />}
+                severity="info"
+                sx={{ borderRadius: 2 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => setFilters({ search: undefined })}
+                  >
+                    Clear search
+                  </Button>
+                }
+              >
+                No results for "<strong>{params.search}</strong>". Here are our latest products instead.
+              </Alert>
+            ) : (
+              <Typography variant="body2" color="text.secondary" mb={2}>
+                {result.totalCount}{' '}
+                {result.totalCount === 1 ? 'item' : 'items'} found
+              </Typography>
+            )}
 
             <ProductsGrid items={result.items} />
 

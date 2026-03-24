@@ -62,6 +62,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(x => x.Slug)
             .IsUnique();
 
+        builder.HasIndex(x => x.Title);
+
         builder.HasIndex(x => new { x.Status, x.UpdatedAt });
         builder.HasIndex(x => new { x.CategoryId, x.Status });
 

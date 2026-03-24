@@ -45,9 +45,16 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             .Where(p => p.Status == ProductStatus.Available || p.Status == ProductStatus.Sold)
             .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
 
-        if (!string.IsNullOrWhiteSpace(parameters.Category))
+        var safeSearch = parameters.SafeSearch;
+        if (safeSearch is not null)
         {
-            var categorySlug = parameters.Category.Trim().ToLowerInvariant();
+            query = query.Where(p => p.Title.Contains(safeSearch));
+        }
+
+        var safeCategory = parameters.SafeCategory;
+        if (safeCategory is not null)
+        {
+            var categorySlug = safeCategory.ToLowerInvariant();
             query = query.Where(p =>
                 dbContext.Categories.Any(c => c.Id == p.CategoryId && c.Slug == categorySlug));
         }
