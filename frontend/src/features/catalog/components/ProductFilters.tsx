@@ -29,7 +29,7 @@ export function ProductFilters({
   const [localMaxPrice, setLocalMaxPrice] = useState(
     params.maxPrice?.toString() ?? '',
   );
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setLocalMinPrice(params.minPrice?.toString() ?? '');

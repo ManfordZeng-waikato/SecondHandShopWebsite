@@ -7,7 +7,7 @@ export function HomeHeroSection() {
     <Box
       component="section"
       aria-label="Hero"
-      sx={{ bgcolor: '#faf8f5', overflow: 'hidden' }}
+      sx={{ bgcolor: '#f0ebe4', overflow: 'hidden' }}
     >
       <Container maxWidth="lg">
         <Stack

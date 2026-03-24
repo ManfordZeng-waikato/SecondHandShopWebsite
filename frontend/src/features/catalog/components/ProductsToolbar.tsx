@@ -26,7 +26,7 @@ export function ProductsToolbar({
       sx={{
         p: 2.5,
         borderRadius: 3,
-        bgcolor: '#faf8f5',
+        bgcolor: '#f0ebe4',
         backgroundImage: 'url(/Title.svg)',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
