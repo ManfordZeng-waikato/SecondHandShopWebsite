@@ -4,7 +4,7 @@ export function MyStoryPage() {
   return (
     <Stack spacing={2}>
       <Typography variant="h3">My Story</Typography>
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3,bgcolor:'#faf8f5', backgroundImage: 'url(/Title.svg)', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', backgroundSize: '90%' }}>
         <Stack spacing={2}>
           <Typography variant="h6" sx={{ color: '#3f3f3f' }} fontWeight={400}>
             Hi, my name is Pat Jackson. For many years I have been a teacher in primary schools

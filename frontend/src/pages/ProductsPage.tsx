@@ -50,26 +50,27 @@ export function ProductsPage() {
   const isFetching = productsQuery.isFetching;
 
   return (
-    <Stack spacing={3}>
-      {/* Page header */}
-      <Box>
-        <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
-          <StorefrontIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-          <Typography variant="h4" fontWeight={800}>
-            All Products
-          </Typography>
-        </Stack>
-        <Typography variant="body1" color="text.secondary">
-          Browse our curated collection of quality second-hand furniture
-        </Typography>
-      </Box>
+        <Stack spacing={3}>
+          {/* Page header */}
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
+              <StorefrontIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+              <Typography variant="h4" fontWeight={800}>
+                All Products
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary">
+              Browse our curated collection of quality second-hand furniture
+            </Typography>
+          </Box>
 
       {/* Filters toolbar */}
-      <ProductsToolbar
-        params={params}
-        categories={categoriesQuery.data ?? []}
-        onFilterChange={setFilters}
-      />
+        <ProductsToolbar
+          params={params}
+          categories={categoriesQuery.data ?? []}
+          onFilterChange={setFilters}
+        />
+      
 
       {/* Product grid */}
       <Box

@@ -7,7 +7,14 @@ export function OurStorySection() {
     <Box
       component="section"
       aria-label="Our story"
-      sx={{ bgcolor: '#f0ebe4', py: { xs: 6, md: 10 } }}
+      sx={{
+        bgcolor: '#f0ebe4',
+        py: { xs: 6, md: 10 },
+        backgroundImage: 'url(/Title.svg)',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        backgroundSize: '90%',
+      }}
     >
       <Container maxWidth="sm">
         <Box sx={{ textAlign: 'center' }}>
