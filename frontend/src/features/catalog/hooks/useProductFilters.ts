@@ -29,6 +29,7 @@ export function useProductFilters() {
       page: parseIntParam(searchParams.get('page'), 1),
       pageSize: parseIntParam(searchParams.get('pageSize'), DEFAULT_PAGE_SIZE),
       category: searchParams.get('category') || undefined,
+      search: searchParams.get('search') || undefined,
       minPrice: parseFloatParam(searchParams.get('minPrice')),
       maxPrice: parseFloatParam(searchParams.get('maxPrice')),
       status: searchParams.get('status') || undefined,

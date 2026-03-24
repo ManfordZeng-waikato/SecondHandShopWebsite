@@ -1,9 +1,9 @@
 import type { PropsWithChildren } from 'react';
-import { AppBar, Box, Button, Container, Link, Stack, Toolbar, Typography } from '@mui/material';
+import { Box, Container, Link, Stack, Typography } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
-import { Link as RouterLink } from 'react-router-dom';
+import { Navbar } from '../components/Navbar';
 
 interface MainLayoutProps extends PropsWithChildren {
   fullWidth?: boolean;
@@ -12,26 +12,7 @@ interface MainLayoutProps extends PropsWithChildren {
 export function MainLayout({ children, fullWidth }: MainLayoutProps) {
   return (
     <Box minHeight="100vh" display="flex" flexDirection="column">
-      <AppBar position="static">
-        <Toolbar>
-          <Typography
-            variant="h6"
-            component={RouterLink}
-            to="/"
-            sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
-          >
-            Pat's Shed
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button color="inherit" component={RouterLink} to="/products">
-              Products
-            </Button>
-            <Button color="inherit" component={RouterLink} to="/my-story">
-              My Story
-            </Button>
-          </Stack>
-        </Toolbar>
-      </AppBar>
+      <Navbar />
       {fullWidth ? (
         <Box sx={{ flexGrow: 1 }}>{children}</Box>
       ) : (

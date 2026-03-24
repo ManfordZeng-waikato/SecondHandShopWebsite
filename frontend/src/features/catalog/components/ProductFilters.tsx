@@ -8,6 +8,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import type { Category } from '../../../entities/category/types';
 import type { ProductQueryParams } from '../../../entities/product/types';
 
@@ -57,6 +58,24 @@ export function ProductFilters({
 
   return (
     <Stack spacing={2}>
+      {/* Active search term */}
+      {params.search && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            icon={<SearchIcon sx={{ fontSize: '1rem !important' }} />}
+            label={`"${params.search}"`}
+            onDelete={() => onFilterChange({ search: undefined })}
+            sx={{
+              fontWeight: 600,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '& .MuiChip-deleteIcon': { color: 'inherit', opacity: 0.7, '&:hover': { opacity: 1 } },
+              '& .MuiChip-icon': { color: 'inherit' },
+            }}
+          />
+        </Box>
+      )}
+
       {/* Category chips */}
       <Box>
         <Typography
