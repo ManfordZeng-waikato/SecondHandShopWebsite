@@ -27,7 +27,7 @@ export function HomeHeroSection() {
           >
             <Box
               component="img"
-              src="/9987_Pats_shed.svg"
+              src="/LogoHome.svg"
               alt="Pat's Shed — quality second-hand furniture"
               sx={{
                 display: 'block',

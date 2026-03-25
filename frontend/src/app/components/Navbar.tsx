@@ -137,20 +137,10 @@ function DesktopNav({
       >
         <Box
           component="img"
-          src="/logo.svg"
+          src="/Title.svg"
           alt="Pat's Shed"
           sx={{ height: 36, width: 'auto' }}
         />
-        <Box
-          sx={{
-            fontWeight: 700,
-            fontSize: '1.15rem',
-            letterSpacing: '-0.02em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Pat's Shed
-        </Box>
       </Box>
 
       {/* Nav links */}

@@ -29,7 +29,7 @@ export function AppRouter() {
         <Route
           path="/products"
           element={
-            <MainLayout>
+            <MainLayout fullWidth>
               <ProductsPage />
             </MainLayout>
           }

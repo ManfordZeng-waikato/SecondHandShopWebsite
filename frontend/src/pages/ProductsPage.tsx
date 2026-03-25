@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Container,
   Stack,
   Typography,
 } from '@mui/material';
@@ -51,7 +52,8 @@ export function ProductsPage() {
   const isFetching = productsQuery.isFetching;
 
   return (
-        <Stack spacing={3}>
+    <Container sx={{ py: 4 }}>
+      <Stack spacing={3}>
           {/* Page header */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
@@ -65,99 +67,99 @@ export function ProductsPage() {
             </Typography>
           </Box>
 
-      {/* Filters toolbar */}
-        <ProductsToolbar
-          params={params}
-          categories={categoriesQuery.data ?? []}
-          onFilterChange={setFilters}
-        />
-      
+          {/* Filters toolbar */}
+          <ProductsToolbar
+            params={params}
+            categories={categoriesQuery.data ?? []}
+            onFilterChange={setFilters}
+          />
 
-      {/* Product grid */}
-      <Box
-        ref={gridRef}
-        sx={{
-          minHeight: 400,
-          opacity: isFetching && !isInitialLoading ? 0.6 : 1,
-          transition: 'opacity 0.2s ease',
-        }}
-      >
-        {isInitialLoading ? (
-          <ProductsSkeleton />
-        ) : isError ? (
-          <Alert
-            severity="error"
-            action={
-              <Button
-                color="inherit"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={() => productsQuery.refetch()}
-              >
-                Retry
-              </Button>
-            }
+          {/* Product grid */}
+          <Box
+            ref={gridRef}
+            sx={{
+              minHeight: 400,
+              opacity: isFetching && !isInitialLoading ? 0.6 : 1,
+              transition: 'opacity 0.2s ease',
+            }}
           >
-            Failed to load products. Please try again.
-          </Alert>
-        ) : result && result.items.length === 0 ? (
-          <Stack
-            alignItems="center"
-            justifyContent="center"
-            spacing={2}
-            sx={{ py: 10, color: 'text.secondary' }}
-          >
-            <SearchOffIcon sx={{ fontSize: 64, opacity: 0.4 }} />
-            <Typography variant="h6" fontWeight={600}>
-              No products found
-            </Typography>
-            <Typography variant="body2">
-              Try adjusting your filters or check back later.
-            </Typography>
-            <Button variant="outlined" size="small" onClick={resetFilters}>
-              Clear all filters
-            </Button>
-          </Stack>
-        ) : result ? (
-          <>
-            {result.isFallback && params.search ? (
+            {isInitialLoading ? (
+              <ProductsSkeleton />
+            ) : isError ? (
               <Alert
-                icon={<InfoOutlinedIcon />}
-                severity="info"
-                sx={{ borderRadius: 2 }}
+                severity="error"
                 action={
                   <Button
                     color="inherit"
                     size="small"
-                    onClick={() => setFilters({ search: undefined })}
+                    startIcon={<RefreshIcon />}
+                    onClick={() => productsQuery.refetch()}
                   >
-                    Clear search
+                    Retry
                   </Button>
                 }
               >
-                No results for "<strong>{params.search}</strong>". Here are our latest products instead.
+                Failed to load products. Please try again.
               </Alert>
-            ) : (
-              <Typography variant="body2" color="text.secondary" mb={2}>
-                {result.totalCount}{' '}
-                {result.totalCount === 1 ? 'item' : 'items'} found
-              </Typography>
-            )}
+            ) : result && result.items.length === 0 ? (
+              <Stack
+                alignItems="center"
+                justifyContent="center"
+                spacing={2}
+                sx={{ py: 10, color: 'text.secondary' }}
+              >
+                <SearchOffIcon sx={{ fontSize: 64, opacity: 0.4 }} />
+                <Typography variant="h6" fontWeight={600}>
+                  No products found
+                </Typography>
+                <Typography variant="body2">
+                  Try adjusting your filters or check back later.
+                </Typography>
+                <Button variant="outlined" size="small" onClick={resetFilters}>
+                  Clear all filters
+                </Button>
+              </Stack>
+            ) : result ? (
+              <>
+                {result.isFallback && params.search ? (
+                  <Alert
+                    icon={<InfoOutlinedIcon />}
+                    severity="info"
+                    sx={{ borderRadius: 2 }}
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        onClick={() => setFilters({ search: undefined })}
+                      >
+                        Clear search
+                      </Button>
+                    }
+                  >
+                    No results for "<strong>{params.search}</strong>". Here are our latest products instead.
+                  </Alert>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    {result.totalCount}{' '}
+                    {result.totalCount === 1 ? 'item' : 'items'} found
+                  </Typography>
+                )}
 
-            <ProductsGrid items={result.items} />
+                <ProductsGrid items={result.items} />
 
-            {result.totalPages > 1 && (
-              <Box display="flex" justifyContent="center" mt={4}>
-                <Pagination
-                  page={result.page}
-                  totalPages={result.totalPages}
-                  onChange={handlePageChange}
-                />
-              </Box>
-            )}
-          </>
-        ) : null}
-      </Box>
-    </Stack>
+                {result.totalPages > 1 && (
+                  <Box display="flex" justifyContent="center" mt={4}>
+                    <Pagination
+                      page={result.page}
+                      totalPages={result.totalPages}
+                      onChange={handlePageChange}
+                    />
+                  </Box>
+                )}
+              </>
+            ) : null}
+          </Box>
+      </Stack>
+    </Container>
   );
 }
