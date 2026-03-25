@@ -21,6 +21,14 @@ public interface IInquiryRepository
         string messageHash,
         DateTime sinceUtc,
         CancellationToken cancellationToken = default);
+    Task<DateTime?> GetIpCooldownUntilAsync(
+        string requestIpAddress,
+        CancellationToken cancellationToken = default);
+    Task UpsertIpCooldownAsync(
+        string requestIpAddress,
+        DateTime blockedUntilUtc,
+        DateTime updatedAtUtc,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Inquiry>> ListPendingEmailAsync(DateTime utcNow, CancellationToken cancellationToken = default);
     Task<Inquiry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PagedResult<CustomerInquiryItemDto>> ListPagedByCustomerIdForAdminAsync(

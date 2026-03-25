@@ -54,6 +54,36 @@ public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepo
             .AnyAsync(cancellationToken);
     }
 
+    public async Task<DateTime?> GetIpCooldownUntilAsync(
+        string requestIpAddress,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.InquiryIpCooldowns
+            .AsNoTracking()
+            .Where(x => x.IpAddress == requestIpAddress)
+            .Select(x => (DateTime?)x.BlockedUntil)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task UpsertIpCooldownAsync(
+        string requestIpAddress,
+        DateTime blockedUntilUtc,
+        DateTime updatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var cooldown = await dbContext.InquiryIpCooldowns
+            .FirstOrDefaultAsync(x => x.IpAddress == requestIpAddress, cancellationToken);
+
+        if (cooldown is null)
+        {
+            cooldown = InquiryIpCooldown.Create(requestIpAddress, blockedUntilUtc, updatedAtUtc);
+            await dbContext.InquiryIpCooldowns.AddAsync(cooldown, cancellationToken);
+            return;
+        }
+
+        cooldown.SetCooldown(blockedUntilUtc, updatedAtUtc);
+    }
+
     public async Task<IReadOnlyList<Inquiry>> ListPendingEmailAsync(DateTime utcNow, CancellationToken cancellationToken = default)
     {
         return await dbContext.Inquiries

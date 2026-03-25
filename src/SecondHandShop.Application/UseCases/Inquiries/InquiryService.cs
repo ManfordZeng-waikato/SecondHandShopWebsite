@@ -19,6 +19,7 @@ public class InquiryService(
     private static readonly TimeSpan IpProductWindow = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan EmailProductWindow = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan MessageHashWindow = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan IpCooldownDuration = TimeSpan.FromMinutes(5);
     private const int MaxIpProductRequests = 2;
     private const int MaxEmailProductRequests = 1;
 
@@ -37,13 +38,29 @@ public class InquiryService(
         var messageHash = ComputeMessageHash(command.Message);
         var utcNow = clock.UtcNow;
 
-        await EnforceAntiSpamRulesAsync(
-            command.ProductId,
-            normalizedRequestIpAddress,
-            normalizedEmail,
-            messageHash,
-            utcNow,
-            cancellationToken);
+        await EnsureIpNotInCooldownAsync(normalizedRequestIpAddress, utcNow, cancellationToken);
+
+        try
+        {
+            await EnforceAntiSpamRulesAsync(
+                command.ProductId,
+                normalizedRequestIpAddress,
+                normalizedEmail,
+                messageHash,
+                utcNow,
+                cancellationToken);
+        }
+        catch (InquiryRateLimitExceededException ex)
+        {
+            await inquiryRepository.UpsertIpCooldownAsync(
+                normalizedRequestIpAddress,
+                utcNow.Add(IpCooldownDuration),
+                utcNow,
+                cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            throw new InquiryRateLimitExceededException(
+                $"{ex.Message} This IP is temporarily blocked for 5 minutes.");
+        }
 
         var customer = await ResolveCustomerAsync(
             normalizedName,
@@ -128,6 +145,22 @@ public class InquiryService(
         {
             throw new InquiryRateLimitExceededException("The same message was already submitted in the last 30 minutes.");
         }
+    }
+
+    private async Task EnsureIpNotInCooldownAsync(
+        string requestIpAddress,
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var blockedUntil = await inquiryRepository.GetIpCooldownUntilAsync(requestIpAddress, cancellationToken);
+        if (blockedUntil is null || blockedUntil <= utcNow)
+        {
+            return;
+        }
+
+        var retryAfterSeconds = (int)Math.Ceiling((blockedUntil.Value - utcNow).TotalSeconds);
+        throw new InquiryRateLimitExceededException(
+            $"This IP is temporarily blocked due to repeated limit violations. Try again in {retryAfterSeconds} seconds.");
     }
 
     private async Task<Customer> ResolveCustomerAsync(
