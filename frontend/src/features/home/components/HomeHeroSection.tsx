@@ -22,7 +22,7 @@ export function HomeHeroSection() {
               flex: { md: '1 1 55%' },
               width: '100%',
               maxWidth: { xs: 400, md: 'none' },
-              order: { xs: 1, md: 2 },
+              order: { xs: 1, md: 1 },
             }}
           >
             <Box
@@ -45,7 +45,7 @@ export function HomeHeroSection() {
             sx={{
               flex: { md: '1 1 45%' },
               textAlign: { xs: 'center', md: 'left' },
-              order: { xs: 2, md: 1 },
+              order: { xs: 2, md: 2 },
             }}
           >
             <Typography
