@@ -6,6 +6,12 @@ public interface IAdminCatalogService
 {
     Task<Guid> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken = default);
     Task UpdateProductStatusAsync(Guid productId, ProductStatus status, Guid? adminUserId, CancellationToken cancellationToken = default);
+    Task UpdateProductFeaturedAsync(
+        Guid productId,
+        bool isFeatured,
+        int? featuredSortOrder,
+        Guid? adminUserId,
+        CancellationToken cancellationToken = default);
 
     Task<CreateProductImageUploadUrlResponse> CreateProductImageUploadUrlAsync(
         CreateProductImageUploadUrlRequest request,

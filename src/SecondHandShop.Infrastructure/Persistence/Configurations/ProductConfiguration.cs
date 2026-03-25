@@ -38,6 +38,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasSentinel((ProductStatus)0)
             .IsRequired();
 
+        builder.Property(x => x.IsFeatured)
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(x => x.FeaturedSortOrder)
+            .IsRequired(false);
+
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 
@@ -66,10 +73,14 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.HasIndex(x => new { x.Status, x.UpdatedAt });
         builder.HasIndex(x => new { x.CategoryId, x.Status });
+        builder.HasIndex(x => new { x.IsFeatured, x.Status, x.FeaturedSortOrder, x.CreatedAt });
 
         builder.ToTable(x =>
         {
             x.HasCheckConstraint("CK_Products_Price", "[Price] > 0");
+            x.HasCheckConstraint(
+                "CK_Products_FeaturedSortOrder_Range",
+                $"[FeaturedSortOrder] IS NULL OR ([FeaturedSortOrder] >= {Product.FeaturedSortOrderMin} AND [FeaturedSortOrder] <= {Product.FeaturedSortOrderMax})");
         });
     }
 }

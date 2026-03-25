@@ -125,9 +125,64 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         return new PagedResult<ProductListItemDto>(items, page, pageSize, totalCount);
     }
 
+    public async Task<IReadOnlyList<ProductListItemDto>> ListFeaturedForPublicAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var safeLimit = Math.Clamp(limit, 1, 24);
+
+        var query = dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.IsFeatured)
+            .Where(p => p.Status == ProductStatus.Available)
+            .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
+
+        var projected = await query
+            .OrderBy(p => p.FeaturedSortOrder.HasValue ? 0 : 1)
+            .ThenBy(p => p.FeaturedSortOrder)
+            .ThenByDescending(p => p.CreatedAt)
+            .ThenBy(p => p.Id)
+            .Take(safeLimit)
+            .Select(p => new
+            {
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.Status,
+                p.Condition,
+                p.CreatedAt,
+                CoverImageKey = dbContext.ProductImages
+                    .Where(i => i.ProductId == p.Id)
+                    .OrderByDescending(i => i.IsPrimary)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.CloudStorageKey)
+                    .FirstOrDefault(),
+                CategoryName = dbContext.Categories
+                    .Where(c => c.Id == p.CategoryId)
+                    .Select(c => c.Name)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return projected
+            .Select(p => new ProductListItemDto(
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.CoverImageKey,
+                p.CategoryName,
+                p.Status.ToString(),
+                p.Condition?.ToString(),
+                p.CreatedAt))
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<Product>> ListForAdminAsync(
         ProductStatus? status,
         Guid? categoryId = null,
+        bool? isFeatured = null,
         CancellationToken cancellationToken = default)
     {
         var query = dbContext.Products.AsNoTracking();
@@ -137,6 +192,9 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
 
         if (categoryId.HasValue)
             query = query.Where(x => x.CategoryId == categoryId.Value);
+
+        if (isFeatured.HasValue)
+            query = query.Where(x => x.IsFeatured == isFeatured.Value);
 
         return await query
             .OrderByDescending(x => x.UpdatedAt)

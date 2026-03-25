@@ -22,6 +22,7 @@ public class AdminProductsController(
     public async Task<ActionResult<IReadOnlyList<AdminProductListItem>>> ListAsync(
         [FromQuery] string? status,
         [FromQuery] Guid? categoryId,
+        [FromQuery] bool? isFeatured,
         CancellationToken cancellationToken)
     {
         ProductStatus? statusFilter = null;
@@ -30,7 +31,11 @@ public class AdminProductsController(
             statusFilter = parsed;
         }
 
-        var products = await productRepository.ListForAdminAsync(statusFilter, categoryId, cancellationToken);
+        var products = await productRepository.ListForAdminAsync(
+            statusFilter,
+            categoryId,
+            isFeatured,
+            cancellationToken);
         var categories = await categoryRepository.ListActiveAsync(cancellationToken);
         var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
 
@@ -51,6 +56,8 @@ public class AdminProductsController(
                 categoryName,
                 images.Count,
                 primary is not null ? objectStorageService.BuildDisplayUrl(primary.CloudStorageKey) : null,
+                product.IsFeatured,
+                product.FeaturedSortOrder,
                 product.CreatedAt,
                 product.UpdatedAt));
         }
@@ -118,6 +125,36 @@ public class AdminProductsController(
         try
         {
             await adminCatalogService.UpdateProductStatusAsync(productId, status, request.AdminUserId, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ErrorResponse(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new ErrorResponse(ex.Message));
+        }
+    }
+
+    [HttpPut("{productId:guid}/featured")]
+    public async Task<IActionResult> UpdateFeaturedAsync(
+        Guid productId,
+        [FromBody] UpdateAdminProductFeaturedRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await adminCatalogService.UpdateProductFeaturedAsync(
+                productId,
+                request.IsFeatured,
+                request.FeaturedSortOrder,
+                request.AdminUserId,
+                cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -247,6 +284,11 @@ public sealed record UpdateProductStatusRequest(
     string Status,
     Guid? AdminUserId);
 
+public sealed record UpdateAdminProductFeaturedRequest(
+    bool IsFeatured,
+    int? FeaturedSortOrder,
+    Guid? AdminUserId);
+
 public sealed record CreateImageUploadUrlRequest(
     string FileName,
     string ContentType,
@@ -274,5 +316,7 @@ public sealed record AdminProductListItem(
     string? CategoryName,
     int ImageCount,
     string? PrimaryImageUrl,
+    bool IsFeatured,
+    int? FeaturedSortOrder,
     DateTime CreatedAt,
     DateTime UpdatedAt);

@@ -15,6 +15,9 @@ public class ProductsController(
     IProductImageRepository productImageRepository,
     IObjectStorageService objectStorageService) : ControllerBase
 {
+    private const int DefaultFeaturedLimit = 8;
+    private const int MaxFeaturedLimit = 24;
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ProductResponse>>> ListAsync(
         [FromQuery] Guid? categoryId,
@@ -51,24 +54,23 @@ public class ProductsController(
         }
 
         var items = result.Items
-            .Select(dto => new ProductListItemResponse(
-                dto.Id,
-                dto.Title,
-                dto.Slug,
-                dto.Price,
-                dto.CoverImageKey is not null
-                    ? objectStorageService.BuildDisplayUrl(dto.CoverImageKey)
-                    : null,
-                dto.CategoryName,
-                dto.Status,
-                dto.Condition,
-                dto.CreatedAt))
+            .Select(ToProductListItemResponse)
             .ToList();
 
         var response = new PagedResult<ProductListItemResponse>(
             items, result.Page, result.PageSize, result.TotalCount, isFallback);
 
         return Ok(response);
+    }
+
+    [HttpGet("featured")]
+    public async Task<ActionResult<IReadOnlyList<ProductListItemResponse>>> ListFeaturedAsync(
+        [FromQuery] int? limit,
+        CancellationToken cancellationToken)
+    {
+        var safeLimit = Math.Clamp(limit ?? DefaultFeaturedLimit, 1, MaxFeaturedLimit);
+        var featuredProducts = await productRepository.ListFeaturedForPublicAsync(safeLimit, cancellationToken);
+        return Ok(featuredProducts.Select(ToProductListItemResponse).ToList());
     }
 
     [HttpGet("slug/{slug}")]
@@ -117,6 +119,22 @@ public class ProductsController(
                 .ToList(),
             product.CreatedAt,
             product.UpdatedAt);
+    }
+
+    private ProductListItemResponse ToProductListItemResponse(ProductListItemDto dto)
+    {
+        return new ProductListItemResponse(
+            dto.Id,
+            dto.Title,
+            dto.Slug,
+            dto.Price,
+            dto.CoverImageKey is not null
+                ? objectStorageService.BuildDisplayUrl(dto.CoverImageKey)
+                : null,
+            dto.CategoryName,
+            dto.Status,
+            dto.Condition,
+            dto.CreatedAt);
     }
 }
 

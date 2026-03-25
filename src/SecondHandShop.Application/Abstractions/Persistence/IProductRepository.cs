@@ -15,9 +15,13 @@ public interface IProductRepository
     Task<PagedResult<ProductListItemDto>> ListPagedForPublicAsync(
         ProductQueryParameters parameters,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductListItemDto>> ListFeaturedForPublicAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListForAdminAsync(
         ProductStatus? status,
         Guid? categoryId = null,
+        bool? isFeatured = null,
         CancellationToken cancellationToken = default);
     Task AddAsync(Product product, CancellationToken cancellationToken = default);
 }

@@ -6,6 +6,9 @@ namespace SecondHandShop.Domain.Entities;
 
 public class Product : AuditableEntity
 {
+    public const int FeaturedSortOrderMin = 0;
+    public const int FeaturedSortOrderMax = 999;
+
     private Product()
     {
     }
@@ -20,6 +23,8 @@ public class Product : AuditableEntity
     public Guid CategoryId { get; private set; }
     public DateTime? SoldAt { get; private set; }
     public DateTime? OffShelvedAt { get; private set; }
+    public bool IsFeatured { get; private set; }
+    public int? FeaturedSortOrder { get; private set; }
 
     public static Product Create(
         string title,
@@ -89,6 +94,8 @@ public class Product : AuditableEntity
         Status = ProductStatus.Sold;
         SoldAt = utcNow;
         OffShelvedAt = null;
+        IsFeatured = false;
+        FeaturedSortOrder = null;
         Touch(updatedByAdminUserId, utcNow);
     }
 
@@ -96,6 +103,8 @@ public class Product : AuditableEntity
     {
         Status = ProductStatus.OffShelf;
         OffShelvedAt = utcNow;
+        IsFeatured = false;
+        FeaturedSortOrder = null;
         Touch(updatedByAdminUserId, utcNow);
     }
 
@@ -105,6 +114,40 @@ public class Product : AuditableEntity
         SoldAt = null;
         OffShelvedAt = null;
         Touch(updatedByAdminUserId, utcNow);
+    }
+
+    public void UpdateFeaturedSettings(
+        bool isFeatured,
+        int? featuredSortOrder,
+        Guid? updatedByAdminUserId,
+        DateTime utcNow)
+    {
+        if (isFeatured && Status != ProductStatus.Available)
+        {
+            throw new InvalidOperationException("Only available products can be featured.");
+        }
+
+        if (featuredSortOrder.HasValue &&
+            (featuredSortOrder.Value < FeaturedSortOrderMin || featuredSortOrder.Value > FeaturedSortOrderMax))
+        {
+            throw new ArgumentOutOfRangeException(nameof(featuredSortOrder), BuildFeaturedSortOrderOutOfRangeMessage());
+        }
+
+        var normalizedSortOrder = isFeatured ? featuredSortOrder : null;
+        if (IsFeatured == isFeatured && FeaturedSortOrder == normalizedSortOrder)
+        {
+            return;
+        }
+
+        IsFeatured = isFeatured;
+        FeaturedSortOrder = normalizedSortOrder;
+        Touch(updatedByAdminUserId, utcNow);
+    }
+
+    public static string BuildFeaturedSortOrderOutOfRangeMessage()
+    {
+        return $"Featured sort order must be between {FeaturedSortOrderMin} and {FeaturedSortOrderMax}. " +
+               $"Smaller values appear earlier.";
     }
 
     private static void ValidatePrice(decimal price)

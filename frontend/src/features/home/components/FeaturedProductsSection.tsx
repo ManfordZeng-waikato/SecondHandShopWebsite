@@ -1,11 +1,12 @@
-import { Box, Button, Card, Container, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Container, Skeleton, Stack, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchFeaturedProducts } from '../api/homeApi';
 import { FeaturedProductCard } from './FeaturedProductCard';
 
-const CARD_COUNT = 5;
+const FEATURED_LIMIT = 8;
+const SKELETON_COUNT = 4;
 
 function CardSkeleton() {
   return (
@@ -20,13 +21,42 @@ function CardSkeleton() {
 }
 
 export function FeaturedProductsSection() {
-  const { data: products, isLoading } = useQuery({
+  const {
+    data: products,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['featured-products'],
-    queryFn: fetchFeaturedProducts,
+    queryFn: () => fetchFeaturedProducts(FEATURED_LIMIT),
     staleTime: 5 * 60 * 1000,
   });
 
   const hasProducts = !isLoading && products && products.length > 0;
+
+  if (isError) {
+    return (
+      <Box component="section" aria-label="Featured products" sx={{ py: { xs: 6, md: 8 }, bgcolor: '#fff' }}>
+        <Container maxWidth="lg">
+          <Stack spacing={2}>
+            <Typography variant="h4" component="h2" fontWeight={800}>
+              Trending Now
+            </Typography>
+            <Alert
+              severity="warning"
+              action={
+                <Button color="inherit" size="small" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              }
+            >
+              Failed to load featured products. Please try again.
+            </Alert>
+          </Stack>
+        </Container>
+      </Box>
+    );
+  }
 
   if (!isLoading && (!products || products.length === 0)) return null;
 
@@ -75,38 +105,27 @@ export function FeaturedProductsSection() {
           )}
         </Stack>
 
-        {/* Product cards — horizontal scroll on mobile, grid on desktop */}
+        {/* Product cards */}
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: {
-              xs: `repeat(${CARD_COUNT}, 240px)`,
-              lg: `repeat(${CARD_COUNT}, 1fr)`,
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(3, minmax(0, 1fr))',
+              lg: 'repeat(4, minmax(0, 1fr))',
             },
-            gap: { xs: 2, lg: 3 },
-            overflowX: { xs: 'auto', lg: 'hidden' },
-            scrollSnapType: { xs: 'x mandatory', lg: 'none' },
-            mx: { xs: -2, sm: -3, lg: 0 },
-            px: { xs: 2, sm: 3, lg: 0 },
-            pb: { xs: 1.5, lg: 0 },
-            '&::-webkit-scrollbar': { height: 4 },
-            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-            '&::-webkit-scrollbar-thumb': {
-              bgcolor: '#d9d9d9',
-              borderRadius: 2,
-            },
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#d9d9d9 transparent',
+            gap: { xs: 2, md: 3 },
           }}
         >
           {isLoading
-            ? Array.from({ length: CARD_COUNT }).map((_, i) => (
-                <Box key={i} sx={{ scrollSnapAlign: 'start' }}>
+            ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                <Box key={i}>
                   <CardSkeleton />
                 </Box>
               ))
             : products?.map((product) => (
-                <Box key={product.id} sx={{ scrollSnapAlign: 'start' }}>
+                <Box key={product.id}>
                   <FeaturedProductCard product={product} />
                 </Box>
               ))}

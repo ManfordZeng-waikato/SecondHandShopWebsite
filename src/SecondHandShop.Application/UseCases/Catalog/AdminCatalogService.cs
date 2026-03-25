@@ -80,6 +80,20 @@ public class AdminCatalogService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task UpdateProductFeaturedAsync(
+        Guid productId,
+        bool isFeatured,
+        int? featuredSortOrder,
+        Guid? adminUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var product = await productRepository.GetByIdAsync(productId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Product '{productId}' was not found.");
+
+        product.UpdateFeaturedSettings(isFeatured, featuredSortOrder, adminUserId, clock.UtcNow);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<CreateProductImageUploadUrlResponse> CreateProductImageUploadUrlAsync(
         CreateProductImageUploadUrlRequest request,
         CancellationToken cancellationToken = default)

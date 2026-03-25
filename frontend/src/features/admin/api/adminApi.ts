@@ -1,7 +1,12 @@
 import type { CreateProductInput, ProductStatus } from '../../../entities/product/types';
 import { httpClient } from '../../../shared/api/httpClient';
 import { env } from '../../../shared/config/env';
-import { createMockProduct, getMockProductsForAdmin, updateMockProductStatus } from '../../../shared/mock/mockApi';
+import {
+  createMockProduct,
+  getMockProductsForAdmin,
+  updateMockProductFeatured,
+  updateMockProductStatus,
+} from '../../../shared/mock/mockApi';
 
 export interface LoginResponse {
   expiresAt: string;
@@ -28,6 +33,8 @@ export interface AdminProductListItem {
   categoryName?: string;
   imageCount: number;
   primaryImageUrl?: string;
+  isFeatured: boolean;
+  featuredSortOrder: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,14 +42,16 @@ export interface AdminProductListItem {
 export async function fetchAdminProducts(
   status?: ProductStatus,
   categoryId?: string,
+  isFeatured?: boolean,
 ): Promise<AdminProductListItem[]> {
   if (env.useMockApi) {
-    return getMockProductsForAdmin(status);
+    return getMockProductsForAdmin(status, isFeatured);
   }
 
   const params: Record<string, string> = {};
   if (status) params.status = status;
   if (categoryId) params.categoryId = categoryId;
+  if (typeof isFeatured === 'boolean') params.isFeatured = String(isFeatured);
 
   const response = await httpClient.get<AdminProductListItem[]>('/api/lord/products', {
     params: Object.keys(params).length > 0 ? params : undefined,
@@ -65,6 +74,22 @@ export async function updateProductStatus(productId: string, status: ProductStat
   }
 
   await httpClient.put(`/api/lord/products/${productId}/status`, { status });
+}
+
+export interface UpdateProductFeaturedInput {
+  isFeatured: boolean;
+  featuredSortOrder: number | null;
+}
+
+export async function updateProductFeatured(
+  productId: string,
+  input: UpdateProductFeaturedInput,
+): Promise<void> {
+  if (env.useMockApi) {
+    return updateMockProductFeatured(productId, input.isFeatured, input.featuredSortOrder);
+  }
+
+  await httpClient.put(`/api/lord/products/${productId}/featured`, input);
 }
 
 export interface PresignedUploadResult {
