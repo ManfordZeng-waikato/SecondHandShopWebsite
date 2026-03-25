@@ -27,6 +27,9 @@ export function AdminLayout({ children }: PropsWithChildren) {
             <Button color="inherit" component={RouterLink} to="/lord/products">
               Products
             </Button>
+            <Button color="inherit" component={RouterLink} to="/lord/customers">
+              Customers
+            </Button>
             <Button color="inherit" component={RouterLink} to="/lord/products/new">
               New product
             </Button>

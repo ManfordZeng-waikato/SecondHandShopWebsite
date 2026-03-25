@@ -1,12 +1,17 @@
-import type { CreateProductInput, ProductStatus } from '../../../entities/product/types';
+import type {
+  PagedResult,
+  CreateProductInput,
+  ProductStatus,
+} from '../../../entities/product/types';
+import type {
+  AdminCustomerQueryParams,
+  CustomerDetail,
+  CustomerInquiryItem,
+  CustomerInquiryQueryParams,
+  CustomerListItem,
+  UpdateCustomerInput,
+} from '../../../entities/customer/types';
 import { httpClient } from '../../../shared/api/httpClient';
-import { env } from '../../../shared/config/env';
-import {
-  createMockProduct,
-  getMockProductsForAdmin,
-  updateMockProductFeatured,
-  updateMockProductStatus,
-} from '../../../shared/mock/mockApi';
 
 export interface LoginResponse {
   expiresAt: string;
@@ -44,10 +49,6 @@ export async function fetchAdminProducts(
   categoryId?: string,
   isFeatured?: boolean,
 ): Promise<AdminProductListItem[]> {
-  if (env.useMockApi) {
-    return getMockProductsForAdmin(status, isFeatured);
-  }
-
   const params: Record<string, string> = {};
   if (status) params.status = status;
   if (categoryId) params.categoryId = categoryId;
@@ -60,19 +61,11 @@ export async function fetchAdminProducts(
 }
 
 export async function createProduct(input: CreateProductInput): Promise<{ id: string }> {
-  if (env.useMockApi) {
-    return createMockProduct(input);
-  }
-
   const response = await httpClient.post<{ id: string }>('/api/lord/products', input);
   return response.data;
 }
 
 export async function updateProductStatus(productId: string, status: ProductStatus): Promise<void> {
-  if (env.useMockApi) {
-    return updateMockProductStatus(productId, status);
-  }
-
   await httpClient.put(`/api/lord/products/${productId}/status`, { status });
 }
 
@@ -85,11 +78,39 @@ export async function updateProductFeatured(
   productId: string,
   input: UpdateProductFeaturedInput,
 ): Promise<void> {
-  if (env.useMockApi) {
-    return updateMockProductFeatured(productId, input.isFeatured, input.featuredSortOrder);
-  }
-
   await httpClient.put(`/api/lord/products/${productId}/featured`, input);
+}
+
+export async function fetchAdminCustomers(
+  params: AdminCustomerQueryParams,
+): Promise<PagedResult<CustomerListItem>> {
+  const response = await httpClient.get<PagedResult<CustomerListItem>>('/api/lord/customers', {
+    params,
+  });
+  return response.data;
+}
+
+export async function fetchAdminCustomerDetail(customerId: string): Promise<CustomerDetail> {
+  const response = await httpClient.get<CustomerDetail>(`/api/lord/customers/${customerId}`);
+  return response.data;
+}
+
+export async function fetchAdminCustomerInquiries(
+  customerId: string,
+  params: CustomerInquiryQueryParams,
+): Promise<PagedResult<CustomerInquiryItem>> {
+  const response = await httpClient.get<PagedResult<CustomerInquiryItem>>(
+    `/api/lord/customers/${customerId}/inquiries`,
+    { params },
+  );
+  return response.data;
+}
+
+export async function updateAdminCustomer(
+  customerId: string,
+  input: UpdateCustomerInput,
+): Promise<void> {
+  await httpClient.put(`/api/lord/customers/${customerId}`, input);
 }
 
 export interface PresignedUploadResult {

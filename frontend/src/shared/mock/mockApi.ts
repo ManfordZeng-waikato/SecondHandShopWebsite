@@ -1,7 +1,20 @@
 import type { Category } from '../../entities/category/types';
+import type {
+  AdminCustomerQueryParams,
+  CustomerDetail,
+  CustomerInquiryItem,
+  CustomerInquiryQueryParams,
+  CustomerListItem,
+  CustomerStatus,
+  CustomerSortBy,
+  SortDirection,
+  UpdateCustomerInput,
+} from '../../entities/customer/types';
+import { customerStatusOptions } from '../../entities/customer/types';
 import type { CreateInquiryInput } from '../../entities/inquiry/types';
 import type {
   CreateProductInput,
+  PagedResult,
   Product,
   ProductListItem,
   ProductStatus,
@@ -15,6 +28,88 @@ const FEATURED_SORT_ORDER_MIN = 0;
 const FEATURED_SORT_ORDER_MAX = 999;
 let featuredStateStore: Record<string, { isFeatured: boolean; featuredSortOrder: number | null }> =
   Object.fromEntries(productsStore.map((product) => [product.id, { isFeatured: false, featuredSortOrder: null }]));
+
+interface MockCustomer {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  status: CustomerStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MockCustomerInquiry {
+  inquiryId: string;
+  customerId: string;
+  productId: string;
+  productTitle: string | null;
+  productSlug: string | null;
+  message: string;
+  inquiryStatus: string;
+  createdAt: string;
+}
+
+function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+let customersStore: MockCustomer[] = [
+  {
+    id: 'cust-001',
+    name: 'Emma Stone',
+    email: 'emma@example.com',
+    phoneNumber: '+64 21 555 123',
+    status: 'Contacted',
+    notes: 'Prefers WhatsApp after 6 PM.',
+    createdAt: isoDaysAgo(14),
+    updatedAt: isoDaysAgo(2),
+  },
+  {
+    id: 'cust-002',
+    name: 'Liam Parker',
+    email: 'liam@example.com',
+    phoneNumber: null,
+    status: 'New',
+    notes: null,
+    createdAt: isoDaysAgo(9),
+    updatedAt: isoDaysAgo(1),
+  },
+];
+
+let customerInquiriesStore: MockCustomerInquiry[] = [
+  {
+    inquiryId: 'inq-001',
+    customerId: 'cust-001',
+    productId: productsStore[0]?.id ?? 'mock-product-001',
+    productTitle: productsStore[0]?.title ?? 'Vintage Cabinet',
+    productSlug: productsStore[0]?.slug ?? null,
+    message: 'Is this still available? Can I arrange pickup this week?',
+    inquiryStatus: 'Sent',
+    createdAt: isoDaysAgo(5),
+  },
+  {
+    inquiryId: 'inq-002',
+    customerId: 'cust-001',
+    productId: productsStore[1]?.id ?? 'mock-product-002',
+    productTitle: productsStore[1]?.title ?? 'Antique Side Table',
+    productSlug: productsStore[1]?.slug ?? null,
+    message: 'Can you share the exact dimensions and condition?',
+    inquiryStatus: 'Pending',
+    createdAt: isoDaysAgo(3),
+  },
+  {
+    inquiryId: 'inq-003',
+    customerId: 'cust-002',
+    productId: productsStore[0]?.id ?? 'mock-product-001',
+    productTitle: productsStore[0]?.title ?? 'Vintage Cabinet',
+    productSlug: productsStore[0]?.slug ?? null,
+    message: 'Do you offer delivery to Wellington?',
+    inquiryStatus: 'Failed',
+    createdAt: isoDaysAgo(2),
+  },
+];
 
 function wait(delay = 250): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delay));
@@ -40,7 +135,56 @@ export async function getMockProductBySlug(slug: string): Promise<Product | null
 export async function createMockInquiry(input: CreateInquiryInput): Promise<{ id: string }> {
   await wait();
   inquiryStore.push(input);
-  return { id: crypto.randomUUID() };
+
+  const normalizedEmail = input.email?.trim().toLowerCase() || null;
+  const normalizedPhone = input.phoneNumber?.trim() || null;
+  const normalizedName = input.customerName?.trim() || null;
+
+  let customer = customersStore.find((item) =>
+    (normalizedEmail && item.email?.toLowerCase() === normalizedEmail)
+    || (normalizedPhone && item.phoneNumber === normalizedPhone));
+
+  if (!customer) {
+    customer = {
+      id: crypto.randomUUID(),
+      name: normalizedName,
+      email: normalizedEmail,
+      phoneNumber: normalizedPhone,
+      status: 'New',
+      notes: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    customersStore = [customer, ...customersStore];
+  } else {
+    const updatedCustomer: MockCustomer = {
+      ...customer,
+      name: normalizedName ?? customer.name,
+      email: normalizedEmail ?? customer.email,
+      phoneNumber: normalizedPhone ?? customer.phoneNumber,
+      updatedAt: new Date().toISOString(),
+    };
+    customer = updatedCustomer;
+    customersStore = customersStore.map((item) => (item.id === updatedCustomer.id ? updatedCustomer : item));
+  }
+
+  const matchedProduct = productsStore.find((item) => item.id === input.productId);
+  const inquiryId = crypto.randomUUID();
+  customerInquiriesStore = [
+    {
+      inquiryId,
+      customerId: customer.id,
+      productId: input.productId,
+      productTitle: matchedProduct?.title ?? null,
+      productSlug: matchedProduct?.slug ?? null,
+      message: input.message,
+      inquiryStatus: 'Pending',
+      createdAt: new Date().toISOString(),
+    },
+    ...customerInquiriesStore,
+  ];
+
+  return { id: inquiryId };
 }
 
 export async function createMockProduct(input: CreateProductInput): Promise<{ id: string }> {
@@ -155,6 +299,235 @@ export async function updateMockProductFeatured(
     item.id === productId
       ? {
           ...item,
+          updatedAt: new Date().toISOString(),
+        }
+      : item,
+  );
+}
+
+function toCustomerListItem(customer: MockCustomer): CustomerListItem {
+  const inquiries = customerInquiriesStore.filter((item) => item.customerId === customer.id);
+  const lastInquiryAt = inquiries
+    .map((item) => item.createdAt)
+    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
+
+  return {
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phoneNumber,
+    status: customer.status,
+    inquiryCount: inquiries.length,
+    lastInquiryAt,
+    createdAt: customer.createdAt,
+    updatedAt: customer.updatedAt,
+  };
+}
+
+function toCustomerDetail(customer: MockCustomer): CustomerDetail {
+  const summary = toCustomerListItem(customer);
+  return {
+    id: summary.id,
+    name: summary.name,
+    email: summary.email,
+    phone: summary.phone,
+    status: summary.status,
+    notes: customer.notes,
+    inquiryCount: summary.inquiryCount,
+    lastInquiryAt: summary.lastInquiryAt,
+    createdAt: summary.createdAt,
+    updatedAt: summary.updatedAt,
+  };
+}
+
+function buildPagedResult<T>(items: T[], page: number, pageSize: number, totalCount: number): PagedResult<T> {
+  const totalPages = Math.ceil(totalCount / pageSize);
+  return {
+    items,
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPreviousPage: page > 1,
+    isFallback: false,
+  };
+}
+
+function compareNullableDate(left: string | null, right: string | null, direction: SortDirection): number {
+  if (!left && !right) {
+    return 0;
+  }
+
+  if (!left) {
+    return direction === 'asc' ? -1 : 1;
+  }
+
+  if (!right) {
+    return direction === 'asc' ? 1 : -1;
+  }
+
+  const diff = new Date(left).getTime() - new Date(right).getTime();
+  return direction === 'asc' ? diff : -diff;
+}
+
+function compareDate(left: string, right: string, direction: SortDirection): number {
+  const diff = new Date(left).getTime() - new Date(right).getTime();
+  return direction === 'asc' ? diff : -diff;
+}
+
+function normalizeSortBy(sortBy: CustomerSortBy | undefined): CustomerSortBy {
+  if (sortBy === 'updatedAt' || sortBy === 'lastInquiryAt' || sortBy === 'createdAt') {
+    return sortBy;
+  }
+  return 'createdAt';
+}
+
+function normalizeSortDirection(direction: SortDirection | undefined): SortDirection {
+  return direction === 'asc' ? 'asc' : 'desc';
+}
+
+export async function getMockCustomersForAdmin(
+  params: AdminCustomerQueryParams,
+): Promise<PagedResult<CustomerListItem>> {
+  await wait();
+
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
+  const sortBy = normalizeSortBy(params.sortBy);
+  const sortDirection = normalizeSortDirection(params.sortDirection);
+  const search = params.search?.trim().toLowerCase() ?? '';
+  const statusFilter = params.status;
+
+  let items = customersStore.map(toCustomerListItem);
+  if (statusFilter) {
+    items = items.filter((item) => item.status === statusFilter);
+  }
+
+  if (search.length > 0) {
+    items = items.filter((item) =>
+      (item.name ?? '').toLowerCase().includes(search)
+      || (item.email ?? '').toLowerCase().includes(search)
+      || (item.phone ?? '').toLowerCase().includes(search));
+  }
+
+  items.sort((left, right) => {
+    const sortResult = (() => {
+      switch (sortBy) {
+        case 'updatedAt':
+          return compareDate(left.updatedAt, right.updatedAt, sortDirection);
+        case 'lastInquiryAt':
+          return compareNullableDate(left.lastInquiryAt, right.lastInquiryAt, sortDirection);
+        case 'createdAt':
+        default:
+          return compareDate(left.createdAt, right.createdAt, sortDirection);
+      }
+    })();
+
+    if (sortResult !== 0) {
+      return sortResult;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+
+  const totalCount = items.length;
+  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
+  return buildPagedResult(pagedItems, page, pageSize, totalCount);
+}
+
+export async function getMockCustomerDetailForAdmin(customerId: string): Promise<CustomerDetail | null> {
+  await wait();
+  const customer = customersStore.find((item) => item.id === customerId);
+  return customer ? toCustomerDetail(customer) : null;
+}
+
+export async function getMockCustomerInquiriesForAdmin(
+  customerId: string,
+  params: CustomerInquiryQueryParams,
+): Promise<PagedResult<CustomerInquiryItem>> {
+  await wait();
+
+  const customer = customersStore.find((item) => item.id === customerId);
+  if (!customer) {
+    throw new Error('Customer was not found.');
+  }
+
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
+
+  const inquiries = customerInquiriesStore
+    .filter((item) => item.customerId === customerId)
+    .sort((left, right) => {
+      const createdDiff = new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      if (createdDiff !== 0) {
+        return createdDiff;
+      }
+
+      return right.inquiryId.localeCompare(left.inquiryId);
+    })
+    .map((item) => ({
+      inquiryId: item.inquiryId,
+      productId: item.productId,
+      productTitle: item.productTitle,
+      productSlug: item.productSlug,
+      message: item.message,
+      inquiryStatus: item.inquiryStatus,
+      createdAt: item.createdAt,
+    }));
+
+  const totalCount = inquiries.length;
+  const pagedItems = inquiries.slice((page - 1) * pageSize, page * pageSize);
+  return buildPagedResult(pagedItems, page, pageSize, totalCount);
+}
+
+export async function updateMockCustomerForAdmin(
+  customerId: string,
+  input: UpdateCustomerInput,
+): Promise<void> {
+  await wait();
+
+  const customerIndex = customersStore.findIndex((item) => item.id === customerId);
+  if (customerIndex < 0) {
+    throw new Error('Customer was not found.');
+  }
+
+  const normalizedPhone = input.phoneNumber?.trim() || null;
+  if (normalizedPhone && !/^[0-9+\-\s()]+$/.test(normalizedPhone)) {
+    throw new Error('Phone number can only contain digits, +, -, spaces, and parentheses.');
+  }
+
+  const duplicatedPhone = normalizedPhone
+    ? customersStore.some((item) => item.id !== customerId && item.phoneNumber === normalizedPhone)
+    : false;
+  if (duplicatedPhone) {
+    throw new Error('The phone number is already used by another customer.');
+  }
+
+  const current = customersStore[customerIndex];
+  const status = input.status ?? current.status;
+  const notes = input.notes === undefined
+    ? current.notes
+    : (input.notes.trim().length === 0 ? null : input.notes.trim());
+
+  if (!customerStatusOptions.includes(status)) {
+    throw new Error(`Unsupported customer status '${status}'.`);
+  }
+
+  const normalizedName = input.name?.trim() || null;
+  const normalizedEmail = current.email?.trim() || null;
+  if (!normalizedEmail && !normalizedPhone) {
+    throw new Error('At least one contact method (email or phone) is required.');
+  }
+
+  customersStore = customersStore.map((item) =>
+    item.id === customerId
+      ? {
+          ...item,
+          name: normalizedName,
+          phoneNumber: normalizedPhone,
+          status,
+          notes,
           updatedAt: new Date().toISOString(),
         }
       : item,

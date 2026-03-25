@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Infrastructure.Persistence.Configurations;
 
@@ -19,6 +20,15 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 
         builder.Property(x => x.PhoneNumber)
             .HasMaxLength(40);
+
+        builder.Property(x => x.Status)
+            .HasConversion<byte>()
+            .HasDefaultValue(CustomerStatus.New)
+            .HasSentinel((CustomerStatus)0)
+            .IsRequired();
+
+        builder.Property(x => x.Notes)
+            .HasMaxLength(2000);
 
         builder.Property(x => x.CreatedAt)
             .IsRequired();

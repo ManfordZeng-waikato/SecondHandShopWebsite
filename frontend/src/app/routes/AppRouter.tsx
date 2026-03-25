@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { MainLayout } from '../layouts/MainLayout';
+import { AdminCustomerDetailPage } from '../../pages/AdminCustomerDetailPage';
+import { AdminCustomersPage } from '../../pages/AdminCustomersPage';
 import { AdminLoginPage } from '../../pages/AdminLoginPage';
 import { AdminNewProductPage } from '../../pages/AdminNewProductPage';
 import { AdminProductsPage } from '../../pages/AdminProductsPage';
@@ -65,6 +67,22 @@ export function AppRouter() {
           }
         />
         <Route element={<ProtectedAdminRoute />}>
+          <Route
+            path="/lord/customers"
+            element={
+              <AdminLayout>
+                <AdminCustomersPage />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/lord/customers/:customerId"
+            element={
+              <AdminLayout>
+                <AdminCustomerDetailPage />
+              </AdminLayout>
+            }
+          />
           <Route
             path="/lord/products"
             element={

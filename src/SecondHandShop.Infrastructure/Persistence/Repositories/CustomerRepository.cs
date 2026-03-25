@@ -1,11 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Contracts.Common;
+using SecondHandShop.Application.Contracts.Customers;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Infrastructure.Persistence.Repositories;
 
 public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRepository
 {
+    public async Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Customers
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
     public async Task<Customer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await dbContext.Customers
@@ -18,8 +27,135 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
             .FirstOrDefaultAsync(x => x.PhoneNumber == phoneNumber, cancellationToken);
     }
 
+    public async Task<PagedResult<CustomerListItemDto>> ListPagedForAdminAsync(
+        AdminCustomerQueryParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var customersQuery = dbContext.Customers.AsNoTracking();
+        var safeSearch = parameters.SafeSearch;
+
+        if (safeSearch is not null)
+        {
+            customersQuery = customersQuery.Where(c =>
+                (c.Name != null && c.Name.Contains(safeSearch))
+                || (c.Email != null && c.Email.Contains(safeSearch))
+                || (c.PhoneNumber != null && c.PhoneNumber.Contains(safeSearch)));
+        }
+
+        var normalizedStatus = parameters.Status?.Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedStatus)
+            && Enum.TryParse<CustomerStatus>(normalizedStatus, ignoreCase: true, out var statusFilter)
+            && Enum.IsDefined(statusFilter))
+        {
+            customersQuery = customersQuery.Where(c => c.Status == statusFilter);
+        }
+
+        var projectedQuery = customersQuery.Select(c => new CustomerAdminProjection
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Email = c.Email,
+            Phone = c.PhoneNumber,
+            Status = c.Status,
+            CreatedAt = c.CreatedAt,
+            UpdatedAt = c.UpdatedAt,
+            InquiryCount = dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
+            LastInquiryAt = dbContext.Inquiries
+                .Where(i => i.CustomerId == c.Id)
+                .Max(i => (DateTime?)i.CreatedAt)
+        });
+
+        var totalCount = await customersQuery.CountAsync(cancellationToken);
+        var page = parameters.SafePage;
+        var pageSize = parameters.SafePageSize;
+
+        var items = await ApplySorting(projectedQuery, parameters)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(c => new CustomerListItemDto(
+                c.Id,
+                c.Name,
+                c.Email,
+                c.Phone,
+                c.Status.ToString(),
+                c.InquiryCount,
+                c.LastInquiryAt,
+                c.CreatedAt,
+                c.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<CustomerListItemDto>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<CustomerDetailDto?> GetDetailForAdminAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Customers
+            .AsNoTracking()
+            .Where(c => c.Id == customerId)
+            .Select(c => new CustomerDetailDto(
+                c.Id,
+                c.Name,
+                c.Email,
+                c.PhoneNumber,
+                c.Status.ToString(),
+                c.Notes,
+                dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
+                dbContext.Inquiries
+                    .Where(i => i.CustomerId == c.Id)
+                    .Max(i => (DateTime?)i.CreatedAt),
+                c.CreatedAt,
+                c.UpdatedAt))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default)
     {
         await dbContext.Customers.AddAsync(customer, cancellationToken);
+    }
+
+    private static IOrderedQueryable<CustomerAdminProjection> ApplySorting(
+        IQueryable<CustomerAdminProjection> query,
+        AdminCustomerQueryParameters parameters)
+    {
+        return (parameters.SafeSortBy, parameters.IsSortDescending) switch
+        {
+            ("updatedAt", true) => query
+                .OrderByDescending(x => x.UpdatedAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id),
+            ("updatedAt", false) => query
+                .OrderBy(x => x.UpdatedAt)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id),
+            ("lastInquiryAt", true) => query
+                .OrderByDescending(x => x.LastInquiryAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id),
+            ("lastInquiryAt", false) => query
+                .OrderBy(x => x.LastInquiryAt)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id),
+            ("createdAt", false) => query
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id),
+            _ => query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+        };
+    }
+
+    private sealed class CustomerAdminProjection
+    {
+        public required Guid Id { get; init; }
+        public string? Name { get; init; }
+        public string? Email { get; init; }
+        public string? Phone { get; init; }
+        public required CustomerStatus Status { get; init; }
+        public required DateTime CreatedAt { get; init; }
+        public required DateTime UpdatedAt { get; init; }
+        public required int InquiryCount { get; init; }
+        public DateTime? LastInquiryAt { get; init; }
     }
 }

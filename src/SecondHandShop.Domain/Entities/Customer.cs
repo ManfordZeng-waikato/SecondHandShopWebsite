@@ -1,3 +1,5 @@
+using SecondHandShop.Domain.Enums;
+
 namespace SecondHandShop.Domain.Entities;
 
 public class Customer
@@ -10,6 +12,8 @@ public class Customer
     public string? Name { get; private set; }
     public string? Email { get; private set; }
     public string? PhoneNumber { get; private set; }
+    public CustomerStatus Status { get; private set; } = CustomerStatus.New;
+    public string? Notes { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
@@ -27,6 +31,8 @@ public class Customer
             Name = Normalize(name),
             Email = Normalize(email),
             PhoneNumber = Normalize(phoneNumber),
+            Status = CustomerStatus.New,
+            Notes = null,
             CreatedAt = utcNow,
             UpdatedAt = utcNow
         };
@@ -42,6 +48,21 @@ public class Customer
         Name = Normalize(name);
         Email = Normalize(email);
         PhoneNumber = Normalize(phoneNumber);
+        UpdatedAt = utcNow;
+    }
+
+    public void UpdateByAdmin(
+        string? name,
+        string? phoneNumber,
+        CustomerStatus status,
+        string? notes,
+        DateTime utcNow)
+    {
+        ValidateContact(Email, phoneNumber);
+        Name = Normalize(name);
+        PhoneNumber = Normalize(phoneNumber);
+        Status = status;
+        Notes = Normalize(notes);
         UpdatedAt = utcNow;
     }
 
