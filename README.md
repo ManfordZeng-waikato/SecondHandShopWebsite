@@ -175,6 +175,7 @@ Configure via `frontend/.env` or `frontend/.env.local` (not committed). Variable
 | `VITE_API_BASE_URL` | Backend base URL (default in code: `https://localhost:7266`) |
 | `VITE_USE_MOCK_API` | `true` = mock in-memory data for several features; `false` = real API |
 | `VITE_IMAGE_BASE_URL` | Optional prefix for image URLs when needed by the UI |
+| `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key used by the public inquiry form |
 
 The shared HTTP client uses **`withCredentials: true`** so **HttpOnly** admin cookies on the API origin are sent for `/api/lord/*` requests.
 
@@ -227,8 +228,14 @@ Key sections in `appsettings.json` (override per environment or secrets):
 | `Email:Smtp` | SMTP for inquiry notifications; `Enabled: false` uses a no-op sender |
 | `R2` | Cloudflare account id, S3 API keys, bucket, **WorkerBaseUrl** for public URLs |
 | `RemoveBg` | remove.bg API for admin background-removal preview (`ImageProcessingController`) |
+| `CloudflareTurnstile` | Inquiry bot protection (`SiteKey`, `SecretKey`, `VerifyUrl`) |
 
-**Never commit production secrets.** Prefer environment variables or user secrets for `Jwt:Key`, SMTP passwords, R2 keys, and Remove.bg keys.
+**Never commit production secrets.** Prefer environment variables or user secrets for `Jwt:Key`, SMTP passwords, R2 keys, Remove.bg keys, and `CloudflareTurnstile:SecretKey`.
+
+Turnstile environment variable mapping:
+
+- Backend: `CloudflareTurnstile__SiteKey`, `CloudflareTurnstile__SecretKey`, `CloudflareTurnstile__VerifyUrl`
+- Frontend: `VITE_TURNSTILE_SITE_KEY`
 
 ---
 

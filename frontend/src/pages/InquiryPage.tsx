@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import axios from 'axios';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -14,6 +15,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchProducts } from '../features/catalog/api/catalogApi';
 import { createInquiry } from '../features/inquiry/api/inquiryApi';
+import { TurnstileWidget, type TurnstileWidgetHandle } from '../features/inquiry/components/TurnstileWidget';
+import { env } from '../shared/config/env';
 
 interface InquiryFormState {
   customerName: string;
@@ -36,13 +39,44 @@ const MAX_NAME_LENGTH = 120;
 const MAX_EMAIL_LENGTH = 256;
 const MAX_PHONE_LENGTH = 40;
 const MAX_MESSAGE_LENGTH = 3000;
+const TURNSTILE_EXECUTE_TIMEOUT_MS = 15000;
+
+function isTurnstileRelatedMessage(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return normalizedMessage.includes('security verification') || normalizedMessage.includes('turnstile');
+}
+
+function getApiErrorMessage(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) {
+    return null;
+  }
+
+  const payload = error.response?.data;
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if (!('message' in payload)) {
+    return null;
+  }
+
+  const message = (payload as { message?: unknown }).message;
+  return typeof message === 'string' ? message : null;
+}
 
 export function InquiryPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [formState, setFormState] = useState<InquiryFormState>(initialState);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [isTriggeringTurnstile, setIsTriggeringTurnstile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
+  const turnstileWidgetRef = useRef<TurnstileWidgetHandle | null>(null);
+  const turnstileTokenResolverRef = useRef<((token: string | null) => void) | null>(null);
+  const turnstileTokenRequestRef = useRef<Promise<string | null> | null>(null);
+  const turnstileTokenTimeoutRef = useRef<number | null>(null);
 
   const productsQuery = useQuery({
     queryKey: ['products'],
@@ -54,8 +88,74 @@ export function InquiryPage() {
     onSuccess: () => {
       setSuccessOpen(true);
       setFormState(initialState);
+      setTurnstileToken(null);
+      setTurnstileResetKey((prev) => prev + 1);
+      setIsTriggeringTurnstile(false);
     },
   });
+
+  const resolvePendingTurnstileTokenRequest = useCallback((token: string | null) => {
+    if (turnstileTokenTimeoutRef.current !== null) {
+      window.clearTimeout(turnstileTokenTimeoutRef.current);
+      turnstileTokenTimeoutRef.current = null;
+    }
+
+    const resolver = turnstileTokenResolverRef.current;
+    turnstileTokenResolverRef.current = null;
+    turnstileTokenRequestRef.current = null;
+    resolver?.(token);
+  }, []);
+
+  const requestTurnstileToken = useCallback(async (): Promise<string | null> => {
+    if (turnstileToken) {
+      return turnstileToken;
+    }
+
+    if (turnstileTokenRequestRef.current) {
+      return turnstileTokenRequestRef.current;
+    }
+
+    const pendingTokenRequest = new Promise<string | null>((resolve) => {
+      turnstileTokenResolverRef.current = resolve;
+      turnstileTokenTimeoutRef.current = window.setTimeout(() => {
+        resolvePendingTurnstileTokenRequest(null);
+      }, TURNSTILE_EXECUTE_TIMEOUT_MS);
+    });
+
+    turnstileTokenRequestRef.current = pendingTokenRequest;
+    const executeTriggered = turnstileWidgetRef.current?.execute() ?? false;
+    if (!executeTriggered) {
+      resolvePendingTurnstileTokenRequest(null);
+    }
+
+    return pendingTokenRequest;
+  }, [resolvePendingTurnstileTokenRequest, turnstileToken]);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+    setIsTriggeringTurnstile(false);
+    resolvePendingTurnstileTokenRequest(token);
+    setError((currentError) =>
+      currentError && isTurnstileRelatedMessage(currentError) ? null : currentError);
+  }, [resolvePendingTurnstileTokenRequest]);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+    setIsTriggeringTurnstile(false);
+    resolvePendingTurnstileTokenRequest(null);
+    setError('Security verification expired. Please verify again.');
+  }, [resolvePendingTurnstileTokenRequest]);
+
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken(null);
+    setIsTriggeringTurnstile(false);
+    resolvePendingTurnstileTokenRequest(null);
+    setError('Security verification failed to load. Please refresh and try again.');
+  }, [resolvePendingTurnstileTokenRequest]);
+
+  useEffect(() => () => {
+    resolvePendingTurnstileTokenRequest(null);
+  }, [resolvePendingTurnstileTokenRequest]);
 
   useEffect(() => {
     if (!successOpen) {
@@ -137,18 +237,44 @@ export function InquiryPage() {
       return;
     }
 
+    let activeTurnstileToken = turnstileToken;
+    if (!activeTurnstileToken) {
+      setIsTriggeringTurnstile(true);
+      activeTurnstileToken = await requestTurnstileToken();
+      setIsTriggeringTurnstile(false);
+    }
+
+    if (!activeTurnstileToken) {
+      setError('Please complete the security verification before submitting.');
+      return;
+    }
+
     try {
       await inquiryMutation.mutateAsync({
         productId: targetProduct.id,
         customerName: formState.customerName || undefined,
         email: normalizedEmail || undefined,
-        phoneNumber: formState.phoneNumber || undefined,
+        phoneNumber: normalizedPhone || undefined,
         message: formState.message,
+        turnstileToken: activeTurnstileToken,
       });
-    } catch {
+    } catch (submissionError) {
+      const apiErrorMessage = getApiErrorMessage(submissionError);
+      if (apiErrorMessage) {
+        setError(apiErrorMessage);
+
+        if (isTurnstileRelatedMessage(apiErrorMessage)) {
+          setTurnstileToken(null);
+          setTurnstileResetKey((prev) => prev + 1);
+        }
+        return;
+      }
+
       setError('Failed to submit inquiry. Please try again.');
     }
   };
+
+  const isSubmitBusy = inquiryMutation.isPending || isTriggeringTurnstile;
 
   return (
     <Paper sx={{ p: 3, maxWidth: 700 }}>
@@ -191,9 +317,21 @@ export function InquiryPage() {
           slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
           helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
         />
+        <TurnstileWidget
+          ref={turnstileWidgetRef}
+          siteKey={env.turnstileSiteKey}
+          resetKey={turnstileResetKey}
+          language="en"
+          executionMode="execute"
+          onVerify={handleTurnstileVerify}
+          onExpire={handleTurnstileExpire}
+          onError={handleTurnstileError}
+        />
         <Box>
-          <Button type="submit" variant="contained" disabled={inquiryMutation.isPending}>
-            {inquiryMutation.isPending ? 'Submitting...' : 'Submit inquiry'}
+          <Button type="submit" variant="contained" disabled={isSubmitBusy}>
+            {inquiryMutation.isPending
+              ? 'Submitting...'
+              : (isTriggeringTurnstile ? 'Verifying...' : 'Submit inquiry')}
           </Button>
         </Box>
       </Stack>

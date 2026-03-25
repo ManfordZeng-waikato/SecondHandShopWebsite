@@ -51,6 +51,7 @@ src/
 
 - `VITE_API_BASE_URL`: backend API base url (default `https://localhost:7266`)
 - `VITE_USE_MOCK_API`: `true` uses in-memory mock adapter, `false` calls backend directly
+- `VITE_TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key for inquiry form protection
 
 ## Routes
 

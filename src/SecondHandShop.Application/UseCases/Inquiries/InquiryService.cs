@@ -3,6 +3,7 @@ using System.Text;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Domain.Entities;
 
@@ -12,6 +13,7 @@ public class InquiryService(
     IProductRepository productRepository,
     IInquiryRepository inquiryRepository,
     ICustomerRepository customerRepository,
+    ITurnstileValidator turnstileValidator,
     IEmailSender emailSender,
     IUnitOfWork unitOfWork,
     IClock clock) : IInquiryService
@@ -22,9 +24,42 @@ public class InquiryService(
     private static readonly TimeSpan IpCooldownDuration = TimeSpan.FromMinutes(5);
     private const int MaxIpProductRequests = 2;
     private const int MaxEmailProductRequests = 1;
+    private static readonly HashSet<string> TurnstileServerErrorCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "missing-input-secret",
+        "invalid-input-secret",
+        "bad-request",
+        "internal-error"
+    };
 
     public async Task<Guid> CreateInquiryAsync(CreateInquiryCommand command, CancellationToken cancellationToken = default)
     {
+        var normalizedTurnstileToken = Normalize(command.TurnstileToken);
+        if (string.IsNullOrWhiteSpace(normalizedTurnstileToken))
+        {
+            throw new ArgumentException(
+                "Please complete the security verification and try again.",
+                nameof(command.TurnstileToken));
+        }
+
+        var normalizedRequestIpAddress = Normalize(command.RequestIpAddress) ?? "unknown";
+        var turnstileValidation = await turnstileValidator.ValidateAsync(
+            normalizedTurnstileToken,
+            normalizedRequestIpAddress == "unknown" ? null : normalizedRequestIpAddress,
+            cancellationToken);
+
+        if (!turnstileValidation.IsSuccess)
+        {
+            if (ContainsServerErrorCode(turnstileValidation.ErrorCodes))
+            {
+                throw new TurnstileValidationUnavailableException(
+                    "Security verification service is temporarily unavailable. Please try again later.");
+            }
+
+            throw new InquiryTurnstileValidationException(
+                BuildTurnstileFailureMessage(turnstileValidation.ErrorCodes));
+        }
+
         var product = await productRepository.GetByIdAsync(command.ProductId, cancellationToken);
         if (product is null)
         {
@@ -34,7 +69,6 @@ public class InquiryService(
         var normalizedName = Normalize(command.CustomerName);
         var normalizedEmail = NormalizeEmail(command.Email);
         var normalizedPhoneNumber = Normalize(command.PhoneNumber);
-        var normalizedRequestIpAddress = Normalize(command.RequestIpAddress) ?? "unknown";
         var messageHash = ComputeMessageHash(command.Message);
         var utcNow = clock.UtcNow;
 
@@ -221,5 +255,27 @@ public class InquiryService(
             .Replace('\r', '\n');
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedMessage));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static bool ContainsServerErrorCode(IReadOnlyCollection<string> errorCodes)
+    {
+        return errorCodes.Any(code => TurnstileServerErrorCodes.Contains(code));
+    }
+
+    private static string BuildTurnstileFailureMessage(IReadOnlyCollection<string> errorCodes)
+    {
+        if (errorCodes.Any(code => string.Equals(code, "timeout-or-duplicate", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Security verification expired or was already used. Please verify again.";
+        }
+
+        if (errorCodes.Any(code =>
+                string.Equals(code, "missing-input-response", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(code, "invalid-input-response", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Security verification is missing or invalid. Please verify and try again.";
+        }
+
+        return "Security verification failed. Please verify and try again.";
     }
 }

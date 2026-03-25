@@ -4,4 +4,5 @@ export interface CreateInquiryInput {
   email?: string;
   phoneNumber?: string;
   message: string;
+  turnstileToken: string;
 }

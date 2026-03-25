@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
 
@@ -19,6 +20,7 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
             request.Email,
             request.PhoneNumber,
             request.Message,
+            request.TurnstileToken,
             requestIpAddress);
 
         try
@@ -37,6 +39,14 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
         catch (InvalidOperationException ex)
         {
             return Conflict(new ErrorResponse(ex.Message));
+        }
+        catch (InquiryTurnstileValidationException ex)
+        {
+            return BadRequest(new ErrorResponse(ex.Message));
+        }
+        catch (TurnstileValidationUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new ErrorResponse(ex.Message));
         }
         catch (ArgumentException ex)
         {
@@ -63,6 +73,9 @@ public sealed record CreateInquiryRequest
     [Required]
     [MaxLength(3000)]
     public required string Message { get; init; }
+
+    [Required]
+    public required string TurnstileToken { get; init; }
 }
 
 public sealed record CreateInquiryResponse(Guid InquiryId);

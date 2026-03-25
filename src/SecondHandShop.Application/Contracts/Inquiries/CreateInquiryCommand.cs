@@ -6,4 +6,5 @@ public sealed record CreateInquiryCommand(
     string? Email,
     string? PhoneNumber,
     string Message,
+    string TurnstileToken,
     string RequestIpAddress);

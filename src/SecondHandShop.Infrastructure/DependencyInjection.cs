@@ -25,6 +25,7 @@ public static class DependencyInjection
         var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
         var r2Options = R2Options.FromConfiguration(configuration);
         var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);
+        var cloudflareTurnstileOptions = CloudflareTurnstileOptions.FromConfiguration(configuration);
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseSqlServer(connectionString));
@@ -50,6 +51,11 @@ public static class DependencyInjection
         });
         services.AddScoped<IClock, SystemClock>();
         services.AddSingleton(smtpOptions);
+        services.AddSingleton(cloudflareTurnstileOptions);
+        services.AddHttpClient<ITurnstileValidator, TurnstileValidator>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
         services.AddScoped<NoOpEmailSender>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<IEmailSender>(provider =>
