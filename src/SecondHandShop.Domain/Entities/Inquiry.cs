@@ -21,6 +21,8 @@ public partial class Inquiry
     public string? CustomerName { get; private set; }
     public string? Email { get; private set; }
     public string? PhoneNumber { get; private set; }
+    public string? RequestIpAddress { get; private set; }
+    public string MessageHash { get; private set; } = string.Empty;
     public string Message { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public EmailDeliveryStatus EmailDeliveryStatus { get; private set; } = EmailDeliveryStatus.Pending;
@@ -35,10 +37,17 @@ public partial class Inquiry
         string? customerName,
         string? email,
         string? phoneNumber,
+        string? requestIpAddress,
+        string messageHash,
         string message,
         DateTime utcNow)
     {
         ValidateContact(email, phoneNumber);
+
+        if (string.IsNullOrWhiteSpace(messageHash))
+        {
+            throw new ArgumentException("Inquiry message hash is required.", nameof(messageHash));
+        }
 
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -53,6 +62,8 @@ public partial class Inquiry
             CustomerName = Normalize(customerName),
             Email = Normalize(email),
             PhoneNumber = Normalize(phoneNumber),
+            RequestIpAddress = Normalize(requestIpAddress),
+            MessageHash = messageHash.Trim().ToLowerInvariant(),
             Message = message.Trim(),
             CreatedAt = utcNow,
             EmailDeliveryStatus = EmailDeliveryStatus.Pending,

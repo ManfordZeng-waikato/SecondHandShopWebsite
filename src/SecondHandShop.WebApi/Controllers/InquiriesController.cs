@@ -12,12 +12,14 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] CreateInquiryRequest request, CancellationToken cancellationToken)
     {
+        var requestIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var command = new CreateInquiryCommand(
             request.ProductId,
             request.CustomerName,
             request.Email,
             request.PhoneNumber,
-            request.Message);
+            request.Message,
+            requestIpAddress);
 
         try
         {
@@ -27,6 +29,10 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
         catch (KeyNotFoundException ex)
         {
             return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (InquiryRateLimitExceededException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, new ErrorResponse(ex.Message));
         }
         catch (InvalidOperationException ex)
         {

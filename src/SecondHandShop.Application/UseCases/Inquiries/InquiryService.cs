@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
@@ -14,6 +16,12 @@ public class InquiryService(
     IUnitOfWork unitOfWork,
     IClock clock) : IInquiryService
 {
+    private static readonly TimeSpan IpProductWindow = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan EmailProductWindow = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan MessageHashWindow = TimeSpan.FromMinutes(30);
+    private const int MaxIpProductRequests = 2;
+    private const int MaxEmailProductRequests = 1;
+
     public async Task<Guid> CreateInquiryAsync(CreateInquiryCommand command, CancellationToken cancellationToken = default)
     {
         var product = await productRepository.GetByIdAsync(command.ProductId, cancellationToken);
@@ -25,6 +33,17 @@ public class InquiryService(
         var normalizedName = Normalize(command.CustomerName);
         var normalizedEmail = NormalizeEmail(command.Email);
         var normalizedPhoneNumber = Normalize(command.PhoneNumber);
+        var normalizedRequestIpAddress = Normalize(command.RequestIpAddress) ?? "unknown";
+        var messageHash = ComputeMessageHash(command.Message);
+        var utcNow = clock.UtcNow;
+
+        await EnforceAntiSpamRulesAsync(
+            command.ProductId,
+            normalizedRequestIpAddress,
+            normalizedEmail,
+            messageHash,
+            utcNow,
+            cancellationToken);
 
         var customer = await ResolveCustomerAsync(
             normalizedName,
@@ -38,8 +57,10 @@ public class InquiryService(
             normalizedName,
             normalizedEmail,
             normalizedPhoneNumber,
+            normalizedRequestIpAddress,
+            messageHash,
             command.Message,
-            clock.UtcNow);
+            utcNow);
 
         await inquiryRepository.AddAsync(inquiry, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -66,6 +87,47 @@ public class InquiryService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return inquiry.Id;
+    }
+
+    private async Task EnforceAntiSpamRulesAsync(
+        Guid productId,
+        string requestIpAddress,
+        string? email,
+        string messageHash,
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var ipCount = await inquiryRepository.CountRecentByIpAndProductAsync(
+            requestIpAddress,
+            productId,
+            utcNow - IpProductWindow,
+            cancellationToken);
+        if (ipCount >= MaxIpProductRequests)
+        {
+            throw new InquiryRateLimitExceededException("Too many inquiries for this product from the same IP. Please try again in 60 seconds.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var emailCount = await inquiryRepository.CountRecentByEmailAndProductAsync(
+                email,
+                productId,
+                utcNow - EmailProductWindow,
+                cancellationToken);
+            if (emailCount >= MaxEmailProductRequests)
+            {
+                throw new InquiryRateLimitExceededException("This email already sent an inquiry for this product in the last 10 minutes.");
+            }
+        }
+
+        var hasSameMessageRecently = await inquiryRepository.ExistsRecentByMessageHashAsync(
+            messageHash,
+            utcNow - MessageHashWindow,
+            cancellationToken);
+        if (hasSameMessageRecently)
+        {
+            throw new InquiryRateLimitExceededException("The same message was already submitted in the last 30 minutes.");
+        }
     }
 
     private async Task<Customer> ResolveCustomerAsync(
@@ -116,5 +178,15 @@ public class InquiryService(
     {
         var normalized = Normalize(value);
         return normalized?.ToLowerInvariant();
+    }
+
+    private static string ComputeMessageHash(string message)
+    {
+        var normalizedMessage = message
+            .Trim()
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedMessage));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

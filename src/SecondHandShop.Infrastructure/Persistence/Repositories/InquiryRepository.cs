@@ -14,6 +14,46 @@ public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepo
         await dbContext.Inquiries.AddAsync(inquiry, cancellationToken);
     }
 
+    public async Task<int> CountRecentByIpAndProductAsync(
+        string requestIpAddress,
+        Guid productId,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Inquiries
+            .AsNoTracking()
+            .Where(x => x.ProductId == productId)
+            .Where(x => x.RequestIpAddress == requestIpAddress)
+            .Where(x => x.CreatedAt >= sinceUtc)
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<int> CountRecentByEmailAndProductAsync(
+        string email,
+        Guid productId,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Inquiries
+            .AsNoTracking()
+            .Where(x => x.ProductId == productId)
+            .Where(x => x.Email == email)
+            .Where(x => x.CreatedAt >= sinceUtc)
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<bool> ExistsRecentByMessageHashAsync(
+        string messageHash,
+        DateTime sinceUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Inquiries
+            .AsNoTracking()
+            .Where(x => x.MessageHash == messageHash)
+            .Where(x => x.CreatedAt >= sinceUtc)
+            .AnyAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Inquiry>> ListPendingEmailAsync(DateTime utcNow, CancellationToken cancellationToken = default)
     {
         return await dbContext.Inquiries

@@ -21,6 +21,13 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
         builder.Property(x => x.PhoneNumber)
             .HasMaxLength(40);
 
+        builder.Property(x => x.RequestIpAddress)
+            .HasMaxLength(64);
+
+        builder.Property(x => x.MessageHash)
+            .HasMaxLength(64)
+            .IsRequired();
+
         builder.Property(x => x.Message)
             .HasMaxLength(3000)
             .IsRequired();
@@ -52,6 +59,9 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.ProductId, x.CreatedAt });
+        builder.HasIndex(x => new { x.ProductId, x.RequestIpAddress, x.CreatedAt });
+        builder.HasIndex(x => new { x.ProductId, x.Email, x.CreatedAt });
+        builder.HasIndex(x => new { x.MessageHash, x.CreatedAt });
         builder.HasIndex(x => new { x.CustomerId, x.CreatedAt });
 
         builder.ToTable(x =>

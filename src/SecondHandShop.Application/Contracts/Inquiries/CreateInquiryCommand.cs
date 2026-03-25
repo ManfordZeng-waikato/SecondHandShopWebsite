@@ -5,4 +5,5 @@ public sealed record CreateInquiryCommand(
     string? CustomerName,
     string? Email,
     string? PhoneNumber,
-    string Message);
+    string Message,
+    string RequestIpAddress);
