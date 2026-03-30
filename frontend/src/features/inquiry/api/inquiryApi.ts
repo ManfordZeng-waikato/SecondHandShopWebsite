@@ -1,7 +1,9 @@
-import type { CreateInquiryInput } from '../../../entities/inquiry/types';
+import type { CreateInquiryInput, CreateInquiryResponse } from '../../../entities/inquiry/types';
 import { httpClient } from '../../../shared/api/httpClient';
 
-export async function createInquiry(input: CreateInquiryInput): Promise<{ id: string }> {
-  const response = await httpClient.post<{ id: string }>('/api/inquiries', input);
+import './createInquiryResponse.contract';
+
+export async function createInquiry(input: CreateInquiryInput): Promise<CreateInquiryResponse> {
+  const response = await httpClient.post<CreateInquiryResponse>('/api/inquiries', input);
   return response.data;
 }

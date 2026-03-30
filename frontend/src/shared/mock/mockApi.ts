@@ -11,7 +11,7 @@ import type {
   UpdateCustomerInput,
 } from '../../entities/customer/types';
 import { customerStatusOptions } from '../../entities/customer/types';
-import type { CreateInquiryInput } from '../../entities/inquiry/types';
+import type { CreateInquiryInput, CreateInquiryResponse } from '../../entities/inquiry/types';
 import type {
   CreateProductInput,
   PagedResult,
@@ -130,7 +130,7 @@ export async function getMockProductBySlug(slug: string): Promise<Product | null
   return productsStore.find((item) => item.slug === slug) ?? null;
 }
 
-export async function createMockInquiry(input: CreateInquiryInput): Promise<{ id: string }> {
+export async function createMockInquiry(input: CreateInquiryInput): Promise<CreateInquiryResponse> {
   await wait();
   inquiryStore.push(input);
 
@@ -182,7 +182,7 @@ export async function createMockInquiry(input: CreateInquiryInput): Promise<{ id
     ...customerInquiriesStore,
   ];
 
-  return { id: inquiryId };
+  return { inquiryId };
 }
 
 export async function createMockProduct(input: CreateProductInput): Promise<{ id: string }> {

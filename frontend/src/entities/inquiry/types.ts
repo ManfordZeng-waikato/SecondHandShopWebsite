@@ -6,3 +6,8 @@ export interface CreateInquiryInput {
   message: string;
   turnstileToken: string;
 }
+
+/** Matches WebApi `CreateInquiryResponse` (camelCase JSON: inquiryId). */
+export interface CreateInquiryResponse {
+  inquiryId: string;
+}
