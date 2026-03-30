@@ -6,11 +6,13 @@ using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Application.UseCases.Inquiries;
 
 public class InquiryService(
     IProductRepository productRepository,
+    ICategoryRepository categoryRepository,
     IInquiryRepository inquiryRepository,
     ICustomerRepository customerRepository,
     ITurnstileValidator turnstileValidator,
@@ -64,6 +66,17 @@ public class InquiryService(
         if (product is null)
         {
             throw new KeyNotFoundException($"Product '{command.ProductId}' was not found.");
+        }
+
+        if (product.Status != ProductStatus.Available)
+        {
+            throw new InvalidOperationException("Inquiries can only be submitted for available products.");
+        }
+
+        var category = await categoryRepository.GetByIdAsync(product.CategoryId, cancellationToken);
+        if (category is null || !category.IsActive)
+        {
+            throw new InvalidOperationException("Inquiries can only be submitted for products in an active category.");
         }
 
         var normalizedName = Normalize(command.CustomerName);

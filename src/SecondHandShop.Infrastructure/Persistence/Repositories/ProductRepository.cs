@@ -19,6 +19,16 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         return await dbContext.Products.FirstOrDefaultAsync(x => x.Slug == slug, cancellationToken);
     }
 
+    public async Task<Product?> GetPublicBySlugAsync(string slug, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Products
+            .AsNoTracking()
+            .Where(x => x.Slug == slug)
+            .Where(x => x.Status == ProductStatus.Available || x.Status == ProductStatus.Sold)
+            .Where(x => dbContext.Categories.Any(c => c.Id == x.CategoryId && c.IsActive))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Product>> ListForPublicAsync(Guid? categoryId, CancellationToken cancellationToken = default)
     {
         var query = dbContext.Products

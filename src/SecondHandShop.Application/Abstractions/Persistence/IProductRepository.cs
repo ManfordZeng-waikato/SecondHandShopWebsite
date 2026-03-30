@@ -9,6 +9,7 @@ public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<Product?> GetPublicBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListForPublicAsync(
         Guid? categoryId,
         CancellationToken cancellationToken = default);

@@ -77,7 +77,7 @@ public class ProductsController(
     public async Task<ActionResult<ProductResponse>> GetBySlugAsync(string slug, CancellationToken cancellationToken)
     {
         var normalizedSlug = slug.Trim().ToLowerInvariant();
-        var product = await productRepository.GetBySlugAsync(normalizedSlug, cancellationToken);
+        var product = await productRepository.GetPublicBySlugAsync(normalizedSlug, cancellationToken);
         if (product is null)
         {
             return NotFound(new ErrorResponse("Product was not found."));
