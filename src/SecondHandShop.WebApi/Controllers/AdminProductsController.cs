@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +65,7 @@ public class AdminProductsController(
 
         try
         {
+            var adminUserId = GetAdminUserId();
             var productId = await adminCatalogService.CreateProductAsync(
                 new CreateProductRequest(
                     request.Title,
@@ -70,7 +73,7 @@ public class AdminProductsController(
                     request.Description,
                     request.Price,
                     request.CategoryId,
-                    request.AdminUserId,
+                    adminUserId,
                     condition),
                 cancellationToken);
 
@@ -107,7 +110,8 @@ public class AdminProductsController(
 
         try
         {
-            await adminCatalogService.UpdateProductStatusAsync(productId, status, request.AdminUserId, cancellationToken);
+            var adminUserId = GetAdminUserId();
+            await adminCatalogService.UpdateProductStatusAsync(productId, status, adminUserId, cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -132,11 +136,12 @@ public class AdminProductsController(
     {
         try
         {
+            var adminUserId = GetAdminUserId();
             await adminCatalogService.UpdateProductFeaturedAsync(
                 productId,
                 request.IsFeatured,
                 request.FeaturedSortOrder,
-                request.AdminUserId,
+                adminUserId,
                 cancellationToken);
             return NoContent();
         }
@@ -158,12 +163,13 @@ public class AdminProductsController(
     {
         try
         {
+            var adminUserId = GetAdminUserId();
             var response = await adminCatalogService.CreateProductImageUploadUrlAsync(
                 new CreateProductImageUploadUrlRequest(
                     productId,
                     request.FileName,
                     request.ContentType,
-                    request.AdminUserId),
+                    adminUserId),
                 cancellationToken);
 
             return Ok(new CreateImageUploadUrlResponse(
@@ -193,6 +199,7 @@ public class AdminProductsController(
     {
         try
         {
+            var adminUserId = GetAdminUserId();
             await adminCatalogService.AddProductImageAsync(
                 new AddProductImageRequest(
                     productId,
@@ -200,7 +207,7 @@ public class AdminProductsController(
                     request.AltText,
                     request.SortOrder,
                     request.IsPrimary,
-                    request.AdminUserId),
+                    adminUserId),
                 cancellationToken);
 
             return NoContent();
@@ -223,11 +230,11 @@ public class AdminProductsController(
     public async Task<IActionResult> DeleteImageAsync(
         Guid productId,
         Guid imageId,
-        [FromQuery] Guid? adminUserId,
         CancellationToken cancellationToken)
     {
         try
         {
+            var adminUserId = GetAdminUserId();
             await adminCatalogService.DeleteProductImageAsync(productId, imageId, adminUserId, cancellationToken);
             return NoContent();
         }
@@ -239,6 +246,13 @@ public class AdminProductsController(
         {
             return Conflict(new ErrorResponse(ex.Message));
         }
+    }
+
+    private Guid? GetAdminUserId()
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                  ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(sub, out var id) ? id : null;
     }
 
     private static bool TryParseCondition(string value, out ProductCondition condition)
@@ -258,24 +272,20 @@ public sealed record CreateAdminProductRequest(
     string Description,
     decimal Price,
     Guid CategoryId,
-    Guid? AdminUserId,
     string? Condition = null);
 
 public sealed record CreateProductResponse(Guid Id);
 
 public sealed record UpdateProductStatusRequest(
-    string Status,
-    Guid? AdminUserId);
+    string Status);
 
 public sealed record UpdateAdminProductFeaturedRequest(
     bool IsFeatured,
-    int? FeaturedSortOrder,
-    Guid? AdminUserId);
+    int? FeaturedSortOrder);
 
 public sealed record CreateImageUploadUrlRequest(
     string FileName,
-    string ContentType,
-    Guid? AdminUserId);
+    string ContentType);
 
 public sealed record CreateImageUploadUrlResponse(
     string ObjectKey,
@@ -286,8 +296,7 @@ public sealed record AddProductImageApiRequest(
     string ObjectKey,
     string? AltText,
     int SortOrder,
-    bool IsPrimary,
-    Guid? AdminUserId);
+    bool IsPrimary);
 
 public sealed record AdminProductListItem(
     Guid Id,
