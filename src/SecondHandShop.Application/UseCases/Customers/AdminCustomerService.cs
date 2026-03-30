@@ -17,23 +17,23 @@ public class AdminCustomerService(
         var customer = await customerRepository.GetByIdAsync(customerId, cancellationToken)
             ?? throw new KeyNotFoundException($"Customer '{customerId}' was not found.");
 
-        var normalizedPhone = Normalize(request.PhoneNumber);
-        if (!string.IsNullOrWhiteSpace(normalizedPhone))
+        var targetName = request.Name ?? customer.Name;
+        var targetPhone = Normalize(request.PhoneNumber) ?? customer.PhoneNumber;
+        var targetStatus = request.Status ?? customer.Status;
+        var targetNotes = request.Notes ?? customer.Notes;
+
+        if (!string.IsNullOrWhiteSpace(targetPhone) && targetPhone != customer.PhoneNumber)
         {
-            var existingByPhone = await customerRepository.GetByPhoneNumberAsync(normalizedPhone, cancellationToken);
+            var existingByPhone = await customerRepository.GetByPhoneNumberAsync(targetPhone, cancellationToken);
             if (existingByPhone is not null && existingByPhone.Id != customerId)
             {
                 throw new InvalidOperationException("The phone number is already used by another customer.");
             }
         }
 
-        var targetStatus = request.Status ?? customer.Status;
-        var targetNotes = request.Notes ?? customer.Notes;
-
-        // Keep email immutable in admin edit flow to avoid accidental identity mismatch.
         customer.UpdateByAdmin(
-            request.Name,
-            normalizedPhone,
+            targetName,
+            targetPhone,
             targetStatus,
             targetNotes,
             clock.UtcNow);

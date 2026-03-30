@@ -530,9 +530,10 @@ export async function updateMockCustomerForAdmin(
     throw new Error(`Unsupported customer status '${status}'.`);
   }
 
-  const normalizedName = input.name?.trim() || null;
+  const normalizedName = input.name !== undefined ? (input.name?.trim() || null) : current.name;
+  const targetPhone = normalizedPhone ?? current.phoneNumber;
   const normalizedEmail = current.email?.trim() || null;
-  if (!normalizedEmail && !normalizedPhone) {
+  if (!normalizedEmail && !targetPhone) {
     throw new Error('At least one contact method (email or phone) is required.');
   }
 
@@ -541,7 +542,7 @@ export async function updateMockCustomerForAdmin(
       ? {
           ...item,
           name: normalizedName,
-          phoneNumber: normalizedPhone,
+          phoneNumber: targetPhone,
           status,
           notes,
           updatedAt: new Date().toISOString(),

@@ -118,7 +118,7 @@ export async function updateAdminCustomer(
   customerId: string,
   input: UpdateCustomerInput,
 ): Promise<void> {
-  await httpClient.put(`/api/lord/customers/${customerId}`, input);
+  await httpClient.patch(`/api/lord/customers/${customerId}`, input);
 }
 
 export interface PresignedUploadResult {

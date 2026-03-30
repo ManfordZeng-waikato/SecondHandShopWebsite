@@ -61,7 +61,7 @@ public class AdminCustomersController(
         return Ok(inquiries);
     }
 
-    [HttpPut("{customerId:guid}")]
+    [HttpPatch("{customerId:guid}")]
     public async Task<IActionResult> UpdateAsync(
         Guid customerId,
         [FromBody] UpdateCustomerApiRequest request,
