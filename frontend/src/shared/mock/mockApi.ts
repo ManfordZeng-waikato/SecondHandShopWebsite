@@ -120,11 +120,9 @@ export async function getMockCategories(): Promise<Category[]> {
   return categoriesStore;
 }
 
-export async function getMockProducts(categoryId?: string): Promise<Product[]> {
+export async function getMockProductById(id: string): Promise<Product | null> {
   await wait();
-  return categoryId
-    ? productsStore.filter((item) => item.categoryId === categoryId)
-    : productsStore;
+  return productsStore.find((item) => item.id === id && item.status !== 'OffShelf') ?? null;
 }
 
 export async function getMockProductBySlug(slug: string): Promise<Product | null> {
@@ -213,29 +211,47 @@ function getFeaturedState(productId: string) {
   return featuredStateStore[productId] ?? { isFeatured: false, featuredSortOrder: null };
 }
 
-export async function getMockProductsForAdmin(status?: ProductStatus, isFeatured?: boolean) {
+export async function getMockProductsForAdmin(
+  params: { status?: ProductStatus; categoryId?: string; isFeatured?: boolean; page?: number; pageSize?: number } = {},
+): Promise<PagedResult<{
+  id: string; title: string; slug: string; price: number; status: ProductStatus;
+  categoryName?: string; imageCount: number; primaryImageUrl?: string;
+  isFeatured: boolean; featuredSortOrder: number | null; createdAt: string; updatedAt: string;
+}>> {
   await wait();
-  let filtered = status
-    ? productsStore.filter((item) => item.status === status)
+  let filtered = params.status
+    ? productsStore.filter((item) => item.status === params.status)
     : productsStore;
 
-  if (typeof isFeatured === 'boolean') {
-    filtered = filtered.filter((item) => getFeaturedState(item.id).isFeatured === isFeatured);
+  if (params.categoryId) {
+    filtered = filtered.filter((item) => item.categoryId === params.categoryId);
   }
 
-  return filtered.map((item) => ({
-    ...getFeaturedState(item.id),
-    id: item.id,
-    title: item.title,
-    slug: item.slug,
-    price: item.price,
-    status: item.status,
-    categoryName: item.categoryName,
-    imageCount: item.images.length,
-    primaryImageUrl: item.images.find((img) => img.isPrimary)?.displayUrl ?? item.images[0]?.displayUrl,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-  }));
+  if (typeof params.isFeatured === 'boolean') {
+    filtered = filtered.filter((item) => getFeaturedState(item.id).isFeatured === params.isFeatured);
+  }
+
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 50));
+  const totalCount = filtered.length;
+
+  const items = filtered
+    .slice((page - 1) * pageSize, page * pageSize)
+    .map((item) => ({
+      ...getFeaturedState(item.id),
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      price: item.price,
+      status: item.status,
+      categoryName: item.categoryName,
+      imageCount: item.images.length,
+      primaryImageUrl: item.images.find((img) => img.isPrimary)?.displayUrl ?? item.images[0]?.displayUrl,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
+
+  return buildPagedResult(items, page, pageSize, totalCount);
 }
 
 export async function updateMockProductStatus(

@@ -103,7 +103,10 @@ export function AdminProductsPage() {
 
   const productsQuery = useQuery({
     queryKey: ['admin-products', selectedCategoryId, featuredFilterParam],
-    queryFn: () => fetchAdminProducts(undefined, selectedCategoryId, featuredFilterParam),
+    queryFn: () => fetchAdminProducts({
+      categoryId: selectedCategoryId,
+      isFeatured: featuredFilterParam,
+    }),
   });
 
   const statusMutation = useMutation({
@@ -152,7 +155,7 @@ export function AdminProductsPage() {
     return <Alert severity="error">Unable to load products for admin dashboard.</Alert>;
   }
 
-  const products = productsQuery.data ?? [];
+  const products = productsQuery.data?.items ?? [];
 
   const getDraft = (product: AdminProductListItem): FeaturedDraftState => {
     return (

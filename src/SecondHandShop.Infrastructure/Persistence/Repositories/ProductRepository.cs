@@ -29,21 +29,14 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Product>> ListForPublicAsync(Guid? categoryId, CancellationToken cancellationToken = default)
+    public async Task<Product?> GetPublicByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Products
+        return await dbContext.Products
             .AsNoTracking()
+            .Where(x => x.Id == id)
             .Where(x => x.Status == ProductStatus.Available || x.Status == ProductStatus.Sold)
-            .Where(x => dbContext.Categories.Any(c => c.Id == x.CategoryId && c.IsActive));
-
-        if (categoryId.HasValue)
-        {
-            query = query.Where(x => x.CategoryId == categoryId.Value);
-        }
-
-        return await query
-            .OrderByDescending(x => x.UpdatedAt)
-            .ToListAsync(cancellationToken);
+            .Where(x => dbContext.Categories.Any(c => c.Id == x.CategoryId && c.IsActive))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<PagedResult<ProductListItemDto>> ListPagedForPublicAsync(
@@ -189,26 +182,77 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             .ToList();
     }
 
-    public async Task<IReadOnlyList<Product>> ListForAdminAsync(
-        ProductStatus? status,
-        Guid? categoryId = null,
-        bool? isFeatured = null,
+    public async Task<PagedResult<AdminProductListItemDto>> ListPagedForAdminAsync(
+        AdminProductQueryParameters parameters,
         CancellationToken cancellationToken = default)
     {
         var query = dbContext.Products.AsNoTracking();
 
-        if (status.HasValue)
-            query = query.Where(x => x.Status == status.Value);
+        if (!string.IsNullOrWhiteSpace(parameters.Status)
+            && Enum.TryParse<ProductStatus>(parameters.Status, ignoreCase: true, out var statusEnum))
+        {
+            query = query.Where(x => x.Status == statusEnum);
+        }
 
-        if (categoryId.HasValue)
-            query = query.Where(x => x.CategoryId == categoryId.Value);
+        if (parameters.CategoryId.HasValue)
+            query = query.Where(x => x.CategoryId == parameters.CategoryId.Value);
 
-        if (isFeatured.HasValue)
-            query = query.Where(x => x.IsFeatured == isFeatured.Value);
+        if (parameters.IsFeatured.HasValue)
+            query = query.Where(x => x.IsFeatured == parameters.IsFeatured.Value);
 
-        return await query
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var page = parameters.SafePage;
+        var pageSize = parameters.SafePageSize;
+
+        var projected = await query
             .OrderByDescending(x => x.UpdatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new
+            {
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.Condition,
+                p.Status,
+                p.IsFeatured,
+                p.FeaturedSortOrder,
+                p.CreatedAt,
+                p.UpdatedAt,
+                ImageCount = dbContext.ProductImages.Count(i => i.ProductId == p.Id),
+                CoverImageKey = dbContext.ProductImages
+                    .Where(i => i.ProductId == p.Id)
+                    .OrderByDescending(i => i.IsPrimary)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.CloudStorageKey)
+                    .FirstOrDefault(),
+                CategoryName = dbContext.Categories
+                    .Where(c => c.Id == p.CategoryId)
+                    .Select(c => c.Name)
+                    .FirstOrDefault(),
+            })
             .ToListAsync(cancellationToken);
+
+        var items = projected
+            .Select(p => new AdminProductListItemDto(
+                p.Id,
+                p.Title,
+                p.Slug,
+                p.Price,
+                p.Condition?.ToString(),
+                p.Status.ToString(),
+                p.CategoryName,
+                p.ImageCount,
+                p.CoverImageKey,
+                p.IsFeatured,
+                p.FeaturedSortOrder,
+                p.CreatedAt,
+                p.UpdatedAt))
+            .ToList();
+
+        return new PagedResult<AdminProductListItemDto>(items, page, pageSize, totalCount);
     }
 
     public async Task AddAsync(Product product, CancellationToken cancellationToken = default)

@@ -18,25 +18,6 @@ public class ProductsController(
     private const int DefaultFeaturedLimit = 8;
     private const int MaxFeaturedLimit = 24;
 
-    [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ProductResponse>>> ListAsync(
-        [FromQuery] Guid? categoryId,
-        CancellationToken cancellationToken)
-    {
-        var products = await productRepository.ListForPublicAsync(categoryId, cancellationToken);
-        var categories = await categoryRepository.ListActiveAsync(cancellationToken);
-        var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
-
-        var response = new List<ProductResponse>(products.Count);
-        foreach (var product in products)
-        {
-            var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
-            response.Add(ToProductResponse(product, images, categoryMap));
-        }
-
-        return Ok(response);
-    }
-
     [HttpGet("search")]
     [EnableRateLimiting("SearchRateLimit")]
     public async Task<ActionResult<PagedResult<ProductListItemResponse>>> SearchAsync(
@@ -71,6 +52,21 @@ public class ProductsController(
         var safeLimit = Math.Clamp(limit ?? DefaultFeaturedLimit, 1, MaxFeaturedLimit);
         var featuredProducts = await productRepository.ListFeaturedForPublicAsync(safeLimit, cancellationToken);
         return Ok(featuredProducts.Select(ToProductListItemResponse).ToList());
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ProductResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var product = await productRepository.GetPublicByIdAsync(id, cancellationToken);
+        if (product is null)
+        {
+            return NotFound(new ErrorResponse("Product was not found."));
+        }
+
+        var categories = await categoryRepository.ListActiveAsync(cancellationToken);
+        var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
+        var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
+        return Ok(ToProductResponse(product, images, categoryMap));
     }
 
     [HttpGet("slug/{slug}")]

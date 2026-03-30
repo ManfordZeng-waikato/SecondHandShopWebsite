@@ -44,18 +44,26 @@ export interface AdminProductListItem {
   updatedAt: string;
 }
 
-export async function fetchAdminProducts(
-  status?: ProductStatus,
-  categoryId?: string,
-  isFeatured?: boolean,
-): Promise<AdminProductListItem[]> {
-  const params: Record<string, string> = {};
-  if (status) params.status = status;
-  if (categoryId) params.categoryId = categoryId;
-  if (typeof isFeatured === 'boolean') params.isFeatured = String(isFeatured);
+export interface AdminProductQueryParams {
+  page?: number;
+  pageSize?: number;
+  status?: ProductStatus;
+  categoryId?: string;
+  isFeatured?: boolean;
+}
 
-  const response = await httpClient.get<AdminProductListItem[]>('/api/lord/products', {
-    params: Object.keys(params).length > 0 ? params : undefined,
+export async function fetchAdminProducts(
+  params: AdminProductQueryParams = {},
+): Promise<PagedResult<AdminProductListItem>> {
+  const queryParams: Record<string, string> = {};
+  if (params.status) queryParams.status = params.status;
+  if (params.categoryId) queryParams.categoryId = params.categoryId;
+  if (typeof params.isFeatured === 'boolean') queryParams.isFeatured = String(params.isFeatured);
+  if (params.page) queryParams.page = String(params.page);
+  if (params.pageSize) queryParams.pageSize = String(params.pageSize);
+
+  const response = await httpClient.get<PagedResult<AdminProductListItem>>('/api/lord/products', {
+    params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
   });
   return response.data;
 }

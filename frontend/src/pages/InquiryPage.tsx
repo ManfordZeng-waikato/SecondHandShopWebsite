@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchProducts } from '../features/catalog/api/catalogApi';
+import { fetchProductById } from '../features/catalog/api/catalogApi';
 import { createInquiry } from '../features/inquiry/api/inquiryApi';
 import { TurnstileWidget, type TurnstileWidgetHandle } from '../features/inquiry/components/TurnstileWidget';
 import { env } from '../shared/config/env';
@@ -70,9 +70,10 @@ export function InquiryPage() {
   const turnstileTokenRequestRef = useRef<Promise<string | null> | null>(null);
   const turnstileTokenTimeoutRef = useRef<number | null>(null);
 
-  const productsQuery = useQuery({
-    queryKey: ['products'],
-    queryFn: () => fetchProducts(),
+  const productQuery = useQuery({
+    queryKey: ['product', id],
+    queryFn: () => fetchProductById(id!),
+    enabled: !!id,
   });
 
   const inquiryMutation = useMutation({
@@ -144,16 +145,15 @@ export function InquiryPage() {
     return () => window.clearTimeout(timer);
   }, [navigate, successOpen]);
 
-  if (productsQuery.isLoading) {
+  if (productQuery.isLoading) {
     return <CircularProgress />;
   }
 
-  if (productsQuery.isError) {
+  if (productQuery.isError) {
     return <Alert severity="error">Unable to load product information.</Alert>;
   }
 
-  const products = productsQuery.data ?? [];
-  const targetProduct = products.find((product) => product.id === id);
+  const targetProduct = productQuery.data;
   const normalizedEmailInput = formState.email.trim();
   const isEmailFormatInvalid = normalizedEmailInput.length > 0 && !emailPattern.test(normalizedEmailInput);
   const normalizedPhoneInput = formState.phoneNumber.trim();

@@ -12,13 +12,6 @@ export async function fetchCategories(): Promise<Category[]> {
   return response.data;
 }
 
-export async function fetchProducts(categoryId?: string): Promise<Product[]> {
-  const response = await httpClient.get<Product[]>('/api/products', {
-    params: categoryId ? { categoryId } : undefined,
-  });
-  return response.data;
-}
-
 export async function fetchProductsPaged(
   params: ProductQueryParams,
   signal?: AbortSignal,
@@ -28,6 +21,15 @@ export async function fetchProductsPaged(
     { params, signal },
   );
   return response.data;
+}
+
+export async function fetchProductById(id: string): Promise<Product | null> {
+  try {
+    const response = await httpClient.get<Product>(`/api/products/${id}`);
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchProductBySlug(slug: string): Promise<Product | null> {

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
+using SecondHandShop.Application.Contracts.Catalog;
+using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.UseCases.Catalog;
 using SecondHandShop.Domain.Enums;
 
@@ -14,55 +16,36 @@ namespace SecondHandShop.WebApi.Controllers;
 public class AdminProductsController(
     IAdminCatalogService adminCatalogService,
     IProductRepository productRepository,
-    ICategoryRepository categoryRepository,
-    IProductImageRepository productImageRepository,
     IObjectStorageService objectStorageService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AdminProductListItem>>> ListAsync(
-        [FromQuery] string? status,
-        [FromQuery] Guid? categoryId,
-        [FromQuery] bool? isFeatured,
+    public async Task<ActionResult<PagedResult<AdminProductListItem>>> ListAsync(
+        [FromQuery] AdminProductQueryParameters parameters,
         CancellationToken cancellationToken)
     {
-        ProductStatus? statusFilter = null;
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ProductStatus>(status, true, out var parsed))
-        {
-            statusFilter = parsed;
-        }
+        var result = await productRepository.ListPagedForAdminAsync(parameters, cancellationToken);
 
-        var products = await productRepository.ListForAdminAsync(
-            statusFilter,
-            categoryId,
-            isFeatured,
-            cancellationToken);
-        var categories = await categoryRepository.ListActiveAsync(cancellationToken);
-        var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
+        var items = result.Items
+            .Select(dto => new AdminProductListItem(
+                dto.Id,
+                dto.Title,
+                dto.Slug,
+                dto.Price,
+                dto.Condition,
+                dto.Status,
+                dto.CategoryName,
+                dto.ImageCount,
+                dto.CoverImageKey is not null
+                    ? objectStorageService.BuildDisplayUrl(dto.CoverImageKey)
+                    : null,
+                dto.IsFeatured,
+                dto.FeaturedSortOrder,
+                dto.CreatedAt,
+                dto.UpdatedAt))
+            .ToList();
 
-        var result = new List<AdminProductListItem>(products.Count);
-        foreach (var product in products)
-        {
-            var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
-            var primary = images.OrderBy(x => x.SortOrder).FirstOrDefault(x => x.IsPrimary) ?? images.MinBy(x => x.SortOrder);
-            categoryMap.TryGetValue(product.CategoryId, out var categoryName);
-
-            result.Add(new AdminProductListItem(
-                product.Id,
-                product.Title,
-                product.Slug,
-                product.Price,
-                product.Condition?.ToString(),
-                product.Status.ToString(),
-                categoryName,
-                images.Count,
-                primary is not null ? objectStorageService.BuildDisplayUrl(primary.CloudStorageKey) : null,
-                product.IsFeatured,
-                product.FeaturedSortOrder,
-                product.CreatedAt,
-                product.UpdatedAt));
-        }
-
-        return Ok(result);
+        return Ok(new PagedResult<AdminProductListItem>(
+            items, result.Page, result.PageSize, result.TotalCount));
     }
 
     [HttpPost]
