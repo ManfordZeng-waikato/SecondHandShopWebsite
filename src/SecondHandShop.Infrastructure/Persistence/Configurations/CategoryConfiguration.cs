@@ -31,6 +31,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne<Category>()
             .WithMany()
             .HasForeignKey(x => x.ParentCategoryId)

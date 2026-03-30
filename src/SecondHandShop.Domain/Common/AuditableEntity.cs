@@ -6,6 +6,7 @@ public abstract class AuditableEntity
     public DateTime UpdatedAt { get; protected set; } = DateTime.UtcNow;
     public Guid? CreatedByAdminUserId { get; protected set; }
     public Guid? UpdatedByAdminUserId { get; protected set; }
+    public byte[] RowVersion { get; protected set; } = [];
 
     protected void SetCreatedAudit(Guid? adminUserId, DateTime utcNow)
     {

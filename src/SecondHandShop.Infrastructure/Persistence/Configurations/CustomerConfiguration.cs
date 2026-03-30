@@ -36,9 +36,16 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.HasIndex(x => x.Email);
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
 
-        builder.HasIndex(x => x.PhoneNumber);
+        builder.HasIndex(x => x.Email)
+            .IsUnique()
+            .HasFilter("[Email] IS NOT NULL");
+
+        builder.HasIndex(x => x.PhoneNumber)
+            .IsUnique()
+            .HasFilter("[PhoneNumber] IS NOT NULL");
 
         builder.ToTable(x =>
         {

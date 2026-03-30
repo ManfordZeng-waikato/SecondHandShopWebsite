@@ -16,6 +16,7 @@ public class Customer
     public string? Notes { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+    public byte[] RowVersion { get; private set; } = [];
 
     public static Customer Create(
         string? name,

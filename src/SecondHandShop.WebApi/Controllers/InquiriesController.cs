@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
@@ -47,6 +48,10 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
         catch (TurnstileValidationUnavailableException ex)
         {
             return StatusCode(StatusCodes.Status502BadGateway, new ErrorResponse(ex.Message));
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new ErrorResponse("A conflict occurred while processing your inquiry. Please try again."));
         }
         catch (ArgumentException ex)
         {

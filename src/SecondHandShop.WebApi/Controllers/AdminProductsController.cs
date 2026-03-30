@@ -118,6 +118,10 @@ public class AdminProductsController(
         {
             return NotFound(new ErrorResponse(ex.Message));
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new ErrorResponse(ex.Message));
@@ -148,6 +152,10 @@ public class AdminProductsController(
         catch (KeyNotFoundException ex)
         {
             return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
         }
         catch (ArgumentException ex)
         {
@@ -216,6 +224,10 @@ public class AdminProductsController(
         {
             return NotFound(new ErrorResponse(ex.Message));
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
+        }
         catch (InvalidOperationException ex)
         {
             return Conflict(new ErrorResponse(ex.Message));
@@ -241,6 +253,10 @@ public class AdminProductsController(
         catch (KeyNotFoundException ex)
         {
             return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
         }
         catch (InvalidOperationException ex)
         {

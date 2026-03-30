@@ -51,6 +51,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne<Category>()
             .WithMany()
             .HasForeignKey(x => x.CategoryId)

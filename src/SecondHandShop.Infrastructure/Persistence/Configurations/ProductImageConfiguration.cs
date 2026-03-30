@@ -34,6 +34,9 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne<Product>()
             .WithMany()
             .HasForeignKey(x => x.ProductId)

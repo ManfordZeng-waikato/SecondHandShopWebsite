@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
@@ -92,6 +93,10 @@ public class AdminCustomersController(
         catch (KeyNotFoundException ex)
         {
             return NotFound(new ErrorResponse(ex.Message));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new ErrorResponse("The customer was modified by another request. Please refresh and try again."));
         }
         catch (InvalidOperationException ex)
         {
