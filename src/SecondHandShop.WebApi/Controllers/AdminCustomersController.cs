@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
 using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -78,34 +78,15 @@ public class AdminCustomersController(
             status = parsedStatus;
         }
 
-        try
-        {
-            await adminCustomerService.UpdateCustomerAsync(
-                customerId,
-                new UpdateCustomerRequest(
-                    request.Name,
-                    request.PhoneNumber,
-                    status,
-                    request.Notes),
-                cancellationToken);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new ErrorResponse("The customer was modified by another request. Please refresh and try again."));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        await adminCustomerService.UpdateCustomerAsync(
+            customerId,
+            new UpdateCustomerRequest(
+                request.Name,
+                request.PhoneNumber,
+                status,
+                request.Notes),
+            cancellationToken);
+        return NoContent();
     }
 
     private static bool TryParseStatus(string value, out CustomerStatus status)

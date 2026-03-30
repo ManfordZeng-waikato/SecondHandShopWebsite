@@ -20,19 +20,12 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
         [FromBody] LoginAdminRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = new LoginAdminCommand(request.UserName, request.Password);
-            var response = await mediator.Send(command, cancellationToken);
+        var command = new LoginAdminCommand(request.UserName, request.Password);
+        var response = await mediator.Send(command, cancellationToken);
 
-            Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
+        Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
 
-            return Ok(new { expiresAt = response.ExpiresAt });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized(new ErrorResponse("Invalid credentials"));
-        }
+        return Ok(new { expiresAt = response.ExpiresAt });
     }
 
     [HttpPost("logout")]

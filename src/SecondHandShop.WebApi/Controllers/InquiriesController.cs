@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
+using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -24,39 +23,8 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
             request.TurnstileToken,
             requestIpAddress);
 
-        try
-        {
-            var inquiryId = await inquiryService.CreateInquiryAsync(command, cancellationToken);
-            return Created($"/api/inquiries/{inquiryId}", new CreateInquiryResponse(inquiryId));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (InquiryRateLimitExceededException ex)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new ErrorResponse(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
-        catch (InquiryTurnstileValidationException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
-        catch (TurnstileValidationUnavailableException ex)
-        {
-            return StatusCode(StatusCodes.Status502BadGateway, new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateException)
-        {
-            return Conflict(new ErrorResponse("A conflict occurred while processing your inquiry. Please try again."));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        var inquiryId = await inquiryService.CreateInquiryAsync(command, cancellationToken);
+        return Created($"/api/inquiries/{inquiryId}", new CreateInquiryResponse(inquiryId));
     }
 }
 
@@ -84,5 +52,3 @@ public sealed record CreateInquiryRequest
 }
 
 public sealed record CreateInquiryResponse(Guid InquiryId);
-
-public sealed record ErrorResponse(string Message);

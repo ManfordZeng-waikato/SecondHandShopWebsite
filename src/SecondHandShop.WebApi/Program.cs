@@ -8,6 +8,7 @@ using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Infrastructure;
 using SecondHandShop.Infrastructure.Services;
 using SecondHandShop.WebApi.Controllers;
+using SecondHandShop.WebApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
@@ -113,7 +114,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ApiExceptionFilter>();
+});
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {

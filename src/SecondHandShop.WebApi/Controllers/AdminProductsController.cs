@@ -2,13 +2,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.Contracts.Catalog;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.UseCases.Catalog;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -63,38 +63,19 @@ public class AdminProductsController(
             condition = parsed;
         }
 
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            var productId = await adminCatalogService.CreateProductAsync(
-                new CreateProductRequest(
-                    request.Title,
-                    request.Slug,
-                    request.Description,
-                    request.Price,
-                    request.CategoryId,
-                    adminUserId,
-                    condition),
-                cancellationToken);
+        var adminUserId = GetAdminUserId();
+        var productId = await adminCatalogService.CreateProductAsync(
+            new CreateProductRequest(
+                request.Title,
+                request.Slug,
+                request.Description,
+                request.Price,
+                request.CategoryId,
+                adminUserId,
+                condition),
+            cancellationToken);
 
-            return Created($"/api/lord/products/{productId}", new CreateProductResponse(productId));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateException)
-        {
-            return Conflict(new ErrorResponse("Concurrent update detected. The product may already have a primary image."));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        return Created($"/api/lord/products/{productId}", new CreateProductResponse(productId));
     }
 
     [HttpPut("{productId:guid}/status")]
@@ -108,28 +89,9 @@ public class AdminProductsController(
             return BadRequest(new ErrorResponse($"Unsupported product status '{request.Status}'."));
         }
 
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            await adminCatalogService.UpdateProductStatusAsync(productId, status, adminUserId, cancellationToken);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
+        var adminUserId = GetAdminUserId();
+        await adminCatalogService.UpdateProductStatusAsync(productId, status, adminUserId, cancellationToken);
+        return NoContent();
     }
 
     [HttpPut("{productId:guid}/featured")]
@@ -138,29 +100,14 @@ public class AdminProductsController(
         [FromBody] UpdateAdminProductFeaturedRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            await adminCatalogService.UpdateProductFeaturedAsync(
-                productId,
-                request.IsFeatured,
-                request.FeaturedSortOrder,
-                adminUserId,
-                cancellationToken);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        var adminUserId = GetAdminUserId();
+        await adminCatalogService.UpdateProductFeaturedAsync(
+            productId,
+            request.IsFeatured,
+            request.FeaturedSortOrder,
+            adminUserId,
+            cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("{productId:guid}/images/presigned-url")]
@@ -169,34 +116,19 @@ public class AdminProductsController(
         [FromBody] CreateImageUploadUrlRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            var response = await adminCatalogService.CreateProductImageUploadUrlAsync(
-                new CreateProductImageUploadUrlRequest(
-                    productId,
-                    request.FileName,
-                    request.ContentType,
-                    adminUserId),
-                cancellationToken);
+        var adminUserId = GetAdminUserId();
+        var response = await adminCatalogService.CreateProductImageUploadUrlAsync(
+            new CreateProductImageUploadUrlRequest(
+                productId,
+                request.FileName,
+                request.ContentType,
+                adminUserId),
+            cancellationToken);
 
-            return Ok(new CreateImageUploadUrlResponse(
-                response.ObjectKey,
-                response.PutUrl,
-                response.ExpiresInSeconds));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        return Ok(new CreateImageUploadUrlResponse(
+            response.ObjectKey,
+            response.PutUrl,
+            response.ExpiresInSeconds));
     }
 
     [HttpPost("{productId:guid}/images")]
@@ -205,37 +137,18 @@ public class AdminProductsController(
         [FromBody] AddProductImageApiRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            await adminCatalogService.AddProductImageAsync(
-                new AddProductImageRequest(
-                    productId,
-                    request.ObjectKey,
-                    request.AltText,
-                    request.SortOrder,
-                    request.IsPrimary,
-                    adminUserId),
-                cancellationToken);
+        var adminUserId = GetAdminUserId();
+        await adminCatalogService.AddProductImageAsync(
+            new AddProductImageRequest(
+                productId,
+                request.ObjectKey,
+                request.AltText,
+                request.SortOrder,
+                request.IsPrimary,
+                adminUserId),
+            cancellationToken);
 
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ErrorResponse(ex.Message));
-        }
+        return NoContent();
     }
 
     [HttpDelete("{productId:guid}/images/{imageId:guid}")]
@@ -244,24 +157,9 @@ public class AdminProductsController(
         Guid imageId,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var adminUserId = GetAdminUserId();
-            await adminCatalogService.DeleteProductImageAsync(productId, imageId, adminUserId, cancellationToken);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ErrorResponse(ex.Message));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict(new ErrorResponse("The product was modified by another request. Please refresh and try again."));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ErrorResponse(ex.Message));
-        }
+        var adminUserId = GetAdminUserId();
+        await adminCatalogService.DeleteProductImageAsync(productId, imageId, adminUserId, cancellationToken);
+        return NoContent();
     }
 
     private Guid? GetAdminUserId()

@@ -4,6 +4,7 @@ using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.Contracts.Catalog;
 using SecondHandShop.Application.Contracts.Common;
+using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
 

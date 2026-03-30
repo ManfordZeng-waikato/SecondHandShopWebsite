@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Infrastructure.Services;
+using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
 
