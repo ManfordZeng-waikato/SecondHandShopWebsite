@@ -1,6 +1,8 @@
+using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Infrastructure;
@@ -74,6 +76,43 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 2;
+
+    var trustAllProxies = builder.Configuration.GetValue<bool>("ReverseProxy:TrustAllProxies");
+    if (trustAllProxies)
+    {
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+    }
+    else
+    {
+        var knownProxies = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>();
+        if (knownProxies is { Length: > 0 })
+        {
+            options.KnownProxies.Clear();
+            foreach (var proxy in knownProxies)
+            {
+                if (IPAddress.TryParse(proxy, out var ip))
+                    options.KnownProxies.Add(ip);
+            }
+        }
+
+        var knownNetworks = builder.Configuration.GetSection("ReverseProxy:KnownNetworks").Get<string[]>();
+        if (knownNetworks is { Length: > 0 })
+        {
+            options.KnownIPNetworks.Clear();
+            foreach (var network in knownNetworks)
+            {
+                if (System.Net.IPNetwork.TryParse(network, out var parsed))
+                    options.KnownIPNetworks.Add(parsed);
+            }
+        }
+    }
+});
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -102,6 +141,8 @@ builder.Services.AddHsts(options =>
 var app = builder.Build();
 
 await AdminSeedService.SeedAdminUserAsync(app.Services);
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
