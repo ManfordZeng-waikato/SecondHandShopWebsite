@@ -7,16 +7,32 @@ export function HomeHeroSection() {
     <Box
       component="section"
       aria-label="Hero"
-      sx={{ bgcolor: '#f0ebe4', overflow: 'hidden' }}
+      sx={{
+        bgcolor: '#f0ebe4',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
     >
-      <Container maxWidth="lg">
+      {/* Subtle dot-grid texture */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <Container maxWidth="lg" sx={{ position: 'relative' }}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}
           alignItems="center"
-          spacing={{ xs: 4, md: 6 }}
-          sx={{ py: { xs: 6, md: 10 } }}
+          spacing={{ xs: 4, md: 8 }}
+          sx={{ py: { xs: 7, md: 11 } }}
         >
-          {/* Illustration — shown first on mobile for visual impact */}
+          {/* Illustration */}
           <Box
             sx={{
               flex: { md: '1 1 55%' },
@@ -40,7 +56,7 @@ export function HomeHeroSection() {
             />
           </Box>
 
-          {/* Text */}
+          {/* Copy */}
           <Box
             sx={{
               flex: { md: '1 1 45%' },
@@ -48,22 +64,31 @@ export function HomeHeroSection() {
               order: { xs: 2, md: 2 },
             }}
           >
+            {/* Eyebrow */}
             <Typography
-              variant="body1"
-              color="text.secondary"
-              fontWeight={500}
-              sx={{ mb: 1, letterSpacing: 1.5, textTransform: 'uppercase', fontSize: '0.8rem' }}
+              component="span"
+              sx={{
+                display: 'inline-block',
+                mb: 2,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: 'text.secondary',
+                borderBottom: '1.5px solid',
+                borderColor: 'text.secondary',
+                pb: '3px',
+              }}
             >
-              Welcome to
+              Hamilton, New Zealand
             </Typography>
 
             <Typography
               variant="h2"
               component="h1"
-              fontWeight={800}
               sx={{
-                fontSize: { xs: '2.2rem', sm: '2.8rem', md: '3.2rem' },
-                lineHeight: 1.15,
+                fontSize: { xs: '2.8rem', sm: '3.4rem', md: '4rem' },
+                lineHeight: 1.08,
                 mb: 2,
               }}
             >
@@ -71,20 +96,31 @@ export function HomeHeroSection() {
             </Typography>
 
             <Typography
-              variant="h6"
-              component="p"
+              variant="body1"
               color="text.secondary"
-              fontWeight={400}
               sx={{
                 fontSize: { xs: '1rem', md: '1.15rem' },
-                lineHeight: 1.6,
+                lineHeight: 1.7,
                 maxWidth: 440,
                 mx: { xs: 'auto', md: 0 },
                 mb: 4,
               }}
             >
-              Quality Second Hand Furniture &amp; Antiques.
+              Quality pre-loved furniture &amp; antiques, hand-picked from
+              the&nbsp;Waikato. Come find your next favourite piece.
             </Typography>
+
+            {/* Accent rule */}
+            <Box
+              aria-hidden
+              sx={{
+                width: 44,
+                height: '2px',
+                bgcolor: 'primary.main',
+                mb: 4,
+                mx: { xs: 'auto', md: 0 },
+              }}
+            />
 
             <Button
               variant="contained"
@@ -96,8 +132,6 @@ export function HomeHeroSection() {
                 px: 4,
                 py: 1.5,
                 borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
                 fontSize: '1rem',
               }}
             >

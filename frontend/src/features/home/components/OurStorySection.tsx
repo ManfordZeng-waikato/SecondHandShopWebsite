@@ -9,19 +9,37 @@ export function OurStorySection() {
       aria-label="Our story"
       sx={{
         bgcolor: '#f0ebe4',
-        py: { xs: 6, md: 10 },
+        py: { xs: 7, md: 11 },
+        position: 'relative',
+        overflow: 'hidden',
         backgroundImage: 'url(/Title.svg)',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
         backgroundSize: '90%',
       }}
     >
-      <Container maxWidth="sm">
+
+      <Container maxWidth="sm" sx={{ position: 'relative' }}>
         <Box sx={{ textAlign: 'center' }}>
+          {/* Decorative opening mark */}
+          <Box
+            aria-hidden
+            sx={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontSize: { xs: '5rem', md: '7rem' },
+              lineHeight: 0.6,
+              color: 'primary.main',
+              opacity: 0.25,
+              mb: 2,
+              userSelect: 'none',
+            }}
+          >
+            &ldquo;
+          </Box>
+
           <Typography
             variant="h4"
             component="h2"
-            fontWeight={800}
             sx={{ fontSize: { xs: '1.5rem', md: '1.85rem' }, mb: 3 }}
           >
             Our Story
@@ -54,7 +72,6 @@ export function OurStorySection() {
             to="/my-story"
             endIcon={<ArrowForwardIcon />}
             sx={{
-              textTransform: 'none',
               fontWeight: 600,
               borderRadius: 2,
               px: 3,

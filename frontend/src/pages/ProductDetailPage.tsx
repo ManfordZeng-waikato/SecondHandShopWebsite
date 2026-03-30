@@ -4,13 +4,12 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  CardMedia,
   CircularProgress,
+  Divider,
   Stack,
   Typography,
 } from '@mui/material';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { fetchProductBySlug } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
@@ -28,7 +27,11 @@ export function ProductDetailPage() {
   });
 
   if (productQuery.isLoading) {
-    return <CircularProgress />;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (productQuery.isError) {
@@ -39,8 +42,8 @@ export function ProductDetailPage() {
     return <Alert severity="warning">Product not found.</Alert>;
   }
 
-  const { images } = productQuery.data;
-  const sortedImages = [...images].sort((a, b) => {
+  const product = productQuery.data;
+  const sortedImages = [...product.images].sort((a, b) => {
     if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
     return a.sortOrder - b.sortOrder;
   });
@@ -48,61 +51,115 @@ export function ProductDetailPage() {
   const activeUrl = activeImage?.displayUrl || FALLBACK_IMAGE;
 
   return (
-    <Card>
-      <CardMedia
-        component="img"
-        height="400"
-        image={activeUrl}
-        alt={activeImage?.altText ?? productQuery.data.title}
-        sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 2 }}
-      />
-
-      {sortedImages.length > 1 && (
-        <Box sx={{ display: 'flex', gap: 1, px: 2, py: 1.5, bgcolor: 'grey.50', overflowX: 'auto' }}>
-          {sortedImages.map((img, index) => (
-            <Box
-              key={img.id}
-              component="img"
-              src={img.displayUrl}
-              alt={img.altText ?? `Image ${index + 1}`}
-              onClick={() => setSelectedIndex(index)}
-              sx={{
-                width: 72,
-                height: 72,
-                objectFit: 'cover',
-                borderRadius: 1,
-                cursor: 'pointer',
-                border: '2px solid',
-                borderColor: index === selectedIndex ? 'primary.main' : 'transparent',
-                opacity: index === selectedIndex ? 1 : 0.6,
-                transition: 'all 0.2s',
-                '&:hover': { opacity: 1 },
-                flexShrink: 0,
-              }}
-            />
-          ))}
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={{ xs: 3, md: 5 }}
+      alignItems={{ md: 'flex-start' }}
+    >
+      {/* ── Image panel ─────────────────────────────────────────────── */}
+      <Box sx={{ flex: { md: '1 1 55%' } }}>
+        {/* Main image */}
+        <Box
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            bgcolor: 'grey.100',
+            border: '1px solid',
+            borderColor: 'divider',
+            aspectRatio: '4/3',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Box
+            component="img"
+            src={activeUrl}
+            alt={activeImage?.altText ?? product.title}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              p: 2,
+            }}
+          />
         </Box>
-      )}
 
-      <CardContent>
-        <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h4">{productQuery.data.title}</Typography>
-            <StatusChip status={productQuery.data.status} />
-          </Stack>
-          <Typography variant="h6">${productQuery.data.price.toFixed(2)}</Typography>
-          <Typography color="text.secondary">{productQuery.data.description}</Typography>
-          <Box>
-            <Button
-              variant="contained"
-              component={RouterLink}
-              to={`/products/${productQuery.data.id}/inquiry`}
-            >
-              Send inquiry
-            </Button>
+        {/* Thumbnails */}
+        {sortedImages.length > 1 && (
+          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, overflowX: 'auto', pb: 0.5 }}>
+            {sortedImages.map((img, index) => (
+              <Box
+                key={img.id}
+                component="img"
+                src={img.displayUrl}
+                alt={img.altText ?? `Image ${index + 1}`}
+                onClick={() => setSelectedIndex(index)}
+                sx={{
+                  width: 72,
+                  height: 72,
+                  objectFit: 'cover',
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  border: '2px solid',
+                  borderColor: index === selectedIndex ? 'primary.main' : 'transparent',
+                  opacity: index === selectedIndex ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  '&:hover': { opacity: 1 },
+                  flexShrink: 0,
+                }}
+              />
+            ))}
           </Box>
+        )}
+      </Box>
+
+      {/* ── Details panel ───────────────────────────────────────────── */}
+      <Box sx={{ flex: { md: '1 1 45%' } }}>
+        {/* Status */}
+        <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+          <StatusChip status={product.status} />
         </Stack>
-      </CardContent>
-    </Card>
+
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
+            fontSize: { xs: '1.8rem', md: '2.2rem' },
+            lineHeight: 1.15,
+            mb: 1.5,
+          }}
+        >
+          {product.title}
+        </Typography>
+
+        <Typography variant="h5" fontWeight={800} color="primary.main" sx={{ mb: 2.5 }}>
+          ${product.price.toFixed(2)}
+        </Typography>
+
+        <Divider sx={{ mb: 2.5 }} />
+
+        {product.description && (
+          <Typography
+            color="text.secondary"
+            sx={{ lineHeight: 1.8, mb: 3, fontSize: '0.95rem' }}
+          >
+            {product.description}
+          </Typography>
+        )}
+
+        <Button
+          variant="contained"
+          size="large"
+          component={RouterLink}
+          to={`/products/${product.id}/inquiry`}
+          endIcon={<ArrowForwardIcon />}
+          disabled={product.status === 'Sold'}
+          sx={{ px: 4, py: 1.5, fontSize: '1rem', borderRadius: 2 }}
+        >
+          {product.status === 'Sold' ? 'Item Sold' : 'Send Inquiry'}
+        </Button>
+      </Box>
+    </Stack>
   );
 }

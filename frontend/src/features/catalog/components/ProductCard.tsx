@@ -10,10 +10,7 @@ import {
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { Link as RouterLink } from 'react-router-dom';
-import type {
-  Product,
-  ProductListItem,
-} from '../../../entities/product/types';
+import type { Product, ProductListItem } from '../../../entities/product/types';
 import { StatusChip } from '../../../shared/components/StatusChip';
 
 type ProductCardItem = Product | ProductListItem;
@@ -67,10 +64,10 @@ export const ProductCard = memo(function ProductCard({
         flexDirection: 'column',
         borderRadius: 3,
         overflow: 'hidden',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        transition: 'transform 0.22s ease, box-shadow 0.22s ease',
         '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
+          transform: 'translateY(-4px)',
+          boxShadow: '0 10px 28px rgba(0,0,0,0.08)',
         },
       }}
     >
@@ -84,7 +81,7 @@ export const ProductCard = memo(function ProductCard({
           alignItems: 'stretch',
         }}
       >
-        <Box sx={{ position: 'relative' }}>
+        <Box sx={{ position: 'relative', overflow: 'hidden' }}>
           <CardMedia
             component="img"
             height="220"
@@ -95,10 +92,13 @@ export const ProductCard = memo(function ProductCard({
               objectFit: 'contain',
               bgcolor: 'grey.100',
               p: 1.5,
+              transition: 'transform 0.3s ease',
               ...(sold && { filter: 'grayscale(35%)', opacity: 0.8 }),
+              '.MuiCardActionArea-root:hover &': {
+                transform: 'scale(1.03)',
+              },
             }}
           />
-
           <Box sx={{ position: 'absolute', top: 10, left: 10 }}>
             <StatusChip status={product.status} />
           </Box>

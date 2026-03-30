@@ -6,12 +6,13 @@ import {
   Box,
   Button,
   CircularProgress,
-  Paper,
+  Divider,
   Snackbar,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchProducts } from '../features/catalog/api/catalogApi';
 import { createInquiry } from '../features/inquiry/api/inquiryApi';
@@ -47,19 +48,10 @@ function isTurnstileRelatedMessage(message: string): boolean {
 }
 
 function getApiErrorMessage(error: unknown): string | null {
-  if (!axios.isAxiosError(error)) {
-    return null;
-  }
-
+  if (!axios.isAxiosError(error)) return null;
   const payload = error.response?.data;
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-
-  if (!('message' in payload)) {
-    return null;
-  }
-
+  if (!payload || typeof payload !== 'object') return null;
+  if (!('message' in payload)) return null;
   const message = (payload as { message?: unknown }).message;
   return typeof message === 'string' ? message : null;
 }
@@ -99,7 +91,6 @@ export function InquiryPage() {
       window.clearTimeout(turnstileTokenTimeoutRef.current);
       turnstileTokenTimeoutRef.current = null;
     }
-
     const resolver = turnstileTokenResolverRef.current;
     turnstileTokenResolverRef.current = null;
     turnstileTokenRequestRef.current = null;
@@ -107,13 +98,8 @@ export function InquiryPage() {
   }, []);
 
   const requestTurnstileToken = useCallback(async (): Promise<string | null> => {
-    if (turnstileToken) {
-      return turnstileToken;
-    }
-
-    if (turnstileTokenRequestRef.current) {
-      return turnstileTokenRequestRef.current;
-    }
+    if (turnstileToken) return turnstileToken;
+    if (turnstileTokenRequestRef.current) return turnstileTokenRequestRef.current;
 
     const pendingTokenRequest = new Promise<string | null>((resolve) => {
       turnstileTokenResolverRef.current = resolve;
@@ -124,10 +110,7 @@ export function InquiryPage() {
 
     turnstileTokenRequestRef.current = pendingTokenRequest;
     const executeTriggered = turnstileWidgetRef.current?.execute() ?? false;
-    if (!executeTriggered) {
-      resolvePendingTurnstileTokenRequest(null);
-    }
-
+    if (!executeTriggered) resolvePendingTurnstileTokenRequest(null);
     return pendingTokenRequest;
   }, [resolvePendingTurnstileTokenRequest, turnstileToken]);
 
@@ -153,22 +136,12 @@ export function InquiryPage() {
     setError('Security verification failed to load. Please refresh and try again.');
   }, [resolvePendingTurnstileTokenRequest]);
 
-  useEffect(() => () => {
-    resolvePendingTurnstileTokenRequest(null);
-  }, [resolvePendingTurnstileTokenRequest]);
+  useEffect(() => () => { resolvePendingTurnstileTokenRequest(null); }, [resolvePendingTurnstileTokenRequest]);
 
   useEffect(() => {
-    if (!successOpen) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      navigate('/');
-    }, 1500);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    if (!successOpen) return;
+    const timer = window.setTimeout(() => navigate('/'), 1500);
+    return () => window.clearTimeout(timer);
   }, [navigate, successOpen]);
 
   if (productsQuery.isLoading) {
@@ -199,39 +172,32 @@ export function InquiryPage() {
       setError('Message is required.');
       return;
     }
-
     if (!formState.email.trim() && !formState.phoneNumber.trim()) {
       setError('Please provide at least one contact method: email or phone number.');
       return;
     }
-
     const normalizedEmail = formState.email.trim();
     if (normalizedEmail && !emailPattern.test(normalizedEmail)) {
       setError('Please enter a valid email address.');
       return;
     }
-
     const normalizedPhone = formState.phoneNumber.trim();
     if (normalizedPhone && !phonePattern.test(normalizedPhone)) {
       setError('Phone number can only contain digits, +, -, spaces, and parentheses.');
       return;
     }
-
     if (formState.customerName.length > MAX_NAME_LENGTH) {
       setError(`Name must be ${MAX_NAME_LENGTH} characters or fewer.`);
       return;
     }
-
     if (normalizedEmail.length > MAX_EMAIL_LENGTH) {
       setError(`Email must be ${MAX_EMAIL_LENGTH} characters or fewer.`);
       return;
     }
-
     if (normalizedPhone.length > MAX_PHONE_LENGTH) {
       setError(`Phone number must be ${MAX_PHONE_LENGTH} characters or fewer.`);
       return;
     }
-
     if (formState.message.length > MAX_MESSAGE_LENGTH) {
       setError(`Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`);
       return;
@@ -243,7 +209,6 @@ export function InquiryPage() {
       activeTurnstileToken = await requestTurnstileToken();
       setIsTriggeringTurnstile(false);
     }
-
     if (!activeTurnstileToken) {
       setError('Please complete the security verification before submitting.');
       return;
@@ -262,14 +227,12 @@ export function InquiryPage() {
       const apiErrorMessage = getApiErrorMessage(submissionError);
       if (apiErrorMessage) {
         setError(apiErrorMessage);
-
         if (isTurnstileRelatedMessage(apiErrorMessage)) {
           setTurnstileToken(null);
           setTurnstileResetKey((prev) => prev + 1);
         }
         return;
       }
-
       setError('Failed to submit inquiry. Please try again.');
     }
   };
@@ -277,64 +240,119 @@ export function InquiryPage() {
   const isSubmitBusy = inquiryMutation.isPending || isTriggeringTurnstile;
 
   return (
-    <Paper sx={{ p: 3, maxWidth: 700 }}>
-      <Stack spacing={2} component="form" onSubmit={handleSubmit}>
-        <Typography variant="h5">Inquiry for {targetProduct.title}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Please leave your contact details. We require at least one contact method.
+    <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          component="span"
+          sx={{
+            display: 'inline-block',
+            mb: 1.5,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            color: 'text.secondary',
+          }}
+        >
+          Interested in this item?
         </Typography>
-        {error && <Alert severity="error">{error}</Alert>}
-        <TextField
-          label="Your name"
-          value={formState.customerName}
-          onChange={(event) => setFormState((prev) => ({ ...prev, customerName: event.target.value }))}
-          slotProps={{ htmlInput: { maxLength: MAX_NAME_LENGTH } }}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={formState.email}
-          onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
-          error={isEmailFormatInvalid}
-          helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
-          slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
-        />
-        <TextField
-          label="Phone number"
-          value={formState.phoneNumber}
-          onChange={(event) => setFormState((prev) => ({ ...prev, phoneNumber: event.target.value }))}
-          error={isPhoneFormatInvalid}
-          helperText={isPhoneFormatInvalid ? 'Phone number can only contain digits, +, -, spaces, and parentheses.' : ' '}
-          slotProps={{ htmlInput: { maxLength: MAX_PHONE_LENGTH } }}
-        />
-        <TextField
-          label="Message"
-          value={formState.message}
-          onChange={(event) => setFormState((prev) => ({ ...prev, message: event.target.value }))}
-          required
-          multiline
-          minRows={4}
-          slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
-          helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
-        />
-        <TurnstileWidget
-          ref={turnstileWidgetRef}
-          siteKey={env.turnstileSiteKey}
-          resetKey={turnstileResetKey}
-          language="en"
-          executionMode="execute"
-          onVerify={handleTurnstileVerify}
-          onExpire={handleTurnstileExpire}
-          onError={handleTurnstileError}
-        />
-        <Box>
-          <Button type="submit" variant="contained" disabled={isSubmitBusy}>
-            {inquiryMutation.isPending
-              ? 'Submitting...'
-              : (isTriggeringTurnstile ? 'Verifying...' : 'Submit inquiry')}
-          </Button>
-        </Box>
-      </Stack>
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{ fontSize: { xs: '1.7rem', md: '2.1rem' }, lineHeight: 1.15 }}
+        >
+          {targetProduct.title}
+        </Typography>
+      </Box>
+
+      <Divider sx={{ mb: 3 }} />
+
+      {/* Form card */}
+      <Box
+        sx={{
+          bgcolor: '#f0ebe4',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 3,
+          p: { xs: 2.5, sm: 4 },
+        }}
+      >
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+          Leave your contact details below and Pat will be in touch. We require at least one contact method.
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+          <TextField
+            label="Your name"
+            value={formState.customerName}
+            onChange={(event) => setFormState((prev) => ({ ...prev, customerName: event.target.value }))}
+            slotProps={{ htmlInput: { maxLength: MAX_NAME_LENGTH } }}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            value={formState.email}
+            onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
+            error={isEmailFormatInvalid}
+            helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
+            slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
+          />
+          <TextField
+            label="Phone number"
+            value={formState.phoneNumber}
+            onChange={(event) => setFormState((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+            error={isPhoneFormatInvalid}
+            helperText={isPhoneFormatInvalid ? 'Phone number can only contain digits, +, -, spaces, and parentheses.' : ' '}
+            slotProps={{ htmlInput: { maxLength: MAX_PHONE_LENGTH } }}
+          />
+          <TextField
+            label="Message"
+            value={formState.message}
+            onChange={(event) => setFormState((prev) => ({ ...prev, message: event.target.value }))}
+            required
+            multiline
+            minRows={4}
+            slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
+            helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
+          />
+
+          <TurnstileWidget
+            ref={turnstileWidgetRef}
+            siteKey={env.turnstileSiteKey}
+            resetKey={turnstileResetKey}
+            language="en"
+            executionMode="execute"
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileExpire}
+            onError={handleTurnstileError}
+          />
+
+          <Box>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={isSubmitBusy}
+              endIcon={!isSubmitBusy ? <SendIcon /> : undefined}
+              sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+            >
+              {inquiryMutation.isPending
+                ? 'Submitting…'
+                : isTriggeringTurnstile
+                  ? 'Verifying…'
+                  : 'Send Inquiry'}
+            </Button>
+          </Box>
+        </Stack>
+      </Box>
+
       <Snackbar
         open={successOpen}
         autoHideDuration={1500}
@@ -345,6 +363,6 @@ export function InquiryPage() {
           Inquiry submitted successfully.
         </Alert>
       </Snackbar>
-    </Paper>
+    </Box>
   );
 }

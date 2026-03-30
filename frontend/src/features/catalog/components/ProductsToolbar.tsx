@@ -1,10 +1,12 @@
-import { Paper, Stack } from '@mui/material';
+import { Box, Chip, Paper, Stack } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import type { Category } from '../../../entities/category/types';
 import type {
   ProductQueryParams,
   ProductSortOption,
 } from '../../../entities/product/types';
-import { ProductFilters } from './ProductFilters';
+import { CategoryTabs } from './CategoryTabs';
 import { ProductSortSelect } from './ProductSortSelect';
 
 interface ProductsToolbarProps {
@@ -24,33 +26,57 @@ export function ProductsToolbar({
   return (
     <Paper
       sx={{
-        p: 2.5,
         borderRadius: 3,
-        bgcolor: '#f0ebe4',
-        backgroundImage: 'url(/Title.svg)',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-        backgroundSize: '90%',
+        bgcolor: '#fff',
+        overflow: 'hidden',
       }}
     >
-      <Stack spacing={2}>
-        <ProductFilters
-          params={params}
+      {/* ── Category tabs ────────────────────────────────────────────── */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#fafaf8' }}>
+        <CategoryTabs
           categories={categories}
-          onFilterChange={onFilterChange}
+          activeSlug={params.category}
+          onChange={(slug) => onFilterChange({ category: slug })}
         />
-        <Stack
-          direction="row"
-          justifyContent="flex-end"
-          alignItems="center"
-        >
-          <ProductSortSelect
-            value={params.sort}
-            onChange={(sort: ProductSortOption | undefined) =>
-              onFilterChange({ sort })
-            }
+      </Box>
+
+      {/* ── Bottom bar: search tag + sort ─────────────────────────────── */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        sx={{ px: { xs: 2, sm: 2.5 }, py: 1.25, minHeight: 44 }}
+      >
+        {/* Search tag (if active) */}
+        {params.search ? (
+          <Chip
+            icon={<SearchIcon sx={{ fontSize: '0.85rem !important' }} />}
+            label={params.search}
+            onDelete={() => onFilterChange({ search: undefined })}
+            deleteIcon={<CloseIcon sx={{ fontSize: '0.85rem !important' }} />}
+            sx={{
+              fontWeight: 500,
+              fontSize: '0.82rem',
+              height: 28,
+              bgcolor: 'primary.main',
+              color: '#fff',
+              mr: 'auto',
+              '& .MuiChip-deleteIcon': {
+                color: 'rgba(255,255,255,0.6)',
+                '&:hover': { color: '#fff' },
+              },
+              '& .MuiChip-icon': { color: 'rgba(255,255,255,0.7)' },
+            }}
           />
-        </Stack>
+        ) : (
+          <Box sx={{ mr: 'auto' }} />
+        )}
+
+        <ProductSortSelect
+          value={params.sort}
+          onChange={(sort: ProductSortOption | undefined) =>
+            onFilterChange({ sort })
+          }
+        />
       </Stack>
     </Paper>
   );

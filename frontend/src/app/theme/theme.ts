@@ -23,15 +23,50 @@ export const theme = createTheme({
     borderRadius: 8,
   },
   typography: {
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    h4: {
+    fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    h1: {
+      fontFamily: "'Cormorant Garamond', Georgia, serif",
       fontWeight: 700,
+      letterSpacing: '-0.02em',
+    },
+    h2: {
+      fontFamily: "'Cormorant Garamond', Georgia, serif",
+      fontWeight: 700,
+      letterSpacing: '-0.015em',
+    },
+    h3: {
+      fontFamily: "'Cormorant Garamond', Georgia, serif",
+      fontWeight: 700,
+      letterSpacing: '-0.01em',
+    },
+    h4: {
+      fontFamily: "'Cormorant Garamond', Georgia, serif",
+      fontWeight: 700,
+      letterSpacing: '-0.01em',
     },
     h5: {
       fontWeight: 700,
     },
+    h6: {
+      fontWeight: 600,
+    },
+    subtitle1: {
+      fontWeight: 500,
+    },
+    button: {
+      fontWeight: 600,
+      letterSpacing: '0.01em',
+    },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        },
+      },
+    },
     MuiAppBar: {
       styleOverrides: {
         root: {
@@ -60,6 +95,10 @@ export const theme = createTheme({
     },
     MuiButton: {
       styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+        },
         containedPrimary: {
           backgroundColor: '#272727',
           color: '#ffffff',

@@ -208,7 +208,6 @@ function DesktopNav({
         sx={{
           color: '#fff',
           borderColor: alpha('#fff', 0.4),
-          textTransform: 'none',
           fontWeight: 600,
           fontSize: '0.9rem',
           borderRadius: 2,
@@ -261,13 +260,10 @@ function MobileNav({
       >
         <Box
           component="img"
-          src="/logo.svg"
+          src="/Title.svg"
           alt="Pat's Shed"
           sx={{ height: 32, width: 'auto' }}
         />
-        <Box sx={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
-          Pat's Shed
-        </Box>
       </Box>
 
       <IconButton
@@ -307,7 +303,15 @@ function MobileNav({
             alignItems: 'center',
           }}
         >
-          <Box sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Menu</Box>
+          <Box
+            sx={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontWeight: 700,
+              fontSize: '1.1rem',
+            }}
+          >
+            Menu
+          </Box>
           <IconButton
             onClick={() => setMobileOpen(false)}
             size="small"
@@ -388,8 +392,6 @@ function MobileNav({
             onClick={() => setMobileOpen(false)}
             endIcon={<ArrowForwardIcon />}
             sx={{
-              textTransform: 'none',
-              fontWeight: 600,
               py: 1.5,
               borderRadius: 2,
               fontSize: '0.95rem',

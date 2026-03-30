@@ -64,7 +64,7 @@ export function FeaturedProductsSection() {
     <Box
       component="section"
       aria-label="Featured products"
-      sx={{ py: { xs: 6, md: 8 }, bgcolor: '#fff' }}
+      sx={{ py: { xs: 6, md: 9 }, bgcolor: '#fff' }}
     >
       <Container maxWidth="lg">
         {/* Section header */}
@@ -73,9 +73,14 @@ export function FeaturedProductsSection() {
           justifyContent="space-between"
           alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
           spacing={1}
-          sx={{ mb: { xs: 3, md: 4 } }}
+          sx={{ mb: { xs: 3, md: 5 } }}
         >
           <Box>
+            {/* Accent rule */}
+            <Box
+              aria-hidden
+              sx={{ width: 32, height: '2px', bgcolor: 'primary.main', mb: 1.5 }}
+            />
             <Typography
               variant="h4"
               component="h2"
@@ -95,7 +100,6 @@ export function FeaturedProductsSection() {
               to="/products"
               endIcon={<ArrowForwardIcon />}
               sx={{
-                textTransform: 'none',
                 fontWeight: 600,
                 display: { xs: 'none', sm: 'inline-flex' },
               }}
@@ -139,7 +143,7 @@ export function FeaturedProductsSection() {
               component={RouterLink}
               to="/products"
               endIcon={<ArrowForwardIcon />}
-              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+              sx={{ fontWeight: 600, borderRadius: 2 }}
             >
               View All Products
             </Button>

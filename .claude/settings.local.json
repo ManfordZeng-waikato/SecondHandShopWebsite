@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find D:ProjectsSecondHandShopWebsite -name vitest.config* -o -name jest.config* -o -name *.test.ts -o -name *.spec.ts)"
+    ]
+  }
+}

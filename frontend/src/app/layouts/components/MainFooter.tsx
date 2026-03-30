@@ -23,6 +23,7 @@ export function MainFooter() {
           justifyContent="space-between"
           alignItems={{ xs: 'center', sm: 'flex-start' }}
         >
+          {/* Left — Address */}
           <Link
             href="https://www.google.com/maps?q=97+Kay+Road+RD1+Hamilton+3281+New+Zealand"
             target="_blank"
@@ -34,6 +35,7 @@ export function MainFooter() {
             {'Address\n97 Kay Road\nRD1\nHamilton 3281\nNew Zealand'}
           </Link>
 
+          {/* Centre — Logo + Hours */}
           <Stack spacing={1} alignItems="center" sx={{ order: { xs: -1, sm: 0 } }}>
             <Box
               component="img"
@@ -50,8 +52,21 @@ export function MainFooter() {
               <AccessTimeIcon fontSize="small" />
               Open Daily 9am - 5pm
             </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                display: { xs: 'none', sm: 'block' },
+                color: 'rgba(255,255,255,0.35)',
+                fontSize: '0.72rem',
+                letterSpacing: '0.04em',
+                mt: 1,
+              }}
+            >
+              &copy; {new Date().getFullYear()} Pat&apos;s Shed. All rights reserved.
+            </Typography>
           </Stack>
 
+          {/* Right — Social / Contact */}
           <Stack spacing={1} alignItems={{ xs: 'center', sm: 'flex-start' }}>
             <Link
               href="https://www.facebook.com/pat.gsq"
@@ -86,6 +101,20 @@ export function MainFooter() {
             </Link>
           </Stack>
         </Stack>
+
+        <Typography
+          variant="caption"
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            color: 'rgba(255,255,255,0.35)',
+            fontSize: '0.72rem',
+            letterSpacing: '0.04em',
+            textAlign: 'center',
+            mt: 3,
+          }}
+        >
+          &copy; {new Date().getFullYear()} Pat&apos;s Shed. All rights reserved.
+        </Typography>
       </Container>
     </Box>
   );

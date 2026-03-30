@@ -1,4 +1,5 @@
-import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import { MenuItem, Select } from '@mui/material';
+import SortIcon from '@mui/icons-material/Sort';
 import type { ProductSortOption } from '../../../entities/product/types';
 
 interface ProductSortSelectProps {
@@ -6,25 +7,55 @@ interface ProductSortSelectProps {
   onChange: (sort: ProductSortOption | undefined) => void;
 }
 
+const options = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'price_asc', label: 'Price: Low → High' },
+  { value: 'price_desc', label: 'Price: High → Low' },
+] as const;
+
 export function ProductSortSelect({
   value,
   onChange,
 }: ProductSortSelectProps) {
   return (
-    <FormControl size="small" sx={{ minWidth: 180 }}>
-      <InputLabel>Sort by</InputLabel>
-      <Select
-        label="Sort by"
-        value={value ?? 'newest'}
-        onChange={(e) => {
-          const v = e.target.value as ProductSortOption;
-          onChange(v === 'newest' ? undefined : v);
-        }}
-      >
-        <MenuItem value="newest">Newest first</MenuItem>
-        <MenuItem value="price_asc">Price: Low to High</MenuItem>
-        <MenuItem value="price_desc">Price: High to Low</MenuItem>
-      </Select>
-    </FormControl>
+    <Select
+      size="small"
+      variant="outlined"
+      value={value ?? 'newest'}
+      onChange={(e) => {
+        const v = e.target.value as ProductSortOption;
+        onChange(v === 'newest' ? undefined : v);
+      }}
+      startAdornment={
+        <SortIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.75 }} />
+      }
+      sx={{
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        color: 'text.secondary',
+        minWidth: 170,
+        borderRadius: '8px',
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: 'divider',
+        },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+          borderColor: 'text.disabled',
+        },
+        '& .MuiSelect-select': {
+          py: '6px',
+          pl: 0,
+        },
+      }}
+    >
+      {options.map((opt) => (
+        <MenuItem
+          key={opt.value}
+          value={opt.value}
+          sx={{ fontSize: '0.82rem' }}
+        >
+          {opt.label}
+        </MenuItem>
+      ))}
+    </Select>
   );
 }

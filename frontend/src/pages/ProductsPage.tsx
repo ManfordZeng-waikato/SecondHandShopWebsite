@@ -56,14 +56,26 @@ export function ProductsPage() {
       <Stack spacing={3}>
           {/* Page header */}
           <Box>
-            <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
-              <StorefrontIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-              <Typography variant="h4" fontWeight={800}>
-                All Products
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.75 }}>
+              <StorefrontIcon sx={{ fontSize: 22, color: 'text.secondary' }} />
+              <Typography
+                component="span"
+                sx={{
+                  letterSpacing: '0.13em',
+                  textTransform: 'uppercase',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                }}
+              >
+                Pat's Shed
               </Typography>
-            </Stack>
+            </Box>
+            <Typography variant="h3" component="h1" sx={{ fontSize: { xs: '1.8rem', md: '2.3rem' }, mb: 0.5 }}>
+              All Products
+            </Typography>
             <Typography variant="body1" color="text.secondary">
-              Browse our curated collection of quality second-hand furniture
+              Browse our curated collection of quality second-hand furniture &amp; antiques
             </Typography>
           </Box>
 

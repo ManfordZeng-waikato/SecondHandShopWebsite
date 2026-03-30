@@ -1,11 +1,5 @@
 import { memo } from 'react';
-import {
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Typography,
-} from '@mui/material';
+import { Box, Card, CardActionArea, CardContent, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { ProductListItem } from '../../../entities/product/types';
 import { StatusChip } from '../../../shared/components/StatusChip';
@@ -23,11 +17,11 @@ export const FeaturedProductCard = memo(function FeaturedProductCard({
         height: '100%',
         borderRadius: 3,
         overflow: 'hidden',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        transition: 'transform 0.22s ease, box-shadow 0.22s ease',
         '@media (hover: hover)': {
           '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+            transform: 'translateY(-5px)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
           },
         },
       }}
@@ -35,15 +29,17 @@ export const FeaturedProductCard = memo(function FeaturedProductCard({
       <CardActionArea
         component={RouterLink}
         to={`/products/${product.slug}`}
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-        }}
+        sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
       >
-        {/* Image area — fixed 4:3 ratio */}
-        <Box sx={{ position: 'relative', paddingTop: '75%', bgcolor: 'grey.100' }}>
+        {/* Image — 4:3 */}
+        <Box
+          sx={{
+            position: 'relative',
+            paddingTop: '75%',
+            bgcolor: 'grey.100',
+            overflow: 'hidden',
+          }}
+        >
           <Box
             component="img"
             src={product.coverImageUrl || ''}
@@ -57,7 +53,11 @@ export const FeaturedProductCard = memo(function FeaturedProductCard({
               height: '100%',
               objectFit: 'contain',
               p: 1.5,
+              transition: 'transform 0.3s ease',
               ...(sold && { filter: 'grayscale(35%)', opacity: 0.75 }),
+              '.MuiCardActionArea-root:hover &': {
+                transform: 'scale(1.03)',
+              },
             }}
           />
           <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
