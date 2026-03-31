@@ -2,10 +2,11 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  getMustChangePassword,
-  isAuthenticated,
+  getAdminAuthSnapshot,
+  initializeAdminAuth,
+  persistSessionAfterLogin,
   revokeLordCookie,
-  setAuth,
+  useAdminAuth,
 } from '../features/admin/auth/adminAuth';
 import { loginAdmin } from '../features/admin/api/adminApi';
 import axios from 'axios';
@@ -13,6 +14,7 @@ import axios from 'axios';
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthInitialized, isAuthenticated, mustChangePassword } = useAdminAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +25,9 @@ export function AdminLoginPage() {
   const passwordChangedNotice = routeState?.passwordChanged === true;
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      if (getMustChangePassword()) {
+    if (!isAuthInitialized) return;
+    if (isAuthenticated) {
+      if (mustChangePassword) {
         navigate('/lord/change-password', { replace: true });
       } else {
         navigate(redirectPath, { replace: true });
@@ -32,7 +35,7 @@ export function AdminLoginPage() {
       return;
     }
     void revokeLordCookie();
-  }, [navigate, redirectPath]);
+  }, [isAuthInitialized, isAuthenticated, mustChangePassword, navigate, redirectPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,9 +48,11 @@ export function AdminLoginPage() {
 
     setLoading(true);
     try {
-      const { expiresAt, requiresPasswordChange } = await loginAdmin(username, password);
-      setAuth(expiresAt, requiresPasswordChange);
-      if (requiresPasswordChange) {
+      const { expiresAt } = await loginAdmin(username, password);
+      persistSessionAfterLogin(expiresAt);
+      await initializeAdminAuth();
+      const s = getAdminAuthSnapshot();
+      if (s.mustChangePassword) {
         navigate('/lord/change-password', { replace: true });
       } else {
         navigate(redirectPath, { replace: true });
@@ -62,6 +67,14 @@ export function AdminLoginPage() {
       setLoading(false);
     }
   };
+
+  if (!isAuthInitialized) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box display="flex" justifyContent="center">

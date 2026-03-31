@@ -1,15 +1,29 @@
+import { Box, CircularProgress } from '@mui/material';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { getMustChangePassword, isAuthenticated } from '../../features/admin/auth/adminAuth';
+import { useAdminAuth } from '../../features/admin/auth/adminAuth';
 
-/** Allows only the forced password-change flow while the session flag is set. */
+function AuthBootstrapSpinner() {
+  return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <CircularProgress />
+    </Box>
+  );
+}
+
+/** Allows only the forced password-change flow while /me reports mustChangePassword. */
 export function ProtectedPasswordChangeRoute() {
   const location = useLocation();
+  const { isAuthInitialized, isAuthenticated, mustChangePassword } = useAdminAuth();
 
-  if (!isAuthenticated()) {
+  if (!isAuthInitialized) {
+    return <AuthBootstrapSpinner />;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/lord/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (!getMustChangePassword()) {
+  if (!mustChangePassword) {
     return <Navigate to="/lord/products" replace />;
   }
 

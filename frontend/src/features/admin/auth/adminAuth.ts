@@ -1,90 +1,52 @@
-import { env } from '../../../shared/config/env';
-
 /**
- * Single session snapshot for admin UI gating. HttpOnly JWT lives in a cookie; this object must stay
- * consistent with the last login response. If it is missing or malformed, we treat the client as logged out
- * and clear the server cookie to avoid a cookie+UI mismatch.
+ * Barrel for admin auth: persistence hint + server sync live in adminAuthStore.
+ * Prefer useAdminAuth() in components; use these helpers from non-React modules (e.g. axios interceptors).
  */
-const AUTH_KEY = 'shs.admin.auth';
-const LEGACY_EXPIRES_KEY = 'shs.admin.expiresAt';
-const LEGACY_PWD_KEY = 'shs.admin.requiresPasswordChange';
+import { env } from '../../../shared/config/env';
+import {
+  getAdminAuthSnapshot as readSnapshot,
+  markLordUnauthorizedAndClear,
+  setSessionHintExpiresAt,
+  type AdminCurrentUser as CurrentUserType,
+} from './adminAuthStore';
 
-export interface AdminAuthSnapshot {
-  expiresAt: string;
-  requiresPasswordChange: boolean;
+export {
+  initializeAdminAuth,
+  getAdminAuthSnapshot,
+  markLordUnauthorizedAndClear,
+  setSessionHintExpiresAt,
+  clearSessionHint,
+  type AdminAuthPublicState,
+  type AdminCurrentUser,
+  type AdminMeDto,
+} from './adminAuthStore';
+
+export { AdminAuthProvider, useAdminAuth } from './AdminAuthProvider';
+
+/** True only after bootstrap finished and /me returned 200. */
+export function isAuthInitialized(): boolean {
+  return readSnapshot().isAuthInitialized;
 }
 
-function clearLegacyKeys(): void {
-  sessionStorage.removeItem(LEGACY_EXPIRES_KEY);
-  sessionStorage.removeItem(LEGACY_PWD_KEY);
-}
-
-function tryParseUnified(raw: string | null): AdminAuthSnapshot | null {
-  if (!raw) return null;
-  try {
-    const o = JSON.parse(raw) as Record<string, unknown>;
-    const expiresAt = o.expiresAt;
-    const requiresPasswordChange = o.requiresPasswordChange;
-    if (typeof expiresAt !== 'string' || expiresAt.length === 0) return null;
-    if (typeof requiresPasswordChange !== 'boolean') return null;
-    return { expiresAt, requiresPasswordChange };
-  } catch {
-    return null;
-  }
-}
-
-/** Read current snapshot, migrate legacy two-key storage once, or null if untrusted / incomplete. */
-export function getAuth(): AdminAuthSnapshot | null {
-  const unified = tryParseUnified(sessionStorage.getItem(AUTH_KEY));
-  if (unified) return unified;
-
-  const exp = sessionStorage.getItem(LEGACY_EXPIRES_KEY);
-  const pwdFlag = sessionStorage.getItem(LEGACY_PWD_KEY);
-
-  if (exp && pwdFlag !== null) {
-    const requiresPasswordChange = pwdFlag === '1';
-    setAuth(exp, requiresPasswordChange);
-    return { expiresAt: exp, requiresPasswordChange };
-  }
-
-  if (exp || pwdFlag !== null) {
-    clearLegacyKeys();
-    sessionStorage.removeItem(AUTH_KEY);
-    return null;
-  }
-
-  return null;
-}
-
-export function setAuth(expiresAt: string, requiresPasswordChange: boolean): void {
-  clearLegacyKeys();
-  const snap: AdminAuthSnapshot = { expiresAt, requiresPasswordChange };
-  sessionStorage.setItem(AUTH_KEY, JSON.stringify(snap));
-}
-
-export function clearAuth(): void {
-  clearLegacyKeys();
-  sessionStorage.removeItem(AUTH_KEY);
-}
-
+/** True when bootstrap done and server considers the admin signed in. */
 export function isAuthenticated(): boolean {
-  const s = getAuth();
-  if (!s) return false;
-  if (new Date(s.expiresAt) <= new Date()) {
-    clearAuth();
-    return false;
-  }
-  return true;
+  const s = readSnapshot();
+  return s.isAuthInitialized && s.isAuthenticated;
 }
 
 export function getMustChangePassword(): boolean {
-  const s = getAuth();
-  if (!s) return false;
-  if (new Date(s.expiresAt) <= new Date()) return false;
-  return s.requiresPasswordChange;
+  return readSnapshot().mustChangePassword;
 }
 
-/** Clears HttpOnly admin cookie without using the shared axios client (avoids import cycles). */
+export function getCurrentUser(): CurrentUserType | null {
+  return readSnapshot().currentUser;
+}
+
+/** Access token is HttpOnly; not readable in the browser. */
+export function getAdminAccessToken(): null {
+  return null;
+}
+
 export async function revokeLordCookie(): Promise<void> {
   try {
     await fetch(`${env.apiBaseUrl}/api/lord/auth/logout`, {
@@ -92,6 +54,16 @@ export async function revokeLordCookie(): Promise<void> {
       credentials: 'include',
     });
   } catch {
-    /* ignore network errors */
+    /* ignore */
   }
+}
+
+/** Call after successful login with API expiresAt (JWT clock); then await initializeAdminAuth(). */
+export function persistSessionAfterLogin(expiresAt: string): void {
+  setSessionHintExpiresAt(expiresAt);
+}
+
+/** Full client-side logout of admin state + session hint (HttpOnly cookie cleared separately). */
+export function clearAuth(): void {
+  markLordUnauthorizedAndClear();
 }

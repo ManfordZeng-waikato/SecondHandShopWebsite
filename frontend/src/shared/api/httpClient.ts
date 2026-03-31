@@ -15,7 +15,8 @@ httpClient.interceptors.response.use(
       const url = error.config?.url ?? '';
       const isLogin = url.includes('/auth/login');
       const isChangeInitialPassword = url.includes('/auth/change-initial-password');
-      if (url.includes('/api/lord') && !isLogin && !isChangeInitialPassword) {
+      const isMe = url.includes('/auth/me');
+      if (url.includes('/api/lord') && !isLogin && !isChangeInitialPassword && !isMe) {
         clearAuth();
         void revokeLordCookie().finally(() => {
           window.location.href = '/lord/login';

@@ -56,6 +56,21 @@ export async function logoutAdmin(): Promise<void> {
   await httpClient.post('/api/lord/auth/logout');
 }
 
+/** Database-backed session info; prefer initializeAdminAuth() for bootstrap to avoid axios cycles. */
+export interface AdminMeResponse {
+  isAuthenticated: boolean;
+  userId: string;
+  userName: string;
+  email: string;
+  role: string;
+  mustChangePassword: boolean;
+}
+
+export async function fetchAdminCurrentUser(): Promise<AdminMeResponse> {
+  const response = await httpClient.get<AdminMeResponse>('/api/lord/auth/me');
+  return response.data;
+}
+
 export interface AdminProductListItem {
   id: string;
   title: string;

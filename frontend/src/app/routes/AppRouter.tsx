@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { MainLayout } from '../layouts/MainLayout';
+import { AdminAuthProvider } from '../../features/admin/auth/adminAuth';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute';
 import { ProtectedPasswordChangeRoute } from './ProtectedPasswordChangeRoute';
 
@@ -57,104 +58,106 @@ function PageFallback() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <MainLayout fullWidth>
-                <HomePage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <MainLayout fullWidth>
-                <ProductsPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/my-story"
-            element={
-              <MainLayout>
-                <MyStoryPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/products/:slug"
-            element={
-              <MainLayout>
-                <ProductDetailPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/products/:id/inquiry"
-            element={
-              <MainLayout>
-                <InquiryPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/lord/login"
-            element={
-              <MainLayout>
-                <AdminLoginPage />
-              </MainLayout>
-            }
-          />
-          <Route element={<ProtectedPasswordChangeRoute />}>
+      <AdminAuthProvider>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
             <Route
-              path="/lord/change-password"
+              path="/"
               element={
-                <MainLayout>
-                  <AdminChangePasswordPage />
+                <MainLayout fullWidth>
+                  <HomePage />
                 </MainLayout>
               }
             />
-          </Route>
-          <Route element={<ProtectedAdminRoute />}>
             <Route
-              path="/lord/customers"
+              path="/products"
               element={
-                <AdminLayout>
-                  <AdminCustomersPage />
-                </AdminLayout>
+                <MainLayout fullWidth>
+                  <ProductsPage />
+                </MainLayout>
               }
             />
             <Route
-              path="/lord/customers/:customerId"
+              path="/my-story"
               element={
-                <AdminLayout>
-                  <AdminCustomerDetailPage />
-                </AdminLayout>
+                <MainLayout>
+                  <MyStoryPage />
+                </MainLayout>
               }
             />
             <Route
-              path="/lord/products"
+              path="/products/:slug"
               element={
-                <AdminLayout>
-                  <AdminProductsPage />
-                </AdminLayout>
+                <MainLayout>
+                  <ProductDetailPage />
+                </MainLayout>
               }
             />
             <Route
-              path="/lord/products/new"
+              path="/products/:id/inquiry"
               element={
-                <AdminLayout>
-                  <AdminNewProductPage />
-                </AdminLayout>
+                <MainLayout>
+                  <InquiryPage />
+                </MainLayout>
               }
             />
-          </Route>
-          <Route path="/404" element={<NotFoundPage />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
-      </Suspense>
+            <Route
+              path="/lord/login"
+              element={
+                <MainLayout>
+                  <AdminLoginPage />
+                </MainLayout>
+              }
+            />
+            <Route element={<ProtectedPasswordChangeRoute />}>
+              <Route
+                path="/lord/change-password"
+                element={
+                  <MainLayout>
+                    <AdminChangePasswordPage />
+                  </MainLayout>
+                }
+              />
+            </Route>
+            <Route element={<ProtectedAdminRoute />}>
+              <Route
+                path="/lord/customers"
+                element={
+                  <AdminLayout>
+                    <AdminCustomersPage />
+                  </AdminLayout>
+                }
+              />
+              <Route
+                path="/lord/customers/:customerId"
+                element={
+                  <AdminLayout>
+                    <AdminCustomerDetailPage />
+                  </AdminLayout>
+                }
+              />
+              <Route
+                path="/lord/products"
+                element={
+                  <AdminLayout>
+                    <AdminProductsPage />
+                  </AdminLayout>
+                }
+              />
+              <Route
+                path="/lord/products/new"
+                element={
+                  <AdminLayout>
+                    <AdminNewProductPage />
+                  </AdminLayout>
+                }
+              />
+            </Route>
+            <Route path="/404" element={<NotFoundPage />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
+          </Routes>
+        </Suspense>
+      </AdminAuthProvider>
     </BrowserRouter>
   );
 }

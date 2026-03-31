@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SecondHandShop.Application.Contracts.Admin;
-using SecondHandShop.Application.Security;
 using SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 using SecondHandShop.Application.UseCases.Admin.Login;
+using SecondHandShop.Application.UseCases.Admin.Me;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -71,23 +71,28 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Returns the current admin from the database (JWT only identifies the subject). Use this to sync SPA state after refresh.
+    /// </summary>
     [HttpGet("me")]
     [Authorize(Policy = "AdminSession")]
-    public IActionResult Me()
+    public async Task<IActionResult> MeAsync(CancellationToken cancellationToken)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        var userName = User.FindFirstValue(ClaimTypes.Name)
-            ?? User.FindFirstValue(JwtRegisteredClaimNames.UniqueName);
-        var requiresPasswordChange =
-            User.FindFirstValue(AdminJwtClaimTypes.PasswordChangeRequired) == "true";
-        return Ok(new { userId, userName, requiresPasswordChange });
+        var adminId = ResolveAdminUserId();
+        if (adminId is null)
+            return Unauthorized();
+
+        var me = await mediator.Send(new GetAdminMeQuery(adminId.Value), cancellationToken);
+        if (me is null)
+            return Unauthorized();
+
+        return Ok(me);
     }
 
     private Guid? ResolveAdminUserId()
     {
-        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         return Guid.TryParse(raw, out var id) ? id : null;
     }
 
