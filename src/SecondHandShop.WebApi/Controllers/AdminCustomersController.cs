@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
+using SecondHandShop.Application.Contracts.Sales;
 using SecondHandShop.Application.UseCases.Customers;
+using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Domain.Enums;
 using SecondHandShop.WebApi.Contracts;
 
@@ -16,7 +18,8 @@ namespace SecondHandShop.WebApi.Controllers;
 public class AdminCustomersController(
     ICustomerRepository customerRepository,
     IInquiryRepository inquiryRepository,
-    IAdminCustomerService adminCustomerService) : ControllerBase
+    IAdminCustomerService adminCustomerService,
+    IAdminSaleService adminSaleService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<CustomerListItemDto>>> ListAsync(
@@ -59,6 +62,21 @@ public class AdminCustomersController(
             cancellationToken);
 
         return Ok(inquiries);
+    }
+
+    [HttpGet("{customerId:guid}/sales")]
+    public async Task<ActionResult<IReadOnlyList<CustomerSaleItemDto>>> ListSalesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        var customer = await customerRepository.GetByIdAsync(customerId, cancellationToken);
+        if (customer is null)
+        {
+            return NotFound(new ErrorResponse($"Customer '{customerId}' was not found."));
+        }
+
+        var sales = await adminSaleService.ListByCustomerIdAsync(customerId, cancellationToken);
+        return Ok(sales);
     }
 
     [HttpPatch("{customerId:guid}")]

@@ -15,6 +15,7 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<InquiryIpCooldown> InquiryIpCooldowns => Set<InquiryIpCooldown>();
+    public DbSet<ProductSale> ProductSales => Set<ProductSale>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,5 +26,6 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
         modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
         modelBuilder.ApplyConfiguration(new InquiryConfiguration());
         modelBuilder.ApplyConfiguration(new InquiryIpCooldownConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductSaleConfiguration());
     }
 }

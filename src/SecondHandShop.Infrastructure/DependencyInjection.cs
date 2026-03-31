@@ -10,6 +10,7 @@ using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.UseCases.Catalog;
 using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Application.UseCases.Inquiries;
+using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Infrastructure.Persistence;
 using SecondHandShop.Infrastructure.Persistence.Repositories;
 using SecondHandShop.Infrastructure.Services;
@@ -37,7 +38,9 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IInquiryRepository, InquiryRepository>();
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
+        services.AddScoped<IProductSaleRepository, ProductSaleRepository>();
         services.AddScoped<IAdminCatalogService, AdminCatalogService>();
+        services.AddScoped<IAdminSaleService, AdminSaleService>();
         services.AddScoped<IAdminCustomerService, AdminCustomerService>();
         services.AddScoped<IInquiryService, InquiryService>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();

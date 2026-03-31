@@ -11,6 +11,11 @@ import type {
   CustomerListItem,
   UpdateCustomerInput,
 } from '../../../entities/customer/types';
+import type {
+  ProductSaleDto,
+  SaveProductSaleInput,
+  CustomerSaleItem,
+} from '../../../entities/sale/types';
 import { httpClient } from '../../../shared/api/httpClient';
 
 export interface LoginResponse {
@@ -275,4 +280,48 @@ export async function uploadBlobToR2(putUrl: string, blob: Blob, contentType: st
   }
 
   throw lastError ?? new Error('Upload failed after retries');
+}
+
+// --- Product Sales ---
+
+export async function fetchProductSale(productId: string): Promise<ProductSaleDto | null> {
+  try {
+    const response = await httpClient.get<ProductSaleDto>(`/api/lord/products/${productId}/sale`);
+    return response.data;
+  } catch (err) {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr.response?.status === 404) return null;
+    }
+    throw err;
+  }
+}
+
+export async function createProductSale(
+  productId: string,
+  input: SaveProductSaleInput,
+): Promise<ProductSaleDto> {
+  const response = await httpClient.post<ProductSaleDto>(
+    `/api/lord/products/${productId}/sale`,
+    input,
+  );
+  return response.data;
+}
+
+export async function updateProductSale(
+  productId: string,
+  input: SaveProductSaleInput,
+): Promise<ProductSaleDto> {
+  const response = await httpClient.put<ProductSaleDto>(
+    `/api/lord/products/${productId}/sale`,
+    input,
+  );
+  return response.data;
+}
+
+export async function fetchCustomerSales(customerId: string): Promise<CustomerSaleItem[]> {
+  const response = await httpClient.get<CustomerSaleItem[]>(
+    `/api/lord/customers/${customerId}/sales`,
+  );
+  return response.data;
 }

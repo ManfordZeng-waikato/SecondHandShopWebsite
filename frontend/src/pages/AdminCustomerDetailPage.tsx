@@ -23,6 +23,7 @@ import type { EditableCustomer, UpdateCustomerInput } from '../entities/customer
 import {
   fetchAdminCustomerDetail,
   fetchAdminCustomerInquiries,
+  fetchCustomerSales,
   updateAdminCustomer,
 } from '../features/admin/api/adminApi';
 import { CustomerEditDialog } from '../features/admin/components/CustomerEditDialog';
@@ -89,6 +90,12 @@ export function AdminCustomerDetailPage() {
         page: inquiryPage,
         pageSize: inquiryPageSize,
       }),
+  });
+
+  const salesQuery = useQuery({
+    queryKey: ['admin-customer-sales', customerId],
+    enabled: Boolean(customerId),
+    queryFn: () => fetchCustomerSales(customerId!),
   });
 
   const updateCustomerMutation = useMutation({
@@ -212,6 +219,69 @@ export function AdminCustomerDetailPage() {
             <Typography>{formatDateTime(customer.updatedAt)}</Typography>
           </Stack>
         </Box>
+      </Paper>
+
+      {/* Purchase History */}
+      <Paper>
+        <Box sx={{ p: 2.5, pb: 1 }}>
+          <Typography variant="h6">Purchase history</Typography>
+        </Box>
+        {salesQuery.isLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : salesQuery.isError ? (
+          <Box sx={{ px: 2.5, pb: 2.5 }}>
+            <Alert severity="error">Unable to load purchase history.</Alert>
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Product</TableCell>
+                  <TableCell>Sold Price</TableCell>
+                  <TableCell>Payment</TableCell>
+                  <TableCell>Sold At</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(salesQuery.data ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography color="text.secondary" sx={{ py: 2 }}>
+                        No purchase records for this customer.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (salesQuery.data ?? []).map((sale) => (
+                    <TableRow key={sale.saleId} hover>
+                      <TableCell>
+                        {sale.productSlug ? (
+                          <Button
+                            component={RouterLink}
+                            to={`/products/${sale.productSlug}`}
+                            variant="text"
+                            size="small"
+                            sx={{ px: 0, justifyContent: 'flex-start' }}
+                          >
+                            {sale.productTitle}
+                          </Button>
+                        ) : (
+                          <Typography color="text.secondary">{sale.productTitle}</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>${sale.finalSoldPrice}</TableCell>
+                      <TableCell>{sale.paymentMethod ?? '—'}</TableCell>
+                      <TableCell>{formatDateTime(sale.soldAtUtc)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
 
       <Paper>

@@ -37,6 +37,7 @@ import {
 } from '../features/admin/api/adminApi';
 import { fetchCategories } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
+import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialog';
 
 const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
 type FeaturedFilter = 'all' | 'featured' | 'not-featured';
@@ -134,6 +135,9 @@ export function AdminProductsPage() {
   // Draft & feedback
   const [featuredDrafts, setFeaturedDrafts] = useState<Record<string, FeaturedDraftState>>({});
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
+
+  // Sale dialog
+  const [saleTarget, setSaleTarget] = useState<AdminProductListItem | null>(null);
 
   const featuredFilterParam = useMemo<boolean | undefined>(() => {
     if (featuredFilter === 'all') {
@@ -675,6 +679,17 @@ export function AdminProductsPage() {
                           </Select>
                         </FormControl>
 
+                        {/* Sale action button */}
+                        <Button
+                          size="small"
+                          variant={product.status === 'Sold' ? 'outlined' : 'contained'}
+                          color={product.status === 'Sold' ? 'info' : 'error'}
+                          onClick={() => setSaleTarget(product)}
+                          sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                        >
+                          {product.status === 'Sold' ? 'Edit Sale Info' : 'Mark as Sold'}
+                        </Button>
+
                         {/* Vertical divider on desktop */}
                         <Divider
                           orientation="vertical"
@@ -789,6 +804,18 @@ export function AdminProductsPage() {
           rowsPerPageOptions={PAGE_SIZE_OPTIONS}
         />
       </Paper>
+
+      <ProductSaleDialog
+        open={Boolean(saleTarget)}
+        productId={saleTarget?.id ?? null}
+        productTitle={saleTarget?.title ?? ''}
+        productPrice={saleTarget?.price ?? 0}
+        onClose={() => setSaleTarget(null)}
+        onSaved={() => {
+          setSaleTarget(null);
+          setFeedback({ severity: 'success', message: 'Sale record saved successfully.' });
+        }}
+      />
 
       <Snackbar
         open={Boolean(feedback)}
