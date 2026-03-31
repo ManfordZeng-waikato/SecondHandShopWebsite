@@ -129,27 +129,21 @@ public class InquiryService(
         await inquiryRepository.AddAsync(inquiry, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        try
-        {
-            var emailMessage = new InquiryEmailMessage(
-                inquiry.Id,
-                product.Id,
-                product.Title,
-                product.Slug,
-                inquiry.CustomerName,
-                inquiry.Email,
-                inquiry.PhoneNumber,
-                inquiry.Message);
+        // Return immediately so the user gets a fast response.
+        // Email is sent fire-and-forget; the delivery status stays Pending for now.
+        // If the send fails, the existing retry mechanism will pick it up later.
+        var emailMessage = new InquiryEmailMessage(
+            inquiry.Id,
+            product.Id,
+            product.Title,
+            product.Slug,
+            inquiry.CustomerName,
+            inquiry.Email,
+            inquiry.PhoneNumber,
+            inquiry.Message);
 
-            await emailSender.SendInquiryAsync(emailMessage, cancellationToken);
-            inquiry.MarkEmailSent(clock.UtcNow);
-        }
-        catch (Exception ex)
-        {
-            inquiry.MarkEmailFailed(ex.Message, clock.UtcNow.AddMinutes(5));
-        }
+        _ = SendEmailInBackgroundAsync(inquiry, emailMessage);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
         return inquiry.Id;
     }
 
@@ -273,6 +267,28 @@ public class InquiryService(
     private static bool ContainsServerErrorCode(IReadOnlyCollection<string> errorCodes)
     {
         return errorCodes.Any(code => TurnstileServerErrorCodes.Contains(code));
+    }
+
+    private async Task SendEmailInBackgroundAsync(Inquiry inquiry, InquiryEmailMessage emailMessage)
+    {
+        try
+        {
+            await emailSender.SendInquiryAsync(emailMessage, CancellationToken.None);
+            inquiry.MarkEmailSent(clock.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            inquiry.MarkEmailFailed(ex.Message, clock.UtcNow.AddMinutes(5));
+        }
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // Status update failed; retry mechanism handles it.
+        }
     }
 
     private static string BuildTurnstileFailureMessage(IReadOnlyCollection<string> errorCodes)

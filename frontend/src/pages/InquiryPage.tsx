@@ -7,13 +7,13 @@ import {
   Button,
   CircularProgress,
   Divider,
-  Snackbar,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { useNavigate, useParams } from 'react-router-dom';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import { fetchProductById } from '../features/catalog/api/catalogApi';
 import { createInquiry } from '../features/inquiry/api/inquiryApi';
 import { TurnstileWidget, type TurnstileWidgetHandle } from '../features/inquiry/components/TurnstileWidget';
@@ -57,7 +57,6 @@ function getApiErrorMessage(error: unknown): string | null {
 }
 
 export function InquiryPage() {
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [formState, setFormState] = useState<InquiryFormState>(initialState);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -139,11 +138,7 @@ export function InquiryPage() {
 
   useEffect(() => () => { resolvePendingTurnstileTokenRequest(null); }, [resolvePendingTurnstileTokenRequest]);
 
-  useEffect(() => {
-    if (!successOpen) return;
-    const timer = window.setTimeout(() => navigate('/'), 1500);
-    return () => window.clearTimeout(timer);
-  }, [navigate, successOpen]);
+  // No auto-redirect after success — let the user stay and see confirmation.
 
   if (productQuery.isLoading) {
     return <CircularProgress />;
@@ -268,101 +263,130 @@ export function InquiryPage() {
 
       <Divider sx={{ mb: 3 }} />
 
-      {/* Form card */}
-      <Box
-        sx={{
-          bgcolor: '#f0ebe4',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 3,
-          p: { xs: 2.5, sm: 4 },
-        }}
-      >
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-          Leave your contact details below and Pat will be in touch. We require at least one contact method.
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Stack spacing={2} component="form" onSubmit={handleSubmit}>
-          <TextField
-            label="Your name"
-            value={formState.customerName}
-            onChange={(event) => setFormState((prev) => ({ ...prev, customerName: event.target.value }))}
-            slotProps={{ htmlInput: { maxLength: MAX_NAME_LENGTH } }}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            value={formState.email}
-            onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
-            error={isEmailFormatInvalid}
-            helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
-            slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
-          />
-          <TextField
-            label="Phone number"
-            value={formState.phoneNumber}
-            onChange={(event) => setFormState((prev) => ({ ...prev, phoneNumber: event.target.value }))}
-            error={isPhoneFormatInvalid}
-            helperText={isPhoneFormatInvalid ? 'Phone number can only contain digits, +, -, spaces, and parentheses.' : ' '}
-            slotProps={{ htmlInput: { maxLength: MAX_PHONE_LENGTH } }}
-          />
-          <TextField
-            label="Message"
-            value={formState.message}
-            onChange={(event) => setFormState((prev) => ({ ...prev, message: event.target.value }))}
-            required
-            multiline
-            minRows={4}
-            slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
-            helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
-          />
-
-          <TurnstileWidget
-            ref={turnstileWidgetRef}
-            siteKey={env.turnstileSiteKey}
-            resetKey={turnstileResetKey}
-            language="en"
-            executionMode="execute"
-            onVerify={handleTurnstileVerify}
-            onExpire={handleTurnstileExpire}
-            onError={handleTurnstileError}
-          />
-
-          <Box>
+      {successOpen ? (
+        /* Success confirmation — replaces the form */
+        <Box
+          sx={{
+            bgcolor: '#f0ebe4',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            p: { xs: 3, sm: 5 },
+            textAlign: 'center',
+          }}
+        >
+          <CheckCircleOutlineIcon sx={{ fontSize: 56, color: 'success.main', mb: 2 }} />
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Inquiry sent!
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Thank you for your interest. Pat will be in touch with you shortly.
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="center">
             <Button
-              type="submit"
               variant="contained"
-              size="large"
-              disabled={isSubmitBusy}
-              endIcon={!isSubmitBusy ? <SendIcon /> : undefined}
-              sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+              component={RouterLink}
+              to={`/products/${targetProduct.slug}`}
+              sx={{ borderRadius: 2 }}
             >
-              {inquiryMutation.isPending
-                ? 'Submitting…'
-                : isTriggeringTurnstile
-                  ? 'Verifying…'
-                  : 'Send Inquiry'}
+              Back to product
             </Button>
-          </Box>
-        </Stack>
-      </Box>
+            <Button
+              variant="outlined"
+              component={RouterLink}
+              to="/products"
+              sx={{ borderRadius: 2 }}
+            >
+              Browse more items
+            </Button>
+          </Stack>
+        </Box>
+      ) : (
+        /* Form card */
+        <Box
+          sx={{
+            bgcolor: '#f0ebe4',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            p: { xs: 2.5, sm: 4 },
+          }}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+            Leave your contact details below and Pat will be in touch. We require at least one contact method.
+          </Typography>
 
-      <Snackbar
-        open={successOpen}
-        autoHideDuration={1500}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        onClose={() => setSuccessOpen(false)}
-      >
-        <Alert onClose={() => setSuccessOpen(false)} severity="success" sx={{ width: '100%' }}>
-          Inquiry submitted successfully.
-        </Alert>
-      </Snackbar>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+            <TextField
+              label="Your name"
+              value={formState.customerName}
+              onChange={(event) => setFormState((prev) => ({ ...prev, customerName: event.target.value }))}
+              slotProps={{ htmlInput: { maxLength: MAX_NAME_LENGTH } }}
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formState.email}
+              onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
+              error={isEmailFormatInvalid}
+              helperText={isEmailFormatInvalid ? 'Please enter a valid email address.' : ' '}
+              slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
+            />
+            <TextField
+              label="Phone number"
+              value={formState.phoneNumber}
+              onChange={(event) => setFormState((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+              error={isPhoneFormatInvalid}
+              helperText={isPhoneFormatInvalid ? 'Phone number can only contain digits, +, -, spaces, and parentheses.' : ' '}
+              slotProps={{ htmlInput: { maxLength: MAX_PHONE_LENGTH } }}
+            />
+            <TextField
+              label="Message"
+              value={formState.message}
+              onChange={(event) => setFormState((prev) => ({ ...prev, message: event.target.value }))}
+              required
+              multiline
+              minRows={4}
+              slotProps={{ htmlInput: { maxLength: MAX_MESSAGE_LENGTH } }}
+              helperText={`${formState.message.length}/${MAX_MESSAGE_LENGTH}`}
+            />
+
+            <TurnstileWidget
+              ref={turnstileWidgetRef}
+              siteKey={env.turnstileSiteKey}
+              resetKey={turnstileResetKey}
+              language="en"
+              executionMode="execute"
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
+              onError={handleTurnstileError}
+            />
+
+            <Box>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={isSubmitBusy}
+                endIcon={!isSubmitBusy ? <SendIcon /> : undefined}
+                sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+              >
+                {inquiryMutation.isPending
+                  ? 'Submitting...'
+                  : isTriggeringTurnstile
+                    ? 'Verifying...'
+                    : 'Send Inquiry'}
+              </Button>
+            </Box>
+          </Stack>
+        </Box>
+      )}
     </Box>
   );
 }
