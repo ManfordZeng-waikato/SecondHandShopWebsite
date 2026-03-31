@@ -12,7 +12,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/customers")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminFullAccess")]
 public class AdminCustomersController(
     ICustomerRepository customerRepository,
     IInquiryRepository inquiryRepository,

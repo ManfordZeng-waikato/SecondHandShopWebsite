@@ -37,6 +37,10 @@ public class AdminUserConfiguration : IEntityTypeConfiguration<AdminUser>
         builder.Property(x => x.IsActive)
             .IsRequired();
 
+        builder.Property(x => x.MustChangePassword)
+            .HasDefaultValue(false)
+            .IsRequired();
+
         builder.Property(x => x.CreatedAt)
             .HasDefaultValueSql("now()")
             .IsRequired();

@@ -34,7 +34,7 @@ public static class AdminSeedService
         }
 
         var hash = passwordHasher.Hash(password);
-        var admin = AdminUser.CreateWithCredentials(userName, userName, hash, "Admin");
+        var admin = AdminUser.CreateWithCredentials(userName, userName, hash, "Admin", mustChangePassword: true);
         await dbContext.AdminUsers.AddAsync(admin);
         await dbContext.SaveChangesAsync();
 

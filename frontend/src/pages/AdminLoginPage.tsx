@@ -1,7 +1,11 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { saveAdminSession } from '../features/admin/auth/adminSession';
+import {
+  adminRequiresPasswordChange,
+  isAdminLoggedIn,
+  saveAdminSession,
+} from '../features/admin/auth/adminSession';
 import { loginAdmin } from '../features/admin/api/adminApi';
 import axios from 'axios';
 
@@ -15,6 +19,12 @@ export function AdminLoginPage() {
 
   const redirectPath = (location.state as { from?: string } | null)?.from ?? '/lord/products';
 
+  useEffect(() => {
+    if (isAdminLoggedIn() && adminRequiresPasswordChange()) {
+      navigate('/lord/change-password', { replace: true });
+    }
+  }, [navigate]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -26,9 +36,13 @@ export function AdminLoginPage() {
 
     setLoading(true);
     try {
-      const { expiresAt } = await loginAdmin(username, password);
-      saveAdminSession(expiresAt);
-      navigate(redirectPath, { replace: true });
+      const { expiresAt, requiresPasswordChange } = await loginAdmin(username, password);
+      saveAdminSession(expiresAt, { requiresPasswordChange });
+      if (requiresPasswordChange) {
+        navigate('/lord/change-password', { replace: true });
+      } else {
+        navigate(redirectPath, { replace: true });
+      }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError('Invalid username or password.');

@@ -13,7 +13,9 @@ httpClient.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const url = error.config?.url ?? '';
-      if (url.includes('/api/lord') && !url.includes('/auth/login')) {
+      const isLogin = url.includes('/auth/login');
+      const isChangeInitialPassword = url.includes('/auth/change-initial-password');
+      if (url.includes('/api/lord') && !isLogin && !isChangeInitialPassword) {
         clearAdminSession();
         window.location.href = '/lord/login';
       }

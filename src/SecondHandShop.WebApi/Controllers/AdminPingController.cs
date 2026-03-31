@@ -5,7 +5,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/ping")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminFullAccess")]
 public class AdminPingController : ControllerBase
 {
     [HttpGet]

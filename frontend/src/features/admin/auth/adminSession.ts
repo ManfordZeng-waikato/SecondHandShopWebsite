@@ -1,7 +1,16 @@
 const expiresAtKey = 'shs.admin.expiresAt';
+const pwdChangeKey = 'shs.admin.requiresPasswordChange';
 
-export function saveAdminSession(expiresAt: string): void {
+export function saveAdminSession(
+  expiresAt: string,
+  options?: { requiresPasswordChange?: boolean },
+): void {
   sessionStorage.setItem(expiresAtKey, expiresAt);
+  if (options?.requiresPasswordChange) {
+    sessionStorage.setItem(pwdChangeKey, '1');
+  } else {
+    sessionStorage.removeItem(pwdChangeKey);
+  }
 }
 
 export function isAdminLoggedIn(): boolean {
@@ -16,6 +25,11 @@ export function isAdminLoggedIn(): boolean {
   return true;
 }
 
+export function adminRequiresPasswordChange(): boolean {
+  return sessionStorage.getItem(pwdChangeKey) === '1';
+}
+
 export function clearAdminSession(): void {
   sessionStorage.removeItem(expiresAtKey);
+  sessionStorage.removeItem(pwdChangeKey);
 }

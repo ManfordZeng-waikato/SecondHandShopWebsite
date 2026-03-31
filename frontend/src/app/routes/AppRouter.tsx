@@ -4,6 +4,7 @@ import { CircularProgress, Box } from '@mui/material';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { MainLayout } from '../layouts/MainLayout';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute';
+import { ProtectedPasswordChangeRoute } from './ProtectedPasswordChangeRoute';
 
 const HomePage = lazy(() =>
   import('../../pages/HomePage').then((m) => ({ default: m.HomePage })),
@@ -26,6 +27,9 @@ const NotFoundPage = lazy(() =>
 
 const AdminLoginPage = lazy(() =>
   import('../../pages/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })),
+);
+const AdminChangePasswordPage = lazy(() =>
+  import('../../pages/AdminChangePasswordPage').then((m) => ({ default: m.AdminChangePasswordPage })),
 );
 const AdminCustomersPage = lazy(() =>
   import('../../pages/AdminCustomersPage').then((m) => ({ default: m.AdminCustomersPage })),
@@ -103,6 +107,16 @@ export function AppRouter() {
               </MainLayout>
             }
           />
+          <Route element={<ProtectedPasswordChangeRoute />}>
+            <Route
+              path="/lord/change-password"
+              element={
+                <MainLayout>
+                  <AdminChangePasswordPage />
+                </MainLayout>
+              }
+            />
+          </Route>
           <Route element={<ProtectedAdminRoute />}>
             <Route
               path="/lord/customers"

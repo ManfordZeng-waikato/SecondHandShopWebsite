@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using SecondHandShop.Application.Abstractions.Security;
+using SecondHandShop.Application.Security;
 using SecondHandShop.Domain.Entities;
 
 namespace SecondHandShop.Infrastructure.Services;
@@ -34,13 +36,17 @@ public class JwtTokenService : IJwtTokenService
     {
         var expires = DateTimeOffset.UtcNow.AddMinutes(20);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
             new Claim(ClaimTypes.Role, user.Role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Restricted session: policy "AdminFullAccess" rejects this claim so the token cannot call catalog/customer APIs.
+        if (user.MustChangePassword)
+            claims.Add(new Claim(AdminJwtClaimTypes.PasswordChangeRequired, "true"));
 
         var signingKey = new SymmetricSecurityKey(_keyBytes);
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);

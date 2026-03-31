@@ -15,6 +15,7 @@ import { httpClient } from '../../../shared/api/httpClient';
 
 export interface LoginResponse {
   expiresAt: string;
+  requiresPasswordChange: boolean;
 }
 
 export async function loginAdmin(userName: string, password: string): Promise<LoginResponse> {
@@ -22,6 +23,31 @@ export async function loginAdmin(userName: string, password: string): Promise<Lo
     userName,
     password,
   });
+  return response.data;
+}
+
+export interface ChangeInitialPasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+export interface ChangeInitialPasswordResponse {
+  expiresAt: string;
+  requiresPasswordChange: boolean;
+}
+
+export async function changeAdminInitialPassword(
+  input: ChangeInitialPasswordInput,
+): Promise<ChangeInitialPasswordResponse> {
+  const response = await httpClient.post<ChangeInitialPasswordResponse>(
+    '/api/lord/auth/change-initial-password',
+    {
+      currentPassword: input.currentPassword,
+      newPassword: input.newPassword,
+      confirmNewPassword: input.confirmNewPassword,
+    },
+  );
   return response.data;
 }
 

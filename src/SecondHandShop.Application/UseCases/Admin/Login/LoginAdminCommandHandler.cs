@@ -29,6 +29,6 @@ public class LoginAdminCommandHandler(
 
         logger.LogInformation("Admin user '{UserName}' logged in successfully.", user.UserName);
         var (token, expiresAt) = jwtTokenService.CreateToken(user);
-        return new LoginAdminResponse(token, expiresAt);
+        return new LoginAdminResponse(token, expiresAt, user.MustChangePassword);
     }
 }

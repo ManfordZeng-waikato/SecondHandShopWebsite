@@ -1,9 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SecondHandShop.Application.Contracts.Admin;
+using SecondHandShop.Application.Security;
+using SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 using SecondHandShop.Application.UseCases.Admin.Login;
 
 namespace SecondHandShop.WebApi.Controllers;
@@ -25,7 +28,11 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
 
         Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
 
-        return Ok(new { expiresAt = response.ExpiresAt });
+        return Ok(new
+        {
+            expiresAt = response.ExpiresAt,
+            requiresPasswordChange = response.RequiresPasswordChange
+        });
     }
 
     [HttpPost("logout")]
@@ -35,13 +42,46 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("change-initial-password")]
+    [Authorize(Policy = "AdminSession")]
+    public async Task<IActionResult> ChangeInitialPasswordAsync(
+        [FromBody] ChangeAdminInitialPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var adminId = ResolveAdminUserId();
+        if (adminId is null)
+            return Unauthorized();
+
+        var command = new ChangeAdminInitialPasswordCommand(
+            adminId.Value,
+            request.CurrentPassword,
+            request.NewPassword,
+            request.ConfirmNewPassword);
+
+        var response = await mediator.Send(command, cancellationToken);
+        Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
+
+        return Ok(new { expiresAt = response.ExpiresAt, requiresPasswordChange = false });
+    }
+
     [HttpGet("me")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "AdminSession")]
     public IActionResult Me()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userName = User.FindFirstValue(ClaimTypes.Name);
-        return Ok(new { userId, userName });
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var userName = User.FindFirstValue(ClaimTypes.Name)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.UniqueName);
+        var requiresPasswordChange =
+            User.FindFirstValue(AdminJwtClaimTypes.PasswordChangeRequired) == "true";
+        return Ok(new { userId, userName, requiresPasswordChange });
+    }
+
+    private Guid? ResolveAdminUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        return Guid.TryParse(raw, out var id) ? id : null;
     }
 
     private static CookieOptions BuildCookieOptions(DateTimeOffset expires) => new()

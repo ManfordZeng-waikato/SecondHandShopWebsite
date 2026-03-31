@@ -14,7 +14,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/products")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminFullAccess")]
 public class AdminProductsController(
     IAdminCatalogService adminCatalogService,
     IProductRepository productRepository,

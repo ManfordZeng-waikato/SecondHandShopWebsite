@@ -12,6 +12,12 @@ public class AdminUserRepository(SecondHandShopDbContext dbContext) : IAdminUser
             .FirstOrDefaultAsync(x => x.UserName == userName, cancellationToken);
     }
 
+    public async Task<AdminUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.AdminUsers
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
     public async Task AddAsync(AdminUser user, CancellationToken cancellationToken = default)
     {
         await dbContext.AdminUsers.AddAsync(user, cancellationToken);

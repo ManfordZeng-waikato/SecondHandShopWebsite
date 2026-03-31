@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
+using SecondHandShop.Application.Security;
 using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Infrastructure;
 using SecondHandShop.Infrastructure.Services;
@@ -49,7 +50,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    // Any valid admin JWT (including restricted first-login tokens).
+    options.AddPolicy("AdminSession", policy => policy.RequireRole("Admin"));
+    // Full back-office: rejects tokens carrying pwd_chg_req (issued while MustChangePassword is true).
+    options.AddPolicy("AdminFullAccess", policy =>
+        policy.RequireRole("Admin").RequireAssertion(context =>
+            context.User.FindFirst(AdminJwtClaimTypes.PasswordChangeRequired)?.Value != "true"));
 });
 
 builder.Services.AddRateLimiter(options =>

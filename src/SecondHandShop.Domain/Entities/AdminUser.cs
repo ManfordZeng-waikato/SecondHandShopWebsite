@@ -13,6 +13,10 @@ public class AdminUser
     public string PasswordHash { get; private set; } = string.Empty;
     public string Role { get; private set; } = string.Empty;
     public bool IsActive { get; private set; } = true;
+    /// <summary>
+    /// When true, the admin must change password before using full back-office APIs (enforced via JWT claim + authorization policy).
+    /// </summary>
+    public bool MustChangePassword { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
     public static AdminUser Create(string displayName, string email)
@@ -39,7 +43,8 @@ public class AdminUser
         string userName,
         string displayName,
         string passwordHash,
-        string role = "Admin")
+        string role = "Admin",
+        bool mustChangePassword = false)
     {
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("User name is required.", nameof(userName));
@@ -56,8 +61,21 @@ public class AdminUser
             Email = $"{userName.Trim()}@admin.local",
             PasswordHash = passwordHash,
             Role = role,
+            MustChangePassword = mustChangePassword,
             CreatedAt = DateTimeOffset.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Updates password after verifying the current secret out-of-band; clears forced-change flag for a full-access token on next issue.
+    /// </summary>
+    public void CompleteForcedPasswordChange(string newPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(newPasswordHash))
+            throw new ArgumentException("Password hash is required.", nameof(newPasswordHash));
+
+        PasswordHash = newPasswordHash;
+        MustChangePassword = false;
     }
 
     public void SetActive(bool isActive)

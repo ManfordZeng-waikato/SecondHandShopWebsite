@@ -8,7 +8,7 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/images")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminFullAccess")]
 public class ImageProcessingController(
     IBackgroundRemovalService backgroundRemovalService,
     RemoveBgOptions removeBgOptions) : ControllerBase
