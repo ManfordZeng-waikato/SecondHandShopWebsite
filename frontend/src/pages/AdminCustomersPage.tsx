@@ -29,7 +29,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
-import SortIcon from '@mui/icons-material/Sort';
 import type { AxiosError } from 'axios';
 import { customerStatusOptions } from '../entities/customer/types';
 import type {

@@ -3,7 +3,13 @@
     "allow": [
       "Bash(find D:ProjectsSecondHandShopWebsite -name vitest.config* -o -name jest.config* -o -name *.test.ts -o -name *.spec.ts)",
       "Bash(dotnet build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find /d/Projects/SecondHandShopWebsite -name *.csproj -type f)",
+      "Bash(grep -r \"AddDbContext\\\\|UseSqlServer\\\\|UseNpgsql\" /d/Projects/SecondHandShopWebsite/src/SecondHandShop.Infrastructure --include=*.cs)",
+      "Bash(ls D:/Projects/SecondHandShopWebsite/src/SecondHandShop.Infrastructure/Persistence/Migrations/*.cs)",
+      "Bash(dotnet package:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet ef:*)"
     ]
   }
 }

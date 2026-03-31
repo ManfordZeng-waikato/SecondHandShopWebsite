@@ -8,8 +8,8 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SecondHand
     public SecondHandShopDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<SecondHandShopDbContext>();
-        optionsBuilder.UseSqlServer(
-            "Server=(localdb)\\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;");
+        optionsBuilder.UseNpgsql(
+            "Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres;");
 
         return new SecondHandShopDbContext(optionsBuilder.Options);
     }

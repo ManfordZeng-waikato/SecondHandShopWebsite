@@ -50,7 +50,7 @@ Four .NET 10 projects following clean architecture:
 
 - **Domain** — Entities (`Product`, `ProductImage`, `Category`, `Customer`, `Inquiry`, `InquiryIpCooldown`), enums, `AuditableEntity` base, `SlugValidator`
 - **Application** — Use cases via MediatR (CQRS-inspired), DTOs in `Contracts/`, abstractions (interfaces) for persistence, security, storage, messaging, image processing
-- **Infrastructure** — EF Core + SQL Server implementations: repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, admin seeding)
+- **Infrastructure** — EF Core + PostgreSQL implementations: repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, admin seeding)
 - **WebApi** — ASP.NET Core host, controller-based routing, DI wiring in `Program.cs`
 
 **Admin routes use `/api/lord/*` prefix** (not `/api/admin`) as a security-by-obscurity measure.
@@ -103,7 +103,7 @@ CORS is configured to allow credentials from `https://localhost:5173` in develop
 
 ## Database
 
-SQL Server LocalDB in development. Migrations are in `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. The `AdminSeedService` creates the initial admin user from `AdminSeed` config on first run.
+PostgreSQL in development (default connection: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres;`). Migrations are in `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. The `AdminSeedService` creates the initial admin user from `AdminSeed` config on first run. Concurrency tokens use PostgreSQL `xmin` system column via `uint RowVersion` properties.
 
 ## Local HTTPS
 

@@ -12,6 +12,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.ToTable("Customers");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.Property(x => x.Name)
             .HasMaxLength(120);
 
@@ -36,22 +39,19 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.Property(x => x.RowVersion)
-            .IsRowVersion();
-
         builder.HasIndex(x => x.Email)
             .IsUnique()
-            .HasFilter("[Email] IS NOT NULL");
+            .HasFilter("\"Email\" IS NOT NULL");
 
         builder.HasIndex(x => x.PhoneNumber)
             .IsUnique()
-            .HasFilter("[PhoneNumber] IS NOT NULL");
+            .HasFilter("\"PhoneNumber\" IS NOT NULL");
 
         builder.ToTable(x =>
         {
             x.HasCheckConstraint(
                 "CK_Customers_AtLeastOneContact",
-                "(NULLIF(LTRIM(RTRIM([Email])), '') IS NOT NULL) OR (NULLIF(LTRIM(RTRIM([PhoneNumber])), '') IS NOT NULL)");
+                "(NULLIF(TRIM(\"Email\"), '') IS NOT NULL) OR (NULLIF(TRIM(\"PhoneNumber\"), '') IS NOT NULL)");
         });
     }
 }

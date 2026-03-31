@@ -12,6 +12,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.ToTable("Products");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.Property(x => x.Title)
             .HasMaxLength(200)
             .IsRequired();
@@ -51,9 +54,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.Property(x => x.RowVersion)
-            .IsRowVersion();
-
         builder.HasOne<Category>()
             .WithMany()
             .HasForeignKey(x => x.CategoryId)
@@ -80,10 +80,10 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.ToTable(x =>
         {
-            x.HasCheckConstraint("CK_Products_Price", "[Price] > 0");
+            x.HasCheckConstraint("CK_Products_Price", "\"Price\" > 0");
             x.HasCheckConstraint(
                 "CK_Products_FeaturedSortOrder_Range",
-                $"[FeaturedSortOrder] IS NULL OR ([FeaturedSortOrder] >= {Product.FeaturedSortOrderMin} AND [FeaturedSortOrder] <= {Product.FeaturedSortOrderMax})");
+                $"\"FeaturedSortOrder\" IS NULL OR (\"FeaturedSortOrder\" >= {Product.FeaturedSortOrderMin} AND \"FeaturedSortOrder\" <= {Product.FeaturedSortOrderMax})");
         });
     }
 }

@@ -38,7 +38,7 @@ public class AdminUserConfiguration : IEntityTypeConfiguration<AdminUser>
             .IsRequired();
 
         builder.Property(x => x.CreatedAt)
-            .HasDefaultValueSql("SYSDATETIMEOFFSET()")
+            .HasDefaultValueSql("now()")
             .IsRequired();
 
         builder.HasIndex(x => x.Email)
@@ -46,6 +46,6 @@ public class AdminUserConfiguration : IEntityTypeConfiguration<AdminUser>
 
         builder.HasIndex(x => x.UserName)
             .IsUnique()
-            .HasFilter("[UserName] <> ''");
+            .HasFilter("\"UserName\" <> ''");
     }
 }

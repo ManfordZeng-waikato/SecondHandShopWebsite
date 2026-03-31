@@ -68,7 +68,7 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
         {
             x.HasCheckConstraint(
                 "CK_Inquiries_AtLeastOneContact",
-                "(NULLIF(LTRIM(RTRIM([Email])), '') IS NOT NULL) OR (NULLIF(LTRIM(RTRIM([PhoneNumber])), '') IS NOT NULL)");
+                "(NULLIF(TRIM(\"Email\"), '') IS NOT NULL) OR (NULLIF(TRIM(\"PhoneNumber\"), '') IS NOT NULL)");
         });
     }
 }

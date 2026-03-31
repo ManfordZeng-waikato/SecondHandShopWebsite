@@ -21,14 +21,14 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=(localdb)\\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;";
+            ?? "Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres;";
         var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
         var r2Options = R2Options.FromConfiguration(configuration);
         var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);
         var cloudflareTurnstileOptions = CloudflareTurnstileOptions.FromConfiguration(configuration);
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseNpgsql(connectionString));
 
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<SecondHandShopDbContext>());
         services.AddScoped<IProductRepository, ProductRepository>();

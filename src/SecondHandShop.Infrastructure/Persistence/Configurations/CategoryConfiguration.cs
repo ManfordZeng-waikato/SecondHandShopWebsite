@@ -11,6 +11,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.ToTable("Categories");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.Property(x => x.Name)
             .HasMaxLength(120)
             .IsRequired();
@@ -30,9 +33,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
-
-        builder.Property(x => x.RowVersion)
-            .IsRowVersion();
 
         builder.HasOne<Category>()
             .WithMany()

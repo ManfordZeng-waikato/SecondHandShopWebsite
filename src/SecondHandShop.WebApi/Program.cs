@@ -145,6 +145,7 @@ builder.Services.AddHsts(options =>
 var app = builder.Build();
 
 await AdminSeedService.SeedAdminUserAsync(app.Services);
+await CatalogSeedService.SeedDefaultCategoriesIfEmptyAsync(app.Services);
 
 app.UseForwardedHeaders();
 

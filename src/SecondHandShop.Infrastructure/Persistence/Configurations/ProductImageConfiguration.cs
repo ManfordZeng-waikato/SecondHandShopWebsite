@@ -11,6 +11,9 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         builder.ToTable("ProductImages");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.Property(x => x.CloudStorageKey)
             .HasMaxLength(500)
             .IsRequired();
@@ -34,9 +37,6 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.Property(x => x.RowVersion)
-            .IsRowVersion();
-
         builder.HasOne<Product>()
             .WithMany()
             .HasForeignKey(x => x.ProductId)
@@ -56,6 +56,6 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
 
         builder.HasIndex(x => x.ProductId)
             .IsUnique()
-            .HasFilter("[IsPrimary] = 1");
+            .HasFilter("\"IsPrimary\" = true");
     }
 }
