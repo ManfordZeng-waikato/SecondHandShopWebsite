@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -17,6 +17,7 @@ import {
   Snackbar,
   Stack,
   Switch,
+  TablePagination,
   TextField,
   Typography,
 } from '@mui/material';
@@ -24,9 +25,12 @@ import ImageIcon from '@mui/icons-material/Image';
 import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import StarIcon from '@mui/icons-material/StarRounded';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
 import type { ProductStatus } from '../entities/product/types';
 import {
   type AdminProductListItem,
+  type AdminProductSortBy,
+  type SortDirection,
   fetchAdminProducts,
   updateProductFeatured,
   updateProductStatus,
@@ -38,6 +42,7 @@ const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
 type FeaturedFilter = 'all' | 'featured' | 'not-featured';
 const FEATURED_SORT_ORDER_MIN = 0;
 const FEATURED_SORT_ORDER_MAX = 999;
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 interface FeaturedDraftState {
   isFeatured: boolean;
@@ -108,8 +113,25 @@ const productCardSx = {
 
 export function AdminProductsPage() {
   const queryClient = useQueryClient();
+
+  // Filters
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<ProductStatus | 'all'>('all');
+
+  // Search
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // Sorting
+  const [sortBy, setSortBy] = useState<AdminProductSortBy>('updatedAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Draft & feedback
   const [featuredDrafts, setFeaturedDrafts] = useState<Record<string, FeaturedDraftState>>({});
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
 
@@ -128,10 +150,26 @@ export function AdminProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ['admin-products', selectedCategoryId, featuredFilterParam],
+    queryKey: [
+      'admin-products',
+      page,
+      pageSize,
+      searchKeyword,
+      statusFilter,
+      selectedCategoryId,
+      featuredFilterParam,
+      sortBy,
+      sortDirection,
+    ],
     queryFn: () => fetchAdminProducts({
+      page,
+      pageSize,
+      search: searchKeyword || undefined,
+      status: statusFilter === 'all' ? undefined : statusFilter,
       categoryId: selectedCategoryId,
       isFeatured: featuredFilterParam,
+      sortBy,
+      sortDirection,
     }),
   });
 
@@ -173,6 +211,7 @@ export function AdminProductsPage() {
 
   const categories = categoriesQuery.data ?? [];
   const products = productsQuery.data?.items ?? [];
+  const totalCount = productsQuery.data?.totalCount ?? 0;
 
   const getDraft = (product: AdminProductListItem): FeaturedDraftState => {
     return (
@@ -212,6 +251,23 @@ export function AdminProductsPage() {
     }
   };
 
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPage(1);
+    setSearchKeyword(searchInput.trim());
+  };
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setSearchKeyword('');
+    setSelectedCategoryId(undefined);
+    setFeaturedFilter('all');
+    setStatusFilter('all');
+    setPage(1);
+  };
+
+  const hasActiveFilters = searchKeyword || selectedCategoryId || featuredFilter !== 'all' || statusFilter !== 'all';
+
   // --- Page header ---
   const headerSection = (
     <Box sx={{ mb: 1 }}>
@@ -225,26 +281,112 @@ export function AdminProductsPage() {
           <Typography variant="h4" sx={{ lineHeight: 1.2 }}>
             Product Management
           </Typography>
-          {!productsQuery.isLoading && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {products.length} {products.length === 1 ? 'product' : 'products'}
-              {selectedCategoryId && categories.length > 0
-                ? ` in ${categories.find((c) => c.id === selectedCategoryId)?.name ?? 'selected category'}`
-                : ''}
-              {featuredFilter !== 'all'
-                ? ` \u00b7 ${featuredFilter === 'featured' ? 'featured only' : 'not featured'}`
-                : ''}
-            </Typography>
-          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {productsQuery.isLoading
+              ? 'Loading...'
+              : `${totalCount} ${totalCount === 1 ? 'product' : 'products'} total`}
+            {hasActiveFilters ? ' (filtered)' : ''}
+          </Typography>
         </Box>
       </Stack>
     </Box>
+  );
+
+  // --- Search & sort toolbar ---
+  const searchSection = (
+    <Paper sx={{ p: 2 }}>
+      <Stack
+        component="form"
+        onSubmit={handleSearch}
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1.5}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+      >
+        <TextField
+          size="small"
+          label="Search by title"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: <SearchIcon sx={{ fontSize: 18, color: 'text.disabled', mr: 0.5 }} />,
+            },
+          }}
+          sx={{ flex: 1 }}
+        />
+        <Select
+          size="small"
+          value={sortBy}
+          onChange={(event) => {
+            setSortBy(event.target.value as AdminProductSortBy);
+            setPage(1);
+          }}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="updatedAt">Sort: last updated</MenuItem>
+          <MenuItem value="createdAt">Sort: date created</MenuItem>
+          <MenuItem value="price">Sort: price</MenuItem>
+          <MenuItem value="title">Sort: title</MenuItem>
+        </Select>
+        <Select
+          size="small"
+          value={sortDirection}
+          onChange={(event) => {
+            setSortDirection(event.target.value as SortDirection);
+            setPage(1);
+          }}
+          sx={{ minWidth: 100 }}
+        >
+          <MenuItem value="desc">Desc</MenuItem>
+          <MenuItem value="asc">Asc</MenuItem>
+        </Select>
+        <Button type="submit" variant="contained" size="small">
+          Search
+        </Button>
+        {hasActiveFilters && (
+          <Button variant="outlined" size="small" onClick={resetFilters}>
+            Reset
+          </Button>
+        )}
+      </Stack>
+    </Paper>
   );
 
   // --- Filter toolbar ---
   const filterSection = (
     <Paper sx={{ p: 2.5 }}>
       <Stack spacing={2}>
+        {/* Status filter */}
+        <Box>
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
+            <FilterListIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Status
+            </Typography>
+          </Stack>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            <Chip
+              label="All"
+              size="small"
+              variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+              onClick={() => { setStatusFilter('all'); setPage(1); }}
+              sx={filterChipSx(statusFilter === 'all')}
+            />
+            {statusOptions.map((status) => (
+              <Chip
+                key={status}
+                label={status}
+                size="small"
+                variant={statusFilter === status ? 'filled' : 'outlined'}
+                onClick={() => { setStatusFilter(statusFilter === status ? 'all' : status); setPage(1); }}
+                sx={filterChipSx(statusFilter === status)}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        <Divider />
+
         {/* Category filters */}
         <Box>
           <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
@@ -258,7 +400,7 @@ export function AdminProductsPage() {
               label="All"
               size="small"
               variant={!selectedCategoryId ? 'filled' : 'outlined'}
-              onClick={() => setSelectedCategoryId(undefined)}
+              onClick={() => { setSelectedCategoryId(undefined); setPage(1); }}
               sx={filterChipSx(!selectedCategoryId)}
             />
             {categories.map((cat) => {
@@ -269,7 +411,7 @@ export function AdminProductsPage() {
                   label={cat.name}
                   size="small"
                   variant={isActive ? 'filled' : 'outlined'}
-                  onClick={() => setSelectedCategoryId(isActive ? undefined : cat.id)}
+                  onClick={() => { setSelectedCategoryId(isActive ? undefined : cat.id); setPage(1); }}
                   sx={filterChipSx(isActive)}
                 />
               );
@@ -298,7 +440,7 @@ export function AdminProductsPage() {
                 label={label}
                 size="small"
                 variant={featuredFilter === value ? 'filled' : 'outlined'}
-                onClick={() => setFeaturedFilter(value)}
+                onClick={() => { setFeaturedFilter(value); setPage(1); }}
                 sx={filterChipSx(featuredFilter === value)}
               />
             ))}
@@ -313,6 +455,7 @@ export function AdminProductsPage() {
     return (
       <Stack spacing={2.5}>
         {headerSection}
+        {searchSection}
         {filterSection}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
           <CircularProgress size={32} sx={{ mb: 1.5, color: 'text.secondary' }} />
@@ -329,6 +472,7 @@ export function AdminProductsPage() {
     return (
       <Stack spacing={2.5}>
         {headerSection}
+        {searchSection}
         {filterSection}
         <Alert severity="error">Unable to load products. Please refresh and try again.</Alert>
       </Stack>
@@ -340,6 +484,7 @@ export function AdminProductsPage() {
     return (
       <Stack spacing={2.5}>
         {headerSection}
+        {searchSection}
         {filterSection}
         <Paper sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <InventoryIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
@@ -347,8 +492,8 @@ export function AdminProductsPage() {
             No products found
           </Typography>
           <Typography variant="body2" color="text.disabled">
-            {selectedCategoryId || featuredFilter !== 'all'
-              ? 'Try adjusting the filters above.'
+            {hasActiveFilters
+              ? 'Try adjusting the search or filters above.'
               : 'Create your first product to get started.'}
           </Typography>
         </Paper>
@@ -373,7 +518,24 @@ export function AdminProductsPage() {
   return (
     <Stack spacing={2.5}>
       {headerSection}
+      {searchSection}
       {filterSection}
+
+      {/* Pagination top */}
+      <Paper sx={{ overflow: 'hidden' }}>
+        <TablePagination
+          component="div"
+          count={totalCount}
+          page={Math.max(0, page - 1)}
+          onPageChange={(_, nextPage) => setPage(nextPage + 1)}
+          rowsPerPage={pageSize}
+          onRowsPerPageChange={(event) => {
+            setPageSize(Number(event.target.value));
+            setPage(1);
+          }}
+          rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+        />
+      </Paper>
 
       <Stack spacing={1.5}>
         {products.map((product, index) => {
@@ -384,7 +546,7 @@ export function AdminProductsPage() {
           const canSaveFeatured = hasChanges && !(draft.isFeatured && !canEnableFeatured);
 
           return (
-            <Fade in timeout={200 + index * 40} key={product.id}>
+            <Fade in timeout={Math.min(300, 150 + index * 20)} key={product.id}>
               <Paper sx={productCardSx}>
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
@@ -411,6 +573,7 @@ export function AdminProductsPage() {
                         component="img"
                         src={product.primaryImageUrl}
                         alt={product.title}
+                        loading="lazy"
                         sx={{
                           width: '100%',
                           height: '100%',
@@ -610,6 +773,22 @@ export function AdminProductsPage() {
           );
         })}
       </Stack>
+
+      {/* Pagination bottom */}
+      <Paper sx={{ overflow: 'hidden' }}>
+        <TablePagination
+          component="div"
+          count={totalCount}
+          page={Math.max(0, page - 1)}
+          onPageChange={(_, nextPage) => setPage(nextPage + 1)}
+          rowsPerPage={pageSize}
+          onRowsPerPageChange={(event) => {
+            setPageSize(Number(event.target.value));
+            setPage(1);
+          }}
+          rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+        />
+      </Paper>
 
       <Snackbar
         open={Boolean(feedback)}

@@ -44,23 +44,32 @@ export interface AdminProductListItem {
   updatedAt: string;
 }
 
+export type AdminProductSortBy = 'updatedAt' | 'createdAt' | 'price' | 'title';
+export type SortDirection = 'asc' | 'desc';
+
 export interface AdminProductQueryParams {
   page?: number;
   pageSize?: number;
+  search?: string;
   status?: ProductStatus;
   categoryId?: string;
   isFeatured?: boolean;
+  sortBy?: AdminProductSortBy;
+  sortDirection?: SortDirection;
 }
 
 export async function fetchAdminProducts(
   params: AdminProductQueryParams = {},
 ): Promise<PagedResult<AdminProductListItem>> {
   const queryParams: Record<string, string> = {};
+  if (params.search) queryParams.search = params.search;
   if (params.status) queryParams.status = params.status;
   if (params.categoryId) queryParams.categoryId = params.categoryId;
   if (typeof params.isFeatured === 'boolean') queryParams.isFeatured = String(params.isFeatured);
   if (params.page) queryParams.page = String(params.page);
   if (params.pageSize) queryParams.pageSize = String(params.pageSize);
+  if (params.sortBy) queryParams.sortBy = params.sortBy;
+  if (params.sortDirection) queryParams.sortDirection = params.sortDirection;
 
   const response = await httpClient.get<PagedResult<AdminProductListItem>>('/api/lord/products', {
     params: Object.keys(queryParams).length > 0 ? queryParams : undefined,

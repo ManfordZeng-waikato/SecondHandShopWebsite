@@ -188,6 +188,10 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
     {
         var query = dbContext.Products.AsNoTracking();
 
+        var search = parameters.SafeSearch;
+        if (search is not null)
+            query = query.Where(x => x.Title.Contains(search));
+
         if (!string.IsNullOrWhiteSpace(parameters.Status)
             && Enum.TryParse<ProductStatus>(parameters.Status, ignoreCase: true, out var statusEnum))
         {
@@ -205,8 +209,23 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         var page = parameters.SafePage;
         var pageSize = parameters.SafePageSize;
 
-        var projected = await query
-            .OrderByDescending(x => x.UpdatedAt)
+        IOrderedQueryable<Product> ordered = parameters.SafeSortBy switch
+        {
+            "createdAt" => parameters.IsSortDescending
+                ? query.OrderByDescending(x => x.CreatedAt)
+                : query.OrderBy(x => x.CreatedAt),
+            "price" => parameters.IsSortDescending
+                ? query.OrderByDescending(x => x.Price)
+                : query.OrderBy(x => x.Price),
+            "title" => parameters.IsSortDescending
+                ? query.OrderByDescending(x => x.Title)
+                : query.OrderBy(x => x.Title),
+            _ => parameters.IsSortDescending
+                ? query.OrderByDescending(x => x.UpdatedAt)
+                : query.OrderBy(x => x.UpdatedAt),
+        };
+
+        var projected = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new
