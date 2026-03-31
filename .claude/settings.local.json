@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(find D:ProjectsSecondHandShopWebsite -name vitest.config* -o -name jest.config* -o -name *.test.ts -o -name *.spec.ts)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
