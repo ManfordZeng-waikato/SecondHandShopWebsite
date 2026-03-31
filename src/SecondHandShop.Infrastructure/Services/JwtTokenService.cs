@@ -44,7 +44,8 @@ public class JwtTokenService : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        // Restricted session: policy "AdminFullAccess" rejects this claim so the token cannot call catalog/customer APIs.
+        // Restricted session: "AdminFullAccess" rejects this claim. DB remains source of truth; after forced password
+        // change the API clears the cookie so the user must log in again (no immediate full-access token).
         if (user.MustChangePassword)
             claims.Add(new Claim(AdminJwtClaimTypes.PasswordChangeRequired, "true"));
 

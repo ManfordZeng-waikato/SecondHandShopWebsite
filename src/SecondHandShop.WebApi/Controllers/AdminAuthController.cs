@@ -58,10 +58,17 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
             request.NewPassword,
             request.ConfirmNewPassword);
 
-        var response = await mediator.Send(command, cancellationToken);
-        Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
+        await mediator.Send(command, cancellationToken);
 
-        return Ok(new { expiresAt = response.ExpiresAt, requiresPasswordChange = false });
+        // End server session: user must authenticate again with the new password (avoids carrying old JWT).
+        Response.Cookies.Delete(CookieName, BuildCookieOptions(DateTimeOffset.UtcNow));
+
+        return Ok(new
+        {
+            success = true,
+            requiresReLogin = true,
+            message = "Password changed successfully, please log in again."
+        });
     }
 
     [HttpGet("me")]

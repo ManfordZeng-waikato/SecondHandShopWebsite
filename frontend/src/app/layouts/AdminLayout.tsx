@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { clearAdminSession } from '../../features/admin/auth/adminSession';
+import { clearAuth } from '../../features/admin/auth/adminAuth';
 import { logoutAdmin } from '../../features/admin/api/adminApi';
 
 export function AdminLayout({ children }: PropsWithChildren) {
@@ -11,7 +11,7 @@ export function AdminLayout({ children }: PropsWithChildren) {
     try {
       await logoutAdmin();
     } finally {
-      clearAdminSession();
+      clearAuth();
       navigate('/lord/login');
     }
   };

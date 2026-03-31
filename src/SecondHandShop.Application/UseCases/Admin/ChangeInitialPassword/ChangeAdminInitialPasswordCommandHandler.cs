@@ -2,7 +2,6 @@ using MediatR;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Security;
-using SecondHandShop.Application.Contracts.Admin;
 using SecondHandShop.Application.Security;
 
 namespace SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
@@ -10,12 +9,11 @@ namespace SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 public sealed class ChangeAdminInitialPasswordCommandHandler(
     IAdminUserRepository adminUserRepository,
     IPasswordHasher passwordHasher,
-    IJwtTokenService jwtTokenService,
-    IUnitOfWork unitOfWork) : IRequestHandler<ChangeAdminInitialPasswordCommand, ChangeAdminInitialPasswordResponse>
+    IUnitOfWork unitOfWork) : IRequestHandler<ChangeAdminInitialPasswordCommand, Unit>
 {
     private const string DummyHash = "$2a$11$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
-    public async Task<ChangeAdminInitialPasswordResponse> Handle(
+    public async Task<Unit> Handle(
         ChangeAdminInitialPasswordCommand request,
         CancellationToken cancellationToken)
     {
@@ -51,7 +49,7 @@ public sealed class ChangeAdminInitialPasswordCommandHandler(
         user.CompleteForcedPasswordChange(newHash);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var (token, expiresAt) = jwtTokenService.CreateToken(user);
-        return new ChangeAdminInitialPasswordResponse(token, expiresAt);
+        // Intentionally no new JWT: client must re-login so no stale restricted token remains in the browser.
+        return Unit.Value;
     }
 }

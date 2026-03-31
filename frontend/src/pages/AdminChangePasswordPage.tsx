@@ -3,7 +3,7 @@ import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typograp
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { changeAdminInitialPassword } from '../features/admin/api/adminApi';
-import { saveAdminSession } from '../features/admin/auth/adminSession';
+import { clearAuth } from '../features/admin/auth/adminAuth';
 
 export function AdminChangePasswordPage() {
   const navigate = useNavigate();
@@ -24,13 +24,13 @@ export function AdminChangePasswordPage() {
 
     setLoading(true);
     try {
-      const result = await changeAdminInitialPassword({
+      await changeAdminInitialPassword({
         currentPassword,
         newPassword,
         confirmNewPassword,
       });
-      saveAdminSession(result.expiresAt, { requiresPasswordChange: result.requiresPasswordChange });
-      navigate('/lord/products', { replace: true });
+      clearAuth();
+      navigate('/lord/login', { replace: true, state: { passwordChanged: true } });
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError('Current password is incorrect.');
@@ -55,7 +55,7 @@ export function AdminChangePasswordPage() {
           <Typography variant="h5">Set a new password</Typography>
           <Typography variant="body2" color="text.secondary">
             Your account must use a new password before accessing the admin dashboard. Use at least 8 characters
-            with at least one letter and one digit.
+            with at least one letter and one digit. After a successful change you will need to sign in again.
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField

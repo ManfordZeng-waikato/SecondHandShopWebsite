@@ -2,10 +2,11 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  adminRequiresPasswordChange,
-  isAdminLoggedIn,
-  saveAdminSession,
-} from '../features/admin/auth/adminSession';
+  getMustChangePassword,
+  isAuthenticated,
+  revokeLordCookie,
+  setAuth,
+} from '../features/admin/auth/adminAuth';
 import { loginAdmin } from '../features/admin/api/adminApi';
 import axios from 'axios';
 
@@ -17,13 +18,21 @@ export function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const redirectPath = (location.state as { from?: string } | null)?.from ?? '/lord/products';
+  const routeState = location.state as { from?: string; passwordChanged?: boolean } | null;
+  const redirectPath = routeState?.from ?? '/lord/products';
+  const passwordChangedNotice = routeState?.passwordChanged === true;
 
   useEffect(() => {
-    if (isAdminLoggedIn() && adminRequiresPasswordChange()) {
-      navigate('/lord/change-password', { replace: true });
+    if (isAuthenticated()) {
+      if (getMustChangePassword()) {
+        navigate('/lord/change-password', { replace: true });
+      } else {
+        navigate(redirectPath, { replace: true });
+      }
+      return;
     }
-  }, [navigate]);
+    void revokeLordCookie();
+  }, [navigate, redirectPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,7 +46,7 @@ export function AdminLoginPage() {
     setLoading(true);
     try {
       const { expiresAt, requiresPasswordChange } = await loginAdmin(username, password);
-      saveAdminSession(expiresAt, { requiresPasswordChange });
+      setAuth(expiresAt, requiresPasswordChange);
       if (requiresPasswordChange) {
         navigate('/lord/change-password', { replace: true });
       } else {
@@ -59,6 +68,9 @@ export function AdminLoginPage() {
       <Paper sx={{ p: 3, width: 420 }}>
         <Stack spacing={2} component="form" onSubmit={handleSubmit}>
           <Typography variant="h5">Admin login</Typography>
+          {passwordChangedNotice && (
+            <Alert severity="success">Password changed successfully. Please sign in again.</Alert>
+          )}
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Username"

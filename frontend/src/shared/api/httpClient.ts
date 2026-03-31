@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { env } from '../config/env';
-import { clearAdminSession } from '../../features/admin/auth/adminSession';
+import { clearAuth, revokeLordCookie } from '../../features/admin/auth/adminAuth';
 
 export const httpClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -16,8 +16,10 @@ httpClient.interceptors.response.use(
       const isLogin = url.includes('/auth/login');
       const isChangeInitialPassword = url.includes('/auth/change-initial-password');
       if (url.includes('/api/lord') && !isLogin && !isChangeInitialPassword) {
-        clearAdminSession();
-        window.location.href = '/lord/login';
+        clearAuth();
+        void revokeLordCookie().finally(() => {
+          window.location.href = '/lord/login';
+        });
       }
     }
     return Promise.reject(error);

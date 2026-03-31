@@ -33,8 +33,9 @@ export interface ChangeInitialPasswordInput {
 }
 
 export interface ChangeInitialPasswordResponse {
-  expiresAt: string;
-  requiresPasswordChange: boolean;
+  success: boolean;
+  requiresReLogin: boolean;
+  message: string;
 }
 
 export async function changeAdminInitialPassword(

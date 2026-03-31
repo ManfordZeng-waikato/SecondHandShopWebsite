@@ -1,14 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { adminRequiresPasswordChange, isAdminLoggedIn } from '../../features/admin/auth/adminSession';
+import { getMustChangePassword, isAuthenticated } from '../../features/admin/auth/adminAuth';
 
 export function ProtectedAdminRoute() {
   const location = useLocation();
 
-  if (!isAdminLoggedIn()) {
+  if (!isAuthenticated()) {
     return <Navigate to="/lord/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (adminRequiresPasswordChange()) {
+  if (getMustChangePassword()) {
     return <Navigate to="/lord/change-password" replace state={{ from: location.pathname }} />;
   }
 
