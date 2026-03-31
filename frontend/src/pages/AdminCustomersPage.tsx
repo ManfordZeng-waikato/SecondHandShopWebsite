@@ -142,7 +142,7 @@ export function AdminCustomersPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Customer management</Typography>
+      <Typography variant="h4">Customer Management</Typography>
 
       <Paper sx={{ p: 2 }}>
         <Stack

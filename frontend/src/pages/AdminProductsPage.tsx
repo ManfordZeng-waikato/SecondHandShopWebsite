@@ -197,7 +197,7 @@ export function AdminProductsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h4">Manage products</Typography>
+      <Typography variant="h4">Product Management</Typography>
 
       {/* Category filter */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
