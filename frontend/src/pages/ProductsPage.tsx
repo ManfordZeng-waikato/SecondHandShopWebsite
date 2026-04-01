@@ -8,7 +8,6 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import StorefrontIcon from '@mui/icons-material/Storefront';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -54,29 +53,101 @@ export function ProductsPage() {
   return (
     <Container sx={{ py: 4 }}>
       <Stack spacing={3}>
-          {/* Page header */}
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.75 }}>
-              <StorefrontIcon sx={{ fontSize: 22, color: 'text.secondary' }} />
-              <Typography
-                component="span"
+          {/* Page header with logo */}
+          <Box
+            sx={{
+              bgcolor: '#f0ebe4',
+              borderRadius: 3,
+              overflow: 'hidden',
+              position: 'relative',
+              px: { xs: 3, sm: 5 },
+              py: { xs: 3.5, sm: 4.5 },
+            }}
+          >
+            {/* Dot-grid texture — matches homepage hero */}
+            <Box
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px)',
+                backgroundSize: '22px 22px',
+                pointerEvents: 'none',
+              }}
+            />
+
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              alignItems="center"
+              spacing={{ xs: 2.5, md: 4 }}
+              sx={{ position: 'relative' }}
+            >
+              <Box
+                component="img"
+                src="/LogoHome.svg"
+                alt="Pat's Shed"
                 sx={{
-                  letterSpacing: '0.13em',
-                  textTransform: 'uppercase',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  color: 'text.secondary',
+                  height: { xs: 110, sm: 130, md: 150 },
+                  width: 'auto',
+                  objectFit: 'contain',
+                  flexShrink: 0,
                 }}
-              >
-                Pat's Shed
-              </Typography>
-            </Box>
-            <Typography variant="h3" component="h1" sx={{ fontSize: { xs: '1.8rem', md: '2.3rem' }, mb: 0.5 }}>
-              All Products
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Browse our curated collection of quality second-hand furniture &amp; antiques
-            </Typography>
+              />
+
+              {/* Vertical divider — desktop only */}
+              <Box
+                aria-hidden
+                sx={{
+                  display: { xs: 'none', md: 'block' },
+                  width: '1.5px',
+                  alignSelf: 'stretch',
+                  bgcolor: 'rgba(0,0,0,0.1)',
+                  my: 1,
+                }}
+              />
+
+              <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    display: 'inline-block',
+                    mb: 1.5,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    borderBottom: '1.5px solid',
+                    borderColor: 'text.secondary',
+                    pb: '3px',
+                  }}
+                >
+                  Hamilton, New Zealand
+                </Typography>
+                <Typography
+                  variant="h3"
+                  component="h1"
+                  sx={{ fontSize: { xs: '2rem', md: '2.6rem' }, lineHeight: 1.1, mb: 1 }}
+                >
+                  All Products
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 440, lineHeight: 1.7 }}>
+                  Quality pre-loved furniture &amp; antiques, hand-picked from the&nbsp;Waikato
+                </Typography>
+
+                {/* Accent rule — matches homepage hero */}
+                <Box
+                  aria-hidden
+                  sx={{
+                    width: 44,
+                    height: '2px',
+                    bgcolor: 'primary.main',
+                    mt: 2,
+                    mx: { xs: 'auto', md: 0 },
+                  }}
+                />
+              </Box>
+            </Stack>
           </Box>
 
           {/* Filters toolbar */}
