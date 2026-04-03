@@ -1,282 +1,228 @@
 # SecondHandShop
 
-A full-stack **second-hand goods storefront**: ASP.NET Core Web API backend, React (Vite) frontend, optional **Cloudflare R2** object storage with a **Cloudflare Worker** for public image delivery, and **SQL Server** persistence.
+A production-grade, full-stack **second-hand goods marketplace** built with modern web technologies. The platform provides a polished public storefront for browsing and inquiring about pre-owned items, paired with a comprehensive admin dashboard for inventory, customer, and sales management.
 
 ---
 
-## Table of contents
+## Highlights
 
-- [Architecture](#architecture)
-- [Technology stack](#technology-stack)
-- [Repository layout](#repository-layout)
-- [Prerequisites](#prerequisites)
-- [Backend (ASP.NET Core)](#backend-aspnet-core)
-- [Database](#database)
-- [Frontend (React + Vite)](#frontend-react--vite)
-- [Cloudflare Worker (image CDN)](#cloudflare-worker-image-cdn)
-- [Configuration reference](#configuration-reference)
-- [HTTP API overview](#http-api-overview)
-- [Security and operations notes](#security-and-operations-notes)
+- **Clean Architecture** backend with clear separation of concerns across Domain, Application, Infrastructure, and WebApi layers
+- **React 19 SPA** with feature-sliced structure, Material UI, and server-state management via React Query
+- **Serverless image delivery** through Cloudflare Workers + R2 object storage
+- **Cookie-based JWT authentication** with HttpOnly secure cookies for admin sessions
+- **Bot protection** via Cloudflare Turnstile on public-facing forms
+- **Rate limiting** on sensitive endpoints (login, search)
+- **Background removal** preview powered by remove.bg API for product image editing
+- **Mock API mode** for frontend development without a running backend
 
 ---
 
-## Architecture
+## Architecture Overview
 
-The server follows a **clean architecture** style split across projects:
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Cloudflare Edge                              │
+│  ┌──────────────────┐    ┌──────────────────────────────────────┐   │
+│  │  Turnstile CAPTCHA│    │  Worker (R2 Image CDN)               │   │
+│  └────────┬─────────┘    │  GET/HEAD → R2 Bucket → Cache → User │   │
+│           │              └──────────────────────────────────────┘   │
+└───────────┼─────────────────────────────────────────────────────────┘
+            │
+┌───────────▼─────────────────────────────────────────────────────────┐
+│  Frontend (React 19 + Vite 7)                                       │
+│  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌───────────────────────┐ │
+│  │  Public   │ │  Product  │ │  Inquiry │ │  Admin Dashboard      │ │
+│  │  Catalog  │ │  Detail   │ │  Form    │ │  /lord/* (protected)  │ │
+│  └──────────┘ └───────────┘ └──────────┘ └───────────────────────┘ │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │ HTTPS (withCredentials)
+┌─────────────────────────▼───────────────────────────────────────────┐
+│  Backend (ASP.NET Core / .NET 10)                                   │
+│  ┌──────────┐ ┌──────────────┐ ┌──────────────┐ ┌───────────────┐ │
+│  │  WebApi   │ │  Application │ │Infrastructure│ │    Domain     │ │
+│  │Controllers│ │  Use Cases   │ │  EF Core,    │ │  Entities,    │ │
+│  │  Filters  │ │  MediatR     │ │  Services    │ │  Rules        │ │
+│  └──────────┘ └──────────────┘ └──────────────┘ └───────────────┘ │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │
+              ┌───────────▼───────────┐
+              │      PostgreSQL       │
+              │  EF Core Migrations   │
+              └───────────────────────┘
+```
 
-| Project | Responsibility |
-|--------|----------------|
-| `SecondHandShop.Domain` | Entities, domain rules (e.g. products, categories, inquiries) |
-| `SecondHandShop.Application` | Use cases, contracts (DTOs), MediatR commands, abstractions |
-| `SecondHandShop.Infrastructure` | EF Core, repositories, JWT/password services, R2 (S3-compatible) storage, email, Remove.bg integration |
-| `SecondHandShop.WebApi` | HTTP API, authentication, CORS, rate limiting |
+### Backend — Clean Architecture (.NET 10)
 
-The **frontend** is a SPA that talks to the API over HTTPS, with **cookie-based JWT** for admin routes under `/api/lord/*`.
+| Layer | Project | Responsibility |
+|-------|---------|----------------|
+| **Domain** | `SecondHandShop.Domain` | Entities (`Product`, `Category`, `Customer`, `Inquiry`, `ProductSale`, etc.), enums, domain validation, `AuditableEntity` base class |
+| **Application** | `SecondHandShop.Application` | Use cases via MediatR (CQRS-inspired), DTOs/Contracts, abstraction interfaces for persistence, storage, security, messaging |
+| **Infrastructure** | `SecondHandShop.Infrastructure` | EF Core + PostgreSQL, repository implementations, JWT/BCrypt services, R2 storage, SMTP, Turnstile, remove.bg integration |
+| **WebApi** | `SecondHandShop.WebApi` | ASP.NET Core host, 9 controllers, rate limiting, CORS, DI composition in `Program.cs` |
 
-Optional **worker** serves objects from an R2 bucket with caching headers and CORS for GET/HEAD.
+### Frontend — Feature-Sliced React SPA
+
+| Directory | Purpose |
+|-----------|---------|
+| `app/` | Entry point, router (React Router 7), providers (React Query + MUI theme), layouts |
+| `pages/` | 6 public pages + 6 admin pages |
+| `features/` | Feature modules — `admin`, `catalog`, `home`, `inquiry` — each with hooks, API calls, and components |
+| `entities/` | TypeScript domain model types |
+| `shared/` | Axios HTTP client, reusable UI components, mock adapters, utilities |
+
+### Worker — Cloudflare Edge Image CDN
+
+A lightweight Cloudflare Worker that serves product images from an R2 bucket with cache headers (1 day browser / 7 days CDN), CORS support, and ETags. Handles GET/HEAD requests only.
 
 ---
 
-## Technology stack
+## Features
 
-**Backend**
+### Public Storefront
 
-- .NET **10** (`net10.0`)
-- ASP.NET Core (JWT Bearer, OpenAPI in Development)
-- Entity Framework Core **10** + **SQL Server**
-- MediatR
-- BCrypt (password hashing), AWS SDK S3-compatible client for **Cloudflare R2**
+- **Home page** with hero section, featured product carousel, and brand story
+- **Product catalog** with category filtering, full-text search, sorting, and pagination
+- **Product detail** pages with multi-image gallery, condition badges, and pricing
+- **Inquiry form** with Turnstile CAPTCHA, auto-customer creation, and IP-based cooldown
+- **Responsive design** with Material UI components and loading skeletons
 
-**Frontend**
+### Admin Dashboard 
 
-- React **19**, TypeScript, **Vite** **7**
-- MUI (Material UI), Emotion
-- TanStack React Query, Axios, React Router **7**
-- Local HTTPS via **vite-plugin-mkcert** (default `https://localhost:5173`)
-
-**Worker**
-
-- Cloudflare Workers + **Wrangler** **3**, R2 binding
+- **Secure authentication** — JWT in HttpOnly cookies, forced initial password change
+- **Product management** — Create, update status (Available / Sold / Off Shelf), toggle featured, manage images
+- **Image upload** — Presigned S3 URLs for direct-to-R2 upload, background removal preview via remove.bg
+- **Customer management** — Status workflow (New → Contacted → Qualified → Archived), contact history, notes
+- **Sales tracking** — Record sale price, payment method (Cash / Bank Transfer / Card / Other), link to customer and inquiry
+- **Email notifications** — Configurable SMTP for inquiry alerts (with no-op fallback)
 
 ---
 
-## Repository layout
+## Technology Stack
 
-```text
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | .NET 10, ASP.NET Core, Entity Framework Core 10, MediatR, BCrypt, JWT Bearer |
+| **Database** | PostgreSQL, EF Core Migrations, `xmin` concurrency tokens |
+| **Frontend** | React 19, TypeScript, Vite 7, Material UI 7, TanStack React Query, Axios, React Router 7 |
+| **Image CDN** | Cloudflare Workers, Wrangler 3, R2 (S3-compatible) object storage |
+| **Security** | JWT (HttpOnly cookies), Cloudflare Turnstile, BCrypt password hashing, rate limiting |
+| **Integrations** | Cloudflare R2, Cloudflare Turnstile, remove.bg API, SMTP (Gmail) |
+| **Dev Tools** | vite-plugin-mkcert (local HTTPS), ESLint, mock API adapters |
+
+---
+
+## Data Model
+
+```
+AdminUser ──────┐
+                │ CreatedBy / UpdatedBy
+Category ◄─────┼── Product ──┬── ProductImage
+                │             ├── ProductSale ──► Customer
+                │             └── Inquiry ──────► Customer
+                │
+                └── InquiryIpCooldown
+```
+
+**Key entities:**
+
+- **Product** — Title, slug, description, price, condition (LikeNew / Good / Fair / NeedsRepair), status lifecycle (Available → Sold / OffShelf), featured flag with sort order
+- **ProductImage** — Cloud storage key, display URL, sort order, primary flag (one per product)
+- **Customer** — Auto-created from inquiries, status workflow with admin notes
+- **Inquiry** — Links customer to product, tracks email delivery status and retry attempts
+- **ProductSale** — Listed vs. final price, payment method, buyer info, linked to customer/inquiry
+
+---
+
+## Repository Structure
+
+```
 SecondHandShopWebsite/
-  src/
-    SecondHandShop.Domain/           # Domain model
-    SecondHandShop.Application/      # Application layer
-    SecondHandShop.Infrastructure/   # EF Core, external services
-    SecondHandShop.WebApi/           # API host (Program.cs, controllers)
-  frontend/                        # React SPA
-  worker/                          # Cloudflare Worker (R2 GET/HEAD)
-  .config/
-    dotnet-tools.json              # dotnet-ef tool manifest
+├── src/
+│   ├── SecondHandShop.Domain/            # Entities, enums, domain rules
+│   ├── SecondHandShop.Application/       # Use cases, DTOs, abstractions
+│   ├── SecondHandShop.Infrastructure/    # EF Core, repositories, external services
+│   └── SecondHandShop.WebApi/            # Controllers, filters, Program.cs
+├── frontend/
+│   ├── src/
+│   │   ├── app/                          # Router, providers, layouts, theme
+│   │   ├── pages/                        # 12 page components
+│   │   ├── features/                     # admin, catalog, home, inquiry
+│   │   ├── entities/                     # TypeScript domain types
+│   │   └── shared/                       # HTTP client, components, mocks
+│   └── package.json
+├── worker/
+│   ├── src/index.ts                      # R2 image CDN handler
+│   └── wrangler.toml
+├── docs/                                 # Design documentation
+├── SecondHandShopWebsite.slnx            # .NET solution file
+└── CLAUDE.md                             # AI assistant guidance
 ```
-
-There is **no** solution (`.sln`) file in the repo; open the folder or the `.csproj` files directly.
 
 ---
 
-## Prerequisites
+## Getting Started
 
-- [.NET SDK 10](https://dotnet.microsoft.com/download) (matching `TargetFramework` in `SecondHandShop.WebApi.csproj`)
-- [Node.js](https://nodejs.org/) (LTS recommended) for `frontend/` and `worker/`
-- **SQL Server** or **SQL Server LocalDB** (default connection string uses LocalDB)
-- Optional: [Cloudflare](https://developers.cloudflare.com/) account + R2 bucket + Wrangler for the worker
+### Prerequisites
 
----
+- [.NET SDK 10](https://dotnet.microsoft.com/download)
+- [Node.js](https://nodejs.org/) (LTS)
+- [PostgreSQL](https://www.postgresql.org/)
 
-## Backend (ASP.NET Core)
-
-### Run the API
-
-From the repository root:
+### Backend
 
 ```bash
-cd src/SecondHandShop.WebApi
-dotnet run
-```
-
-**Default URLs** (see `appsettings.json` / `launchSettings.json`):
-
-- HTTP: `http://localhost:5288`
-- HTTPS: `https://localhost:7266`
-
-Use the `https` launch profile if you want both URLs explicitly:
-
-```bash
-dotnet run --launch-profile https
-```
-
-### Restore EF Core tools (migrations)
-
-The repo pins `dotnet-ef` in `.config/dotnet-tools.json`:
-
-```bash
+# Restore tools and apply database migrations
 dotnet tool restore
+dotnet ef database update \
+  --project src/SecondHandShop.Infrastructure \
+  --startup-project src/SecondHandShop.WebApi
+
+# Run API server (HTTPS on port 7266)
+dotnet run --project src/SecondHandShop.WebApi
 ```
 
----
+Configure `appsettings.Development.json` for database connection, JWT key, admin seed credentials, and optional integrations (R2, SMTP, Turnstile, remove.bg).
 
-## Database
-
-### Connection string
-
-Configure `ConnectionStrings:DefaultConnection` in `appsettings.json`, `appsettings.Development.json`, environment variables, or [user secrets](https://learn.microsoft.com/dotnet/core/tools/user-secrets) for the `SecondHandShop.WebApi` project.
-
-Default template in `appsettings.json` uses **LocalDB**:
-
-`Server=(localdb)\MSSQLLocalDB;Database=SecondHandShopDb;Trusted_Connection=True;TrustServerCertificate=True;`
-
-### Apply migrations
-
-Apply EF Core migrations **from the repo root** (adjust paths if your shell differs):
-
-```bash
-dotnet tool restore
-dotnet ef database update --project src/SecondHandShop.Infrastructure --startup-project src/SecondHandShop.WebApi
-```
-
-Migrations live under `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. A SQL script snapshot is also available at `Persistence/Migrations/InitialCreate.sql` for reference.
-
-### Seed admin user
-
-On startup, `AdminSeedService` ensures an admin user exists using `AdminSeed` settings (see [Configuration reference](#configuration-reference)).
-
----
-
-## Frontend (React + Vite)
-
-### Install and run
+### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev    # https://localhost:5173
 ```
 
-Default dev server: **`https://localhost:5173`** (strict port; mkcert may prompt to install a local CA).
+Create `frontend/.env.local` with:
 
-### Build
+```env
+VITE_API_BASE_URL=https://localhost:7266
+VITE_USE_MOCK_API=false
+```
+
+Set `VITE_USE_MOCK_API=true` to run the frontend with mock data and no backend dependency.
+
+### Worker (optional)
 
 ```bash
-npm run build
-npm run preview   # optional production preview
+cd worker
+npm install
+npx wrangler dev      # Local development
+npx wrangler deploy   # Deploy to Cloudflare
 ```
 
-### Environment variables (Vite)
-
-Configure via `frontend/.env` or `frontend/.env.local` (not committed). Variables must be prefixed with `VITE_`.
-
-| Variable | Purpose |
-|----------|---------|
-| `VITE_API_BASE_URL` | Backend base URL (default in code: `https://localhost:7266`) |
-| `VITE_USE_MOCK_API` | `true` = mock in-memory data for several features; `false` = real API |
-| `VITE_IMAGE_BASE_URL` | Optional prefix for image URLs when needed by the UI |
-| `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key used by the public inquiry form |
-
-The shared HTTP client uses **`withCredentials: true`** so **HttpOnly** admin cookies on the API origin are sent for `/api/lord/*` requests.
-
-### Frontend routes
-
-| Path | Description |
-|------|-------------|
-| `/` | Home |
-| `/products` | Product catalog / search |
-| `/products/:slug` | Product detail |
-| `/products/:id/inquiry` | Inquiry form |
-| `/my-story` | Story page |
-| `/lord/login` | Admin login |
-| `/lord/products` | Admin product list (protected) |
-| `/lord/products/new` | New product (protected) |
-| `/404` | Not found |
-
-Admin UI uses the **`/lord`** prefix (not `/admin`).
-
-### CORS
-
-The backend must list the frontend origin in `Cors:AllowedOrigins` (e.g. `https://localhost:5173`) and use credentials-compatible CORS (already configured in `Program.cs`).
-
 ---
 
-## Cloudflare Worker (image CDN)
+## Security
 
-The **`worker/`** project exposes **GET/HEAD** for objects in an R2 bucket: path after the host is the object key. It sets cache headers and allows broad CORS for read access.
-
-1. Install dependencies: `cd worker && npm install`
-2. Configure `wrangler.toml` (`[[r2_buckets]]`, `bucket_name`, etc.)
-3. Local dev: `npm run dev`
-4. Deploy: `npm run deploy`
-
-The API stores image keys in the database; **`R2:WorkerBaseUrl`** (or equivalent URL building in `IObjectStorageService`) should match how browsers load images in production.
-
----
-
-## Configuration reference
-
-Key sections in `appsettings.json` (override per environment or secrets):
-
-| Section | Purpose |
-|---------|---------|
-| `ConnectionStrings:DefaultConnection` | SQL Server |
-| `Kestrel` / `HttpsPort` | URLs and HTTPS port hint |
-| `Cors:AllowedOrigins` | Frontend origins for CORS |
-| `Jwt` | `Issuer`, `Audience`, `Key` (use a long random key in production) |
-| `AdminSeed` | Initial admin username/password (change after first deploy) |
-| `Email:Smtp` | SMTP for inquiry notifications; `Enabled: false` uses a no-op sender |
-| `R2` | Cloudflare account id, S3 API keys, bucket, **WorkerBaseUrl** for public URLs |
-| `RemoveBg` | remove.bg API for admin background-removal preview (`ImageProcessingController`) |
-| `CloudflareTurnstile` | Inquiry bot protection (`SiteKey`, `SecretKey`, `VerifyUrl`) |
-
-**Never commit production secrets.** Prefer environment variables or user secrets for `Jwt:Key`, SMTP passwords, R2 keys, Remove.bg keys, and `CloudflareTurnstile:SecretKey`.
-
-Turnstile environment variable mapping:
-
-- Backend: `CloudflareTurnstile__SiteKey`, `CloudflareTurnstile__SecretKey`, `CloudflareTurnstile__VerifyUrl`
-- Frontend: `VITE_TURNSTILE_SITE_KEY`
-
----
-
-## HTTP API overview
-
-**Public catalog**
-
-- `GET /api/categories` — active categories  
-- `GET /api/products` — list (optional `categoryId`)  
-- `GET /api/products/search` — paged search (rate limited: **SearchRateLimit**)  
-- `GET /api/products/featured` — featured products (`limit` clamped)  
-- `GET /api/products/slug/{slug}` — product by slug  
-
-**Inquiries**
-
-- `POST /api/inquiries` — create inquiry for a product  
-
-**Admin (JWT + cookie, policy `AdminOnly`)**
-
-- `POST /api/lord/auth/login` — sets HttpOnly cookie `shs.admin.token` (rate limited: **LoginRateLimit**)  
-- `POST /api/lord/auth/logout`  
-- `GET /api/lord/auth/me`  
-- `GET/POST/PUT/... /api/lord/products` — product management (see `AdminProductsController`)  
-- `POST /api/lord/images/remove-background-preview` — background removal preview (multipart)  
-
-**Development**
-
-- OpenAPI mapping is enabled when `ASPNETCORE_ENVIRONMENT` is `Development`.
-
----
-
-## Security and operations notes
-
-- **JWT**: The signing key must be strong and unique in production (`Jwt:Key`).  
-- **HTTPS**: Frontend dev uses HTTPS; the API should be reached over HTTPS for cookie `Secure` flags to match.  
-- **Rate limiting**: Login and search endpoints use ASP.NET Core rate limiting policies.  
-- **HSTS**: Applied outside Development.  
-- **Admin paths**: Deliberately under `/lord` to reduce trivial scanning of `/admin`.  
+- **Admin paths** use `/lord` prefix instead of `/admin` to reduce automated scanning
+- **JWT tokens** stored in HttpOnly, Secure, SameSite cookies — not accessible via JavaScript
+- **Rate limiting** on login (5/min) and search (30/min) endpoints per IP
+- **Turnstile CAPTCHA** on public inquiry form
+- **BCrypt** password hashing with forced initial password change
+- **HSTS** enforced outside development
+- **CORS** restricted to configured origins with credentials support
 
 ---
 
 ## License
 
-If you publish this repository, add a `LICENSE` file and describe terms here.
+This project is proprietary and confidential. Unauthorized copying or distribution is prohibited.
