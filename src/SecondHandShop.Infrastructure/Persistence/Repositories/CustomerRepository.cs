@@ -78,7 +78,9 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
         var page = parameters.SafePage;
         var pageSize = parameters.SafePageSize;
 
-        var items = await ApplySorting(projectedQuery, parameters)
+        var items = await projectedQuery
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(c => new CustomerListItemDto(
@@ -136,53 +138,6 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
     public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default)
     {
         await dbContext.Customers.AddAsync(customer, cancellationToken);
-    }
-
-    private static IOrderedQueryable<CustomerAdminProjection> ApplySorting(
-        IQueryable<CustomerAdminProjection> query,
-        AdminCustomerQueryParameters parameters)
-    {
-        return (parameters.SafeSortBy, parameters.IsSortDescending) switch
-        {
-            ("updatedAt", true) => query
-                .OrderByDescending(x => x.UpdatedAt)
-                .ThenByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id),
-            ("updatedAt", false) => query
-                .OrderBy(x => x.UpdatedAt)
-                .ThenBy(x => x.CreatedAt)
-                .ThenBy(x => x.Id),
-            ("lastInquiryAt", true) => query
-                .OrderByDescending(x => x.LastInquiryAt)
-                .ThenByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id),
-            ("lastInquiryAt", false) => query
-                .OrderBy(x => x.LastInquiryAt)
-                .ThenBy(x => x.CreatedAt)
-                .ThenBy(x => x.Id),
-            ("totalSpent", true) => query
-                .OrderByDescending(x => x.TotalSpent)
-                .ThenByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id),
-            ("totalSpent", false) => query
-                .OrderBy(x => x.TotalSpent)
-                .ThenBy(x => x.CreatedAt)
-                .ThenBy(x => x.Id),
-            ("lastPurchaseAtUtc", true) => query
-                .OrderByDescending(x => x.LastPurchaseAtUtc)
-                .ThenByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id),
-            ("lastPurchaseAtUtc", false) => query
-                .OrderBy(x => x.LastPurchaseAtUtc)
-                .ThenBy(x => x.CreatedAt)
-                .ThenBy(x => x.Id),
-            ("createdAt", false) => query
-                .OrderBy(x => x.CreatedAt)
-                .ThenBy(x => x.Id),
-            _ => query
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id)
-        };
     }
 
     private sealed class CustomerAdminProjection

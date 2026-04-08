@@ -5,9 +5,8 @@ import type {
   CustomerInquiryItem,
   CustomerInquiryQueryParams,
   CustomerListItem,
+  CustomerSource,
   CustomerStatus,
-  CustomerSortBy,
-  SortDirection,
   UpdateCustomerInput,
 } from '../../entities/customer/types';
 import { customerStatusOptions } from '../../entities/customer/types';
@@ -327,14 +326,21 @@ function toCustomerListItem(customer: MockCustomer): CustomerListItem {
     .map((item) => item.createdAt)
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
 
+  const primarySource: CustomerSource = inquiries.length > 0 ? 'Inquiry' : 'Manual';
+
   return {
     id: customer.id,
     name: customer.name,
     email: customer.email,
     phone: customer.phoneNumber,
     status: customer.status,
+    primarySource,
     inquiryCount: inquiries.length,
     lastInquiryAt,
+    purchaseCount: 0,
+    totalSpent: 0,
+    lastPurchaseAtUtc: null,
+    lastContactAtUtc: lastInquiryAt,
     createdAt: customer.createdAt,
     updatedAt: customer.updatedAt,
   };
@@ -343,16 +349,8 @@ function toCustomerListItem(customer: MockCustomer): CustomerListItem {
 function toCustomerDetail(customer: MockCustomer): CustomerDetail {
   const summary = toCustomerListItem(customer);
   return {
-    id: summary.id,
-    name: summary.name,
-    email: summary.email,
-    phone: summary.phone,
-    status: summary.status,
+    ...summary,
     notes: customer.notes,
-    inquiryCount: summary.inquiryCount,
-    lastInquiryAt: summary.lastInquiryAt,
-    createdAt: summary.createdAt,
-    updatedAt: summary.updatedAt,
   };
 }
 
@@ -370,39 +368,6 @@ function buildPagedResult<T>(items: T[], page: number, pageSize: number, totalCo
   };
 }
 
-function compareNullableDate(left: string | null, right: string | null, direction: SortDirection): number {
-  if (!left && !right) {
-    return 0;
-  }
-
-  if (!left) {
-    return direction === 'asc' ? -1 : 1;
-  }
-
-  if (!right) {
-    return direction === 'asc' ? 1 : -1;
-  }
-
-  const diff = new Date(left).getTime() - new Date(right).getTime();
-  return direction === 'asc' ? diff : -diff;
-}
-
-function compareDate(left: string, right: string, direction: SortDirection): number {
-  const diff = new Date(left).getTime() - new Date(right).getTime();
-  return direction === 'asc' ? diff : -diff;
-}
-
-function normalizeSortBy(sortBy: CustomerSortBy | undefined): CustomerSortBy {
-  if (sortBy === 'updatedAt' || sortBy === 'lastInquiryAt' || sortBy === 'createdAt') {
-    return sortBy;
-  }
-  return 'createdAt';
-}
-
-function normalizeSortDirection(direction: SortDirection | undefined): SortDirection {
-  return direction === 'asc' ? 'asc' : 'desc';
-}
-
 export async function getMockCustomersForAdmin(
   params: AdminCustomerQueryParams,
 ): Promise<PagedResult<CustomerListItem>> {
@@ -410,8 +375,6 @@ export async function getMockCustomersForAdmin(
 
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
-  const sortBy = normalizeSortBy(params.sortBy);
-  const sortDirection = normalizeSortDirection(params.sortDirection);
   const search = params.search?.trim().toLowerCase() ?? '';
   const statusFilter = params.status;
 
@@ -428,23 +391,13 @@ export async function getMockCustomersForAdmin(
   }
 
   items.sort((left, right) => {
-    const sortResult = (() => {
-      switch (sortBy) {
-        case 'updatedAt':
-          return compareDate(left.updatedAt, right.updatedAt, sortDirection);
-        case 'lastInquiryAt':
-          return compareNullableDate(left.lastInquiryAt, right.lastInquiryAt, sortDirection);
-        case 'createdAt':
-        default:
-          return compareDate(left.createdAt, right.createdAt, sortDirection);
-      }
-    })();
-
-    if (sortResult !== 0) {
-      return sortResult;
+    const byCreated =
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    if (byCreated !== 0) {
+      return byCreated;
     }
 
-    return left.id.localeCompare(right.id);
+    return right.id.localeCompare(left.id);
   });
 
   const totalCount = items.length;

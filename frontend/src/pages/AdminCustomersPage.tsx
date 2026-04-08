@@ -9,8 +9,6 @@ import {
   Divider,
   Fade,
   Paper,
-  Select,
-  MenuItem,
   Snackbar,
   Stack,
   Table,
@@ -34,9 +32,7 @@ import { customerStatusOptions } from '../entities/customer/types';
 import type {
   CustomerStatus,
   CustomerListItem,
-  CustomerSortBy,
   EditableCustomer,
-  SortDirection,
   UpdateCustomerInput,
   CustomerSource,
 } from '../entities/customer/types';
@@ -136,10 +132,6 @@ export function AdminCustomersPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | 'all'>('all');
 
-  // Sorting
-  const [sortBy, setSortBy] = useState<CustomerSortBy>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
   // Pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -150,15 +142,13 @@ export function AdminCustomersPage() {
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
 
   const customersQuery = useQuery({
-    queryKey: ['admin-customers', page, pageSize, searchKeyword, statusFilter, sortBy, sortDirection],
+    queryKey: ['admin-customers', page, pageSize, searchKeyword, statusFilter],
     queryFn: () =>
       fetchAdminCustomers({
         page,
         pageSize,
         search: searchKeyword || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
-        sortBy,
-        sortDirection,
       }),
   });
 
@@ -231,7 +221,7 @@ export function AdminCustomersPage() {
     </Box>
   );
 
-  // --- Search & sort toolbar ---
+  // --- Search toolbar ---
   const searchSection = (
     <Paper sx={{ p: 2 }}>
       <Stack
@@ -253,33 +243,6 @@ export function AdminCustomersPage() {
           }}
           sx={{ flex: 1 }}
         />
-        <Select
-          size="small"
-          value={sortBy}
-          onChange={(event) => {
-            setSortBy(event.target.value as CustomerSortBy);
-            setPage(1);
-          }}
-          sx={{ minWidth: 190 }}
-        >
-          <MenuItem value="createdAt">Sort: date created</MenuItem>
-          <MenuItem value="updatedAt">Sort: last updated</MenuItem>
-          <MenuItem value="lastInquiryAt">Sort: latest inquiry</MenuItem>
-          <MenuItem value="totalSpent">Sort: total spent</MenuItem>
-          <MenuItem value="lastPurchaseAt">Sort: last purchase</MenuItem>
-        </Select>
-        <Select
-          size="small"
-          value={sortDirection}
-          onChange={(event) => {
-            setSortDirection(event.target.value as SortDirection);
-            setPage(1);
-          }}
-          sx={{ minWidth: 100 }}
-        >
-          <MenuItem value="desc">Desc</MenuItem>
-          <MenuItem value="asc">Asc</MenuItem>
-        </Select>
         <Button type="submit" variant="contained" size="small">
           Search
         </Button>

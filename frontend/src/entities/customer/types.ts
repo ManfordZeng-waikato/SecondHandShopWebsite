@@ -1,5 +1,3 @@
-export type CustomerSortBy = 'createdAt' | 'updatedAt' | 'lastInquiryAt' | 'totalSpent' | 'lastPurchaseAt';
-export type SortDirection = 'asc' | 'desc';
 export type CustomerStatus = 'New' | 'Contacted' | 'Qualified' | 'Archived';
 export type CustomerSource = 'Inquiry' | 'Sale' | 'Manual';
 
@@ -66,8 +64,6 @@ export interface AdminCustomerQueryParams {
   pageSize?: number;
   search?: string;
   status?: CustomerStatus;
-  sortBy?: CustomerSortBy;
-  sortDirection?: SortDirection;
 }
 
 export interface CustomerInquiryQueryParams {
