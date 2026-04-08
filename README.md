@@ -13,8 +13,6 @@ A production-grade, full-stack **second-hand goods marketplace** built with mode
 - **Bot protection** via Cloudflare Turnstile on public-facing forms
 - **Rate limiting** on sensitive endpoints (login, search)
 - **Background removal** preview powered by remove.bg API for product image editing
-- **Mock API mode** for frontend development without a running backend
-
 ---
 
 ## Architecture Overview
@@ -68,7 +66,7 @@ A production-grade, full-stack **second-hand goods marketplace** built with mode
 | `pages/` | 6 public pages + 6 admin pages |
 | `features/` | Feature modules — `admin`, `catalog`, `home`, `inquiry` — each with hooks, API calls, and components |
 | `entities/` | TypeScript domain model types |
-| `shared/` | Axios HTTP client, reusable UI components, mock adapters, utilities |
+| `shared/` | Axios HTTP client, reusable UI components, utilities |
 
 ### Worker — Cloudflare Edge Image CDN
 
@@ -107,7 +105,7 @@ A lightweight Cloudflare Worker that serves product images from an R2 bucket wit
 | **Image CDN** | Cloudflare Workers, Wrangler 3, R2 (S3-compatible) object storage |
 | **Security** | JWT (HttpOnly cookies), Cloudflare Turnstile, BCrypt password hashing, rate limiting |
 | **Integrations** | Cloudflare R2, Cloudflare Turnstile, remove.bg API, SMTP (Gmail) |
-| **Dev Tools** | vite-plugin-mkcert (local HTTPS), ESLint, mock API adapters |
+| **Dev Tools** | vite-plugin-mkcert (local HTTPS), ESLint |
 
 ---
 
@@ -148,7 +146,7 @@ SecondHandShopWebsite/
 │   │   ├── pages/                        # 12 page components
 │   │   ├── features/                     # admin, catalog, home, inquiry
 │   │   ├── entities/                     # TypeScript domain types
-│   │   └── shared/                       # HTTP client, components, mocks
+│   │   └── shared/                       # HTTP client, components, utilities
 │   └── package.json
 ├── worker/
 │   ├── src/index.ts                      # R2 image CDN handler
@@ -195,10 +193,9 @@ Create `frontend/.env.local` with:
 
 ```env
 VITE_API_BASE_URL=https://localhost:7266
-VITE_USE_MOCK_API=false
+VITE_IMAGE_BASE_URL=<worker or CDN base URL for product images>
+VITE_TURNSTILE_SITE_KEY=<cloudflare turnstile site key>
 ```
-
-Set `VITE_USE_MOCK_API=true` to run the frontend with mock data and no backend dependency.
 
 ### Worker (optional)
 

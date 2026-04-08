@@ -71,8 +71,6 @@ React 19 SPA with a feature-sliced structure:
 - `entities/` — TypeScript domain model types
 - `shared/api/httpClient.ts` — Axios instance with `withCredentials: true`; auto-redirects to `/lord/login` on 401 from admin endpoints
 
-Mock API fallback: set `VITE_USE_MOCK_API=true` in `frontend/.env.local` to use mock adapters in `shared/mock/` without a running backend.
-
 ### Worker (`worker/`)
 
 Cloudflare Worker serving product images from R2 bucket (`patshed`) with caching headers. Handles GET/HEAD requests only.
@@ -83,7 +81,6 @@ Cloudflare Worker serving product images from R2 bucket (`patshed`) with caching
 
 ```
 VITE_API_BASE_URL=https://localhost:7266
-VITE_USE_MOCK_API=false
 VITE_IMAGE_BASE_URL=https://secondhandshop-images.zengchang389.workers.dev
 VITE_TURNSTILE_SITE_KEY=<cloudflare turnstile site key>
 ```

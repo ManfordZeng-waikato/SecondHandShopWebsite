@@ -21,7 +21,7 @@ src/
   pages/                # page-level screens
   features/             # feature modules (catalog, inquiry, admin)
   entities/             # domain types (product/category/inquiry)
-  shared/               # shared api/config/mock/components
+  shared/               # shared api/config/components
 ```
 
 ## Quick start
@@ -50,7 +50,7 @@ src/
 ## Environment variables
 
 - `VITE_API_BASE_URL`: backend API base url (default `https://localhost:7266`)
-- `VITE_USE_MOCK_API`: `true` uses in-memory mock adapter, `false` calls backend directly
+- `VITE_IMAGE_BASE_URL`: base URL for product images (e.g. Cloudflare Worker)
 - `VITE_TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key for inquiry form protection
 
 ## Routes
@@ -64,17 +64,6 @@ Admin:
 - `/admin/login` - admin login placeholder
 - `/admin/products` - admin product status management (guarded)
 - `/admin/products/new` - create product form (guarded)
-
-## API integration notes
-
-- Current frontend supports mock fallback via `VITE_USE_MOCK_API=true`.
-- For real backend integration, set `VITE_USE_MOCK_API=false` and ensure backend supports:
-  - `GET /api/categories`
-  - `GET /api/products`
-  - `GET /api/products/slug/:slug`
-  - `POST /api/inquiries`
-  - `POST /api/admin/products`
-  - `PUT /api/admin/products/:id/status`
 
 ## Backend CORS reminder
 
