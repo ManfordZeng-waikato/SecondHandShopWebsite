@@ -1,16 +1,19 @@
 export type CustomerStatus = 'New' | 'Contacted' | 'Qualified' | 'Archived';
 export type CustomerSource = 'Inquiry' | 'Sale' | 'Manual';
 
-export const customerStatusOptions: CustomerStatus[] = [
-  'New',
-  'Contacted',
-  'Qualified',
-  'Archived',
-];
-
 export const customerSourceLabels: Record<CustomerSource, string> = {
   Inquiry: 'Inquiry',
   Sale: 'Sale',
+  Manual: 'Manual',
+};
+
+/** Values for admin list source filter (matches `CustomerSource`). */
+export const customerSourceOptions: CustomerSource[] = ['Inquiry', 'Sale', 'Manual'];
+
+/** Short labels for admin filter chips. */
+export const customerSourceFilterLabels: Record<CustomerSource, string> = {
+  Inquiry: 'Inquiry',
+  Sale: 'Sale (buyer)',
   Manual: 'Manual',
 };
 
@@ -63,7 +66,7 @@ export interface AdminCustomerQueryParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  status?: CustomerStatus;
+  primarySource?: CustomerSource;
 }
 
 export interface CustomerInquiryQueryParams {
@@ -74,7 +77,6 @@ export interface CustomerInquiryQueryParams {
 export interface UpdateCustomerInput {
   name?: string;
   phoneNumber?: string;
-  status?: CustomerStatus;
   notes?: string;
 }
 
@@ -83,6 +85,5 @@ export interface EditableCustomer {
   name: string;
   email: string;
   phone: string;
-  status: CustomerStatus;
   notes: string;
 }

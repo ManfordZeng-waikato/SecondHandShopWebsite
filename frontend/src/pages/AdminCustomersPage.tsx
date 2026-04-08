@@ -28,9 +28,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
 import type { AxiosError } from 'axios';
-import { customerStatusOptions } from '../entities/customer/types';
+import {
+  customerSourceFilterLabels,
+  customerSourceOptions,
+} from '../entities/customer/types';
 import type {
-  CustomerStatus,
   CustomerListItem,
   EditableCustomer,
   UpdateCustomerInput,
@@ -90,7 +92,6 @@ function toEditableCustomer(customer: CustomerListItem): EditableCustomer {
     name: customer.name ?? '',
     email: customer.email ?? '',
     phone: customer.phone ?? '',
-    status: customer.status,
     notes: '',
   };
 }
@@ -106,13 +107,6 @@ const filterChipSx = (isActive: boolean) => ({
   },
   transition: 'all 0.15s ease',
 }) as const;
-
-const statusColorMap: Record<CustomerStatus, { color: string; bg: string }> = {
-  New: { color: '#1565c0', bg: 'rgba(21,101,192,0.08)' },
-  Contacted: { color: '#e65100', bg: 'rgba(230,81,0,0.08)' },
-  Qualified: { color: '#2e7d32', bg: 'rgba(46,125,50,0.08)' },
-  Archived: { color: '#757575', bg: 'rgba(117,117,117,0.08)' },
-};
 
 const sourceColorMap: Record<CustomerSource, { color: string; bg: string }> = {
   Inquiry: { color: '#1565c0', bg: 'rgba(21,101,192,0.08)' },
@@ -130,7 +124,7 @@ export function AdminCustomersPage() {
   const [searchKeyword, setSearchKeyword] = useState('');
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus | 'all'>('all');
+  const [sourceFilter, setSourceFilter] = useState<CustomerSource | 'all'>('all');
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -142,13 +136,13 @@ export function AdminCustomersPage() {
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
 
   const customersQuery = useQuery({
-    queryKey: ['admin-customers', page, pageSize, searchKeyword, statusFilter],
+    queryKey: ['admin-customers', page, pageSize, searchKeyword, sourceFilter],
     queryFn: () =>
       fetchAdminCustomers({
         page,
         pageSize,
         search: searchKeyword || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
+        primarySource: sourceFilter === 'all' ? undefined : sourceFilter,
       }),
   });
 
@@ -178,13 +172,13 @@ export function AdminCustomersPage() {
   const resetFilters = () => {
     setSearchInput('');
     setSearchKeyword('');
-    setStatusFilter('all');
+    setSourceFilter('all');
     setPage(1);
   };
 
   const customers = customersQuery.data?.items ?? [];
   const totalCount = customersQuery.data?.totalCount ?? 0;
-  const hasActiveFilters = searchKeyword || statusFilter !== 'all';
+  const hasActiveFilters = searchKeyword || sourceFilter !== 'all';
 
   const openEditDialog = async (customer: CustomerListItem) => {
     setSaveError(null);
@@ -195,7 +189,6 @@ export function AdminCustomersPage() {
       });
       setEditTarget({
         ...toEditableCustomer(customer),
-        status: detail.status,
         notes: detail.notes ?? '',
       });
     } catch {
@@ -261,25 +254,25 @@ export function AdminCustomersPage() {
       <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
         <FilterListIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Status
+          Source
         </Typography>
       </Stack>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
         <Chip
           label="All"
           size="small"
-          variant={statusFilter === 'all' ? 'filled' : 'outlined'}
-          onClick={() => { setStatusFilter('all'); setPage(1); }}
-          sx={filterChipSx(statusFilter === 'all')}
+          variant={sourceFilter === 'all' ? 'filled' : 'outlined'}
+          onClick={() => { setSourceFilter('all'); setPage(1); }}
+          sx={filterChipSx(sourceFilter === 'all')}
         />
-        {customerStatusOptions.map((status) => (
+        {customerSourceOptions.map((source) => (
           <Chip
-            key={status}
-            label={status}
+            key={source}
+            label={customerSourceFilterLabels[source]}
             size="small"
-            variant={statusFilter === status ? 'filled' : 'outlined'}
-            onClick={() => { setStatusFilter(statusFilter === status ? 'all' : status); setPage(1); }}
-            sx={filterChipSx(statusFilter === status)}
+            variant={sourceFilter === source ? 'filled' : 'outlined'}
+            onClick={() => { setSourceFilter(sourceFilter === source ? 'all' : source); setPage(1); }}
+            sx={filterChipSx(sourceFilter === source)}
           />
         ))}
       </Box>
@@ -354,7 +347,6 @@ export function AdminCustomersPage() {
   const mobileList = (
     <Stack spacing={1.5}>
       {customers.map((customer, index) => {
-        const statusStyle = statusColorMap[customer.status];
         const sourceStyle = sourceColorMap[customer.primarySource];
         return (
           <Fade in timeout={Math.min(300, 150 + index * 20)} key={customer.id}>
@@ -366,37 +358,23 @@ export function AdminCustomersPage() {
               }}
             >
               <Stack spacing={1.5}>
-                {/* Name + Status + Source */}
+                {/* Name + Source */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6" sx={{ fontSize: '1rem' }} noWrap>
                     {customer.name || '\u2014'}
                   </Typography>
-                  <Stack direction="row" spacing={0.5}>
-                    <Chip
-                      label={customer.primarySource}
-                      size="small"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.65rem',
-                        height: 22,
-                        color: sourceStyle.color,
-                        bgcolor: sourceStyle.bg,
-                        border: 'none',
-                      }}
-                    />
-                    <Chip
-                      label={customer.status}
-                      size="small"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                        height: 24,
-                        color: statusStyle.color,
-                        bgcolor: statusStyle.bg,
-                        border: 'none',
-                      }}
-                    />
-                  </Stack>
+                  <Chip
+                    label={customerSourceFilterLabels[customer.primarySource]}
+                    size="small"
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.65rem',
+                      height: 22,
+                      color: sourceStyle.color,
+                      bgcolor: sourceStyle.bg,
+                      border: 'none',
+                    }}
+                  />
                 </Stack>
 
                 {/* Contact info */}
@@ -477,7 +455,6 @@ export function AdminCustomersPage() {
               <TableCell>Email</TableCell>
               <TableCell>Phone</TableCell>
               <TableCell>Source</TableCell>
-              <TableCell>Status</TableCell>
               <TableCell align="right">Inquiries</TableCell>
               <TableCell align="right">Purchases</TableCell>
               <TableCell align="right">Total Spent</TableCell>
@@ -488,7 +465,6 @@ export function AdminCustomersPage() {
           </TableHead>
           <TableBody>
             {customers.map((customer) => {
-              const statusStyle = statusColorMap[customer.status];
               const sourceStyle = sourceColorMap[customer.primarySource];
               return (
                 <TableRow key={customer.id} hover>
@@ -497,7 +473,7 @@ export function AdminCustomersPage() {
                   <TableCell>{customer.phone || '\u2014'}</TableCell>
                   <TableCell>
                     <Chip
-                      label={customer.primarySource}
+                      label={customerSourceFilterLabels[customer.primarySource]}
                       size="small"
                       sx={{
                         fontWeight: 600,
@@ -505,20 +481,6 @@ export function AdminCustomersPage() {
                         height: 22,
                         color: sourceStyle.color,
                         bgcolor: sourceStyle.bg,
-                        border: 'none',
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={customer.status}
-                      size="small"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                        height: 24,
-                        color: statusStyle.color,
-                        bgcolor: statusStyle.bg,
                         border: 'none',
                       }}
                     />

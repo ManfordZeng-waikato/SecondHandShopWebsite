@@ -7,6 +7,7 @@ public sealed record CustomerListItemDto(
     string? Phone,
     string Status,
     string PrimarySource,
+    string ListedPrimarySource,
     int InquiryCount,
     DateTime? LastInquiryAt,
     int PurchaseCount,

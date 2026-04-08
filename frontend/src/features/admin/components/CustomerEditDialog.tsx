@@ -6,17 +6,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
-  Select,
   Stack,
   TextField,
 } from '@mui/material';
-import {
-  customerStatusOptions,
-  type CustomerStatus,
-  type EditableCustomer,
-  type UpdateCustomerInput,
-} from '../../../entities/customer/types';
+import type { EditableCustomer, UpdateCustomerInput } from '../../../entities/customer/types';
 
 interface CustomerEditDialogProps {
   open: boolean;
@@ -42,7 +35,6 @@ export function CustomerEditDialog({
 }: CustomerEditDialogProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [status, setStatus] = useState<CustomerStatus>('New');
   const [notes, setNotes] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -53,7 +45,6 @@ export function CustomerEditDialog({
 
     setName(customer.name);
     setPhone(customer.phone);
-    setStatus(customer.status);
     setNotes(customer.notes);
     setValidationError(null);
   }, [open, customer]);
@@ -96,7 +87,6 @@ export function CustomerEditDialog({
       await onSubmit({
         name: name.trim() || undefined,
         phoneNumber: phone.trim() || undefined,
-        status,
         notes: notes.trim(),
       });
     } catch {
@@ -131,17 +121,6 @@ export function CustomerEditDialog({
             disabled={isSubmitting}
             inputProps={{ maxLength: PHONE_MAX_LENGTH }}
           />
-          <Select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as CustomerStatus)}
-            disabled={isSubmitting}
-          >
-            {customerStatusOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </Select>
           <TextField
             label="Notes"
             value={notes}

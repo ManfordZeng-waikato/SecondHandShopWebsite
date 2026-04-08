@@ -9,7 +9,6 @@ import type {
   CustomerStatus,
   UpdateCustomerInput,
 } from '../../entities/customer/types';
-import { customerStatusOptions } from '../../entities/customer/types';
 import type { CreateInquiryInput, CreateInquiryResponse } from '../../entities/inquiry/types';
 import type {
   CreateProductInput,
@@ -37,6 +36,8 @@ interface MockCustomer {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  /** When set, overrides inquiry-based inference for list/detail `primarySource`. */
+  primarySource?: CustomerSource;
 }
 
 interface MockCustomerInquiry {
@@ -74,6 +75,17 @@ let customersStore: MockCustomer[] = [
     notes: null,
     createdAt: isoDaysAgo(9),
     updatedAt: isoDaysAgo(1),
+  },
+  {
+    id: 'cust-003',
+    name: 'Ava Chen',
+    email: 'ava@example.com',
+    phoneNumber: '+64 21 999 8877',
+    status: 'Qualified',
+    notes: null,
+    createdAt: isoDaysAgo(3),
+    updatedAt: isoDaysAgo(1),
+    primarySource: 'Sale',
   },
 ];
 
@@ -326,7 +338,8 @@ function toCustomerListItem(customer: MockCustomer): CustomerListItem {
     .map((item) => item.createdAt)
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
 
-  const primarySource: CustomerSource = inquiries.length > 0 ? 'Inquiry' : 'Manual';
+  const primarySource: CustomerSource =
+    customer.primarySource ?? (inquiries.length > 0 ? 'Inquiry' : 'Manual');
 
   return {
     id: customer.id,
@@ -376,11 +389,11 @@ export async function getMockCustomersForAdmin(
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
   const search = params.search?.trim().toLowerCase() ?? '';
-  const statusFilter = params.status;
+  const sourceFilter = params.primarySource;
 
   let items = customersStore.map(toCustomerListItem);
-  if (statusFilter) {
-    items = items.filter((item) => item.status === statusFilter);
+  if (sourceFilter) {
+    items = items.filter((item) => item.primarySource === sourceFilter);
   }
 
   if (search.length > 0) {
@@ -474,14 +487,9 @@ export async function updateMockCustomerForAdmin(
   }
 
   const current = customersStore[customerIndex];
-  const status = input.status ?? current.status;
   const notes = input.notes === undefined
     ? current.notes
     : (input.notes.trim().length === 0 ? null : input.notes.trim());
-
-  if (!customerStatusOptions.includes(status)) {
-    throw new Error(`Unsupported customer status '${status}'.`);
-  }
 
   const normalizedName = input.name !== undefined ? (input.name?.trim() || null) : current.name;
   const targetPhone = normalizedPhone ?? current.phoneNumber;
@@ -496,7 +504,7 @@ export async function updateMockCustomerForAdmin(
           ...item,
           name: normalizedName,
           phoneNumber: targetPhone,
-          status,
+          status: current.status,
           notes,
           updatedAt: new Date().toISOString(),
         }

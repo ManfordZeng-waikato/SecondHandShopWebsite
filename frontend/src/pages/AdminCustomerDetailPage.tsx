@@ -171,7 +171,6 @@ export function AdminCustomerDetailPage() {
                 name: customer.name ?? '',
                 email: customer.email ?? '',
                 phone: customer.phone ?? '',
-                status: customer.status,
                 notes: customer.notes ?? '',
               });
             }}

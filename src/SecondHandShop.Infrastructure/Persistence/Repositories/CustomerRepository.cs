@@ -42,12 +42,12 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 || (c.PhoneNumber != null && c.PhoneNumber.Contains(safeSearch)));
         }
 
-        var normalizedStatus = parameters.Status?.Trim();
-        if (!string.IsNullOrWhiteSpace(normalizedStatus)
-            && Enum.TryParse<CustomerStatus>(normalizedStatus, ignoreCase: true, out var statusFilter)
-            && Enum.IsDefined(statusFilter))
+        var normalizedSource = parameters.PrimarySource?.Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedSource)
+            && Enum.TryParse<CustomerSource>(normalizedSource, ignoreCase: true, out var sourceFilter)
+            && Enum.IsDefined(sourceFilter))
         {
-            customersQuery = customersQuery.Where(c => c.Status == statusFilter);
+            customersQuery = customersQuery.Where(c => c.PrimarySource == sourceFilter);
         }
 
         var projectedQuery = customersQuery.Select(c => new CustomerAdminProjection
