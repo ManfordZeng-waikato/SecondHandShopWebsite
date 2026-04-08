@@ -5,6 +5,7 @@ using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Inquiries;
+using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -14,7 +15,7 @@ public class InquiryService(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
     IInquiryRepository inquiryRepository,
-    ICustomerRepository customerRepository,
+    ICustomerResolutionService customerResolutionService,
     ITurnstileValidator turnstileValidator,
     IEmailSender emailSender,
     IUnitOfWork unitOfWork,
@@ -109,10 +110,11 @@ public class InquiryService(
                 $"{ex.Message} This IP is temporarily blocked for 5 minutes.");
         }
 
-        var customer = await ResolveCustomerAsync(
+        var customer = await customerResolutionService.GetOrCreateCustomerAsync(
             normalizedName,
             normalizedEmail,
             normalizedPhoneNumber,
+            CustomerSource.Inquiry,
             cancellationToken);
 
         var inquiry = Inquiry.Create(
@@ -202,45 +204,6 @@ public class InquiryService(
         var retryAfterSeconds = (int)Math.Ceiling((blockedUntil.Value - utcNow).TotalSeconds);
         throw new InquiryRateLimitExceededException(
             $"This IP is temporarily blocked due to repeated limit violations. Try again in {retryAfterSeconds} seconds.");
-    }
-
-    private async Task<Customer> ResolveCustomerAsync(
-        string? name,
-        string? email,
-        string? phoneNumber,
-        CancellationToken cancellationToken)
-    {
-        Customer? customerByEmail = null;
-        Customer? customerByPhoneNumber = null;
-
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            customerByEmail = await customerRepository.GetByEmailAsync(email, cancellationToken);
-        }
-
-        if (!string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            customerByPhoneNumber = await customerRepository.GetByPhoneNumberAsync(phoneNumber, cancellationToken);
-        }
-
-        if (customerByEmail is not null && customerByPhoneNumber is not null && customerByEmail.Id != customerByPhoneNumber.Id)
-        {
-            throw new InvalidOperationException("Email and phone number belong to different customers.");
-        }
-
-        var customer = customerByEmail ?? customerByPhoneNumber;
-        if (customer is null)
-        {
-            customer = Customer.Create(name, email, phoneNumber, clock.UtcNow);
-            await customerRepository.AddAsync(customer, cancellationToken);
-            return customer;
-        }
-
-        var mergedName = name ?? customer.Name;
-        var mergedEmail = email ?? customer.Email;
-        var mergedPhoneNumber = phoneNumber ?? customer.PhoneNumber;
-        customer.UpdateContact(mergedName, mergedEmail, mergedPhoneNumber, clock.UtcNow);
-        return customer;
     }
 
     private static string? Normalize(string? value)

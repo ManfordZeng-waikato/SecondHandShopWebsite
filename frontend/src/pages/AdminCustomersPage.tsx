@@ -38,6 +38,7 @@ import type {
   EditableCustomer,
   SortDirection,
   UpdateCustomerInput,
+  CustomerSource,
 } from '../entities/customer/types';
 import {
   fetchAdminCustomerDetail,
@@ -49,7 +50,7 @@ import { CustomerEditDialog } from '../features/admin/components/CustomerEditDia
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 function parseApiDate(value: string): Date {
-  const hasTimeZone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(value);
+  const hasTimeZone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
   return new Date(hasTimeZone ? value : `${value}Z`);
 }
 
@@ -71,6 +72,10 @@ function formatDateTime(value: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatCurrency(value: number): string {
+  return `$${value.toFixed(2)}`;
 }
 
 function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -111,6 +116,12 @@ const statusColorMap: Record<CustomerStatus, { color: string; bg: string }> = {
   Contacted: { color: '#e65100', bg: 'rgba(230,81,0,0.08)' },
   Qualified: { color: '#2e7d32', bg: 'rgba(46,125,50,0.08)' },
   Archived: { color: '#757575', bg: 'rgba(117,117,117,0.08)' },
+};
+
+const sourceColorMap: Record<CustomerSource, { color: string; bg: string }> = {
+  Inquiry: { color: '#1565c0', bg: 'rgba(21,101,192,0.08)' },
+  Sale: { color: '#2e7d32', bg: 'rgba(46,125,50,0.08)' },
+  Manual: { color: '#757575', bg: 'rgba(117,117,117,0.08)' },
 };
 
 export function AdminCustomersPage() {
@@ -185,6 +196,26 @@ export function AdminCustomersPage() {
   const totalCount = customersQuery.data?.totalCount ?? 0;
   const hasActiveFilters = searchKeyword || statusFilter !== 'all';
 
+  const openEditDialog = async (customer: CustomerListItem) => {
+    setSaveError(null);
+    try {
+      const detail = await queryClient.fetchQuery({
+        queryKey: ['admin-customer', customer.id],
+        queryFn: () => fetchAdminCustomerDetail(customer.id),
+      });
+      setEditTarget({
+        ...toEditableCustomer(customer),
+        status: detail.status,
+        notes: detail.notes ?? '',
+      });
+    } catch {
+      setFeedback({
+        severity: 'error',
+        message: 'Unable to load customer details for editing.',
+      });
+    }
+  };
+
   // --- Page header ---
   const headerSection = (
     <Box sx={{ mb: 1 }}>
@@ -234,6 +265,8 @@ export function AdminCustomersPage() {
           <MenuItem value="createdAt">Sort: date created</MenuItem>
           <MenuItem value="updatedAt">Sort: last updated</MenuItem>
           <MenuItem value="lastInquiryAt">Sort: latest inquiry</MenuItem>
+          <MenuItem value="totalSpent">Sort: total spent</MenuItem>
+          <MenuItem value="lastPurchaseAt">Sort: last purchase</MenuItem>
         </Select>
         <Select
           size="small"
@@ -334,7 +367,7 @@ export function AdminCustomersPage() {
           <Typography variant="body2" color="text.disabled">
             {hasActiveFilters
               ? 'Try adjusting the search or filters above.'
-              : 'Customers will appear here once they submit inquiries.'}
+              : 'Customers will appear here once they submit inquiries or make purchases.'}
           </Typography>
         </Paper>
 
@@ -359,6 +392,7 @@ export function AdminCustomersPage() {
     <Stack spacing={1.5}>
       {customers.map((customer, index) => {
         const statusStyle = statusColorMap[customer.status];
+        const sourceStyle = sourceColorMap[customer.primarySource];
         return (
           <Fade in timeout={Math.min(300, 150 + index * 20)} key={customer.id}>
             <Paper
@@ -369,23 +403,37 @@ export function AdminCustomersPage() {
               }}
             >
               <Stack spacing={1.5}>
-                {/* Name + Status */}
+                {/* Name + Status + Source */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6" sx={{ fontSize: '1rem' }} noWrap>
                     {customer.name || '\u2014'}
                   </Typography>
-                  <Chip
-                    label={customer.status}
-                    size="small"
-                    sx={{
-                      fontWeight: 600,
-                      fontSize: '0.7rem',
-                      height: 24,
-                      color: statusStyle.color,
-                      bgcolor: statusStyle.bg,
-                      border: 'none',
-                    }}
-                  />
+                  <Stack direction="row" spacing={0.5}>
+                    <Chip
+                      label={customer.primarySource}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.65rem',
+                        height: 22,
+                        color: sourceStyle.color,
+                        bgcolor: sourceStyle.bg,
+                        border: 'none',
+                      }}
+                    />
+                    <Chip
+                      label={customer.status}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        height: 24,
+                        color: statusStyle.color,
+                        bgcolor: statusStyle.bg,
+                        border: 'none',
+                      }}
+                    />
+                  </Stack>
                 </Stack>
 
                 {/* Contact info */}
@@ -409,8 +457,18 @@ export function AdminCustomersPage() {
                   <Typography variant="caption" color="text.secondary">
                     {customer.inquiryCount} {customer.inquiryCount === 1 ? 'inquiry' : 'inquiries'}
                   </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {customer.purchaseCount} {customer.purchaseCount === 1 ? 'purchase' : 'purchases'}
+                  </Typography>
+                  {customer.totalSpent > 0 && (
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      {formatCurrency(customer.totalSpent)} spent
+                    </Typography>
+                  )}
+                </Stack>
+                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                   <Typography variant="caption" color="text.disabled">
-                    Last inquiry: {formatDateTime(customer.lastInquiryAt)}
+                    Last purchase: {formatDateTime(customer.lastPurchaseAtUtc)}
                   </Typography>
                   <Typography variant="caption" color="text.disabled">
                     Created: {formatDateTime(customer.createdAt)}
@@ -432,25 +490,7 @@ export function AdminCustomersPage() {
                     size="small"
                     variant="contained"
                     fullWidth
-                    onClick={async () => {
-                      setSaveError(null);
-                      try {
-                        const detail = await queryClient.fetchQuery({
-                          queryKey: ['admin-customer', customer.id],
-                          queryFn: () => fetchAdminCustomerDetail(customer.id),
-                        });
-                        setEditTarget({
-                          ...toEditableCustomer(customer),
-                          status: detail.status,
-                          notes: detail.notes ?? '',
-                        });
-                      } catch {
-                        setFeedback({
-                          severity: 'error',
-                          message: 'Unable to load customer details for editing.',
-                        });
-                      }
-                    }}
+                    onClick={() => openEditDialog(customer)}
                   >
                     Edit
                   </Button>
@@ -473,9 +513,12 @@ export function AdminCustomersPage() {
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Phone</TableCell>
+              <TableCell>Source</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Inquiries</TableCell>
-              <TableCell>Last inquiry</TableCell>
+              <TableCell align="right">Purchases</TableCell>
+              <TableCell align="right">Total Spent</TableCell>
+              <TableCell>Last Purchase</TableCell>
               <TableCell>Created</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -483,11 +526,26 @@ export function AdminCustomersPage() {
           <TableBody>
             {customers.map((customer) => {
               const statusStyle = statusColorMap[customer.status];
+              const sourceStyle = sourceColorMap[customer.primarySource];
               return (
                 <TableRow key={customer.id} hover>
                   <TableCell>{customer.name || '\u2014'}</TableCell>
                   <TableCell>{customer.email || '\u2014'}</TableCell>
                   <TableCell>{customer.phone || '\u2014'}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={customer.primarySource}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.65rem',
+                        height: 22,
+                        color: sourceStyle.color,
+                        bgcolor: sourceStyle.bg,
+                        border: 'none',
+                      }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={customer.status}
@@ -503,7 +561,11 @@ export function AdminCustomersPage() {
                     />
                   </TableCell>
                   <TableCell align="right">{customer.inquiryCount}</TableCell>
-                  <TableCell>{formatDateTime(customer.lastInquiryAt)}</TableCell>
+                  <TableCell align="right">{customer.purchaseCount}</TableCell>
+                  <TableCell align="right">
+                    {customer.totalSpent > 0 ? formatCurrency(customer.totalSpent) : '\u2014'}
+                  </TableCell>
+                  <TableCell>{formatDateTime(customer.lastPurchaseAtUtc)}</TableCell>
                   <TableCell>{formatDateTime(customer.createdAt)}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -518,25 +580,7 @@ export function AdminCustomersPage() {
                       <Button
                         size="small"
                         variant="contained"
-                        onClick={async () => {
-                          setSaveError(null);
-                          try {
-                            const detail = await queryClient.fetchQuery({
-                              queryKey: ['admin-customer', customer.id],
-                              queryFn: () => fetchAdminCustomerDetail(customer.id),
-                            });
-                            setEditTarget({
-                              ...toEditableCustomer(customer),
-                              status: detail.status,
-                              notes: detail.notes ?? '',
-                            });
-                          } catch {
-                            setFeedback({
-                              severity: 'error',
-                              message: 'Unable to load customer details for editing.',
-                            });
-                          }
-                        }}
+                        onClick={() => openEditDialog(customer)}
                       >
                         Edit
                       </Button>

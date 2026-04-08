@@ -30,6 +30,12 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .HasSentinel((CustomerStatus)0)
             .IsRequired();
 
+        builder.Property(x => x.PrimarySource)
+            .HasConversion<byte>()
+            .HasDefaultValue(CustomerSource.Inquiry)
+            .HasSentinel((CustomerSource)0)
+            .IsRequired();
+
         builder.Property(x => x.Notes)
             .HasMaxLength(2000);
 
@@ -38,6 +44,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
+
+        builder.Property(x => x.LastContactAtUtc)
+            .IsRequired(false);
 
         builder.HasIndex(x => x.Email)
             .IsUnique()

@@ -9,7 +9,10 @@
       "Bash(ls D:/Projects/SecondHandShopWebsite/src/SecondHandShop.Infrastructure/Persistence/Migrations/*.cs)",
       "Bash(dotnet package:*)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet ef:*)"
+      "Bash(dotnet ef:*)",
+      "Bash(taskkill //PID 12524 //F)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

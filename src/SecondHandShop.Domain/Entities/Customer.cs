@@ -13,15 +13,18 @@ public class Customer
     public string? Email { get; private set; }
     public string? PhoneNumber { get; private set; }
     public CustomerStatus Status { get; private set; } = CustomerStatus.New;
+    public CustomerSource PrimarySource { get; private set; } = CustomerSource.Inquiry;
     public string? Notes { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+    public DateTime? LastContactAtUtc { get; private set; }
     public uint RowVersion { get; private set; }
 
     public static Customer Create(
         string? name,
         string? email,
         string? phoneNumber,
+        CustomerSource source,
         DateTime utcNow)
     {
         ValidateContact(email, phoneNumber);
@@ -33,10 +36,34 @@ public class Customer
             Email = Normalize(email),
             PhoneNumber = Normalize(phoneNumber),
             Status = CustomerStatus.New,
+            PrimarySource = source,
             Notes = null,
             CreatedAt = utcNow,
-            UpdatedAt = utcNow
+            UpdatedAt = utcNow,
+            LastContactAtUtc = utcNow
         };
+    }
+
+    /// <summary>
+    /// Cautious merge: fills in blank fields without overwriting existing values.
+    /// </summary>
+    public void MergeContact(
+        string? name,
+        string? email,
+        string? phoneNumber,
+        DateTime utcNow)
+    {
+        var mergedName = Name ?? Normalize(name);
+        var mergedEmail = Email ?? NormalizeEmail(email);
+        var mergedPhoneNumber = PhoneNumber ?? Normalize(phoneNumber);
+
+        ValidateContact(mergedEmail, mergedPhoneNumber);
+
+        Name = mergedName;
+        Email = mergedEmail;
+        PhoneNumber = mergedPhoneNumber;
+        LastContactAtUtc = utcNow;
+        UpdatedAt = utcNow;
     }
 
     public void UpdateContact(
@@ -49,6 +76,7 @@ public class Customer
         Name = Normalize(name);
         Email = Normalize(email);
         PhoneNumber = Normalize(phoneNumber);
+        LastContactAtUtc = utcNow;
         UpdatedAt = utcNow;
     }
 
@@ -78,5 +106,11 @@ public class Customer
     private static string? Normalize(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string? NormalizeEmail(string? value)
+    {
+        var normalized = Normalize(value);
+        return normalized?.ToLowerInvariant();
     }
 }

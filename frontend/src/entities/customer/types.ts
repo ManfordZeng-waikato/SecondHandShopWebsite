@@ -1,6 +1,7 @@
-export type CustomerSortBy = 'createdAt' | 'updatedAt' | 'lastInquiryAt';
+export type CustomerSortBy = 'createdAt' | 'updatedAt' | 'lastInquiryAt' | 'totalSpent' | 'lastPurchaseAt';
 export type SortDirection = 'asc' | 'desc';
 export type CustomerStatus = 'New' | 'Contacted' | 'Qualified' | 'Archived';
+export type CustomerSource = 'Inquiry' | 'Sale' | 'Manual';
 
 export const customerStatusOptions: CustomerStatus[] = [
   'New',
@@ -9,14 +10,25 @@ export const customerStatusOptions: CustomerStatus[] = [
   'Archived',
 ];
 
+export const customerSourceLabels: Record<CustomerSource, string> = {
+  Inquiry: 'Inquiry',
+  Sale: 'Sale',
+  Manual: 'Manual',
+};
+
 export interface CustomerListItem {
   id: string;
   name: string | null;
   email: string | null;
   phone: string | null;
   status: CustomerStatus;
+  primarySource: CustomerSource;
   inquiryCount: number;
   lastInquiryAt: string | null;
+  purchaseCount: number;
+  totalSpent: number;
+  lastPurchaseAtUtc: string | null;
+  lastContactAtUtc: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,9 +39,14 @@ export interface CustomerDetail {
   email: string | null;
   phone: string | null;
   status: CustomerStatus;
+  primarySource: CustomerSource;
   notes: string | null;
   inquiryCount: number;
   lastInquiryAt: string | null;
+  purchaseCount: number;
+  totalSpent: number;
+  lastPurchaseAtUtc: string | null;
+  lastContactAtUtc: string | null;
   createdAt: string;
   updatedAt: string;
 }

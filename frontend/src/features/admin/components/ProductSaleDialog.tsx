@@ -42,7 +42,7 @@ function toLocalDateTimeValue(utcIso: string | null): string {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
   }
-  const hasTimeZone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(utcIso);
+  const hasTimeZone = /([zZ]|[+-]\d{2}:\d{2})$/.test(utcIso);
   const d = new Date(hasTimeZone ? utcIso : `${utcIso}Z`);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
@@ -109,7 +109,6 @@ export function ProductSaleDialog({
       setSoldAtUtc(toLocalDateTimeValue(existingSale.soldAtUtc));
       setPaymentMethod(existingSale.paymentMethod ?? '');
       setNotes(existingSale.notes ?? '');
-      // Customer will be resolved separately if customerId exists
       setSelectedCustomer(null);
     } else {
       setBuyerName('');
@@ -134,6 +133,8 @@ export function ProductSaleDialog({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       await queryClient.invalidateQueries({ queryKey: ['product-sale', productId] });
+      // Also invalidate customer queries so newly created/linked customers appear immediately
+      await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       onSaved();
     },
   });
@@ -166,6 +167,8 @@ export function ProductSaleDialog({
   })();
 
   const canSubmit = !priceError && soldAtUtc.trim() !== '' && !saveMutation.isPending;
+
+  const hasBuyerContact = buyerEmail.trim() !== '' || buyerPhone.trim() !== '';
 
   return (
     <Dialog
@@ -222,9 +225,14 @@ export function ProductSaleDialog({
             </Stack>
 
             {/* Buyer info */}
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Buyer Information
-            </Typography>
+            <Stack spacing={0.5}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Buyer Information
+              </Typography>
+              <Typography variant="caption" color="text.disabled">
+                Providing email or phone will automatically create or link a customer record.
+              </Typography>
+            </Stack>
             <TextField
               label="Buyer Name"
               value={buyerName}
@@ -249,9 +257,15 @@ export function ProductSaleDialog({
               />
             </Stack>
 
+            {hasBuyerContact && !selectedCustomer && !existingSale?.customerId && (
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                A customer record will be automatically created or matched from the buyer info above.
+              </Alert>
+            )}
+
             {/* Linked Customer */}
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Linked Records (Optional)
+              Link to Existing Customer (Optional)
             </Typography>
             <Autocomplete
               options={customerSearchQuery.data?.items ?? []}
@@ -272,7 +286,7 @@ export function ProductSaleDialog({
                   helperText={
                     !selectedCustomer && existingSale?.customerId
                       ? `Currently linked: ${existingSale.customerId}`
-                      : undefined
+                      : 'If left empty and buyer email/phone is provided, a customer will be auto-resolved.'
                   }
                 />
               )}

@@ -1,6 +1,7 @@
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Sales;
+using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -11,6 +12,7 @@ public class AdminSaleService(
     IProductSaleRepository productSaleRepository,
     ICustomerRepository customerRepository,
     IInquiryRepository inquiryRepository,
+    ICustomerResolutionService customerResolutionService,
     IUnitOfWork unitOfWork,
     IClock clock) : IAdminSaleService
 {
@@ -36,11 +38,25 @@ public class AdminSaleService(
             paymentMethod = parsed;
         }
 
-        if (request.CustomerId.HasValue)
+        // Resolve CustomerId: use explicit value, or auto-resolve from buyer info
+        var customerId = request.CustomerId;
+
+        if (customerId.HasValue)
         {
-            var customer = await customerRepository.GetByIdAsync(request.CustomerId.Value, cancellationToken);
+            var customer = await customerRepository.GetByIdAsync(customerId.Value, cancellationToken);
             if (customer is null)
-                throw new KeyNotFoundException($"Customer '{request.CustomerId}' not found.");
+                throw new KeyNotFoundException($"Customer '{customerId}' not found.");
+        }
+        else if (HasBuyerContact(request))
+        {
+            // Auto-create or link customer from buyer info
+            var resolved = await customerResolutionService.GetOrCreateCustomerAsync(
+                request.BuyerName,
+                request.BuyerEmail,
+                request.BuyerPhone,
+                CustomerSource.Sale,
+                cancellationToken);
+            customerId = resolved.Id;
         }
 
         if (request.InquiryId.HasValue)
@@ -62,7 +78,7 @@ public class AdminSaleService(
                 request.SoldAtUtc,
                 request.AdminUserId,
                 utcNow,
-                request.CustomerId,
+                customerId,
                 request.InquiryId,
                 request.BuyerName,
                 request.BuyerPhone,
@@ -79,7 +95,7 @@ public class AdminSaleService(
                 request.SoldAtUtc,
                 request.AdminUserId,
                 utcNow,
-                request.CustomerId,
+                customerId,
                 request.InquiryId,
                 request.BuyerName,
                 request.BuyerPhone,
@@ -105,6 +121,12 @@ public class AdminSaleService(
         Guid customerId, CancellationToken cancellationToken = default)
     {
         return await productSaleRepository.ListByCustomerIdAsync(customerId, cancellationToken);
+    }
+
+    private static bool HasBuyerContact(SaveProductSaleRequest request)
+    {
+        return !string.IsNullOrWhiteSpace(request.BuyerEmail)
+               || !string.IsNullOrWhiteSpace(request.BuyerPhone);
     }
 
     private static ProductSaleDto MapToDto(ProductSale sale)

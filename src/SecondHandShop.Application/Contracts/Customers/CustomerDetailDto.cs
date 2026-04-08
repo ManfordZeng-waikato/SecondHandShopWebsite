@@ -6,8 +6,13 @@ public sealed record CustomerDetailDto(
     string? Email,
     string? Phone,
     string Status,
+    string PrimarySource,
     string? Notes,
     int InquiryCount,
     DateTime? LastInquiryAt,
+    int PurchaseCount,
+    decimal TotalSpent,
+    DateTime? LastPurchaseAtUtc,
+    DateTime? LastContactAtUtc,
     DateTime CreatedAt,
     DateTime UpdatedAt);

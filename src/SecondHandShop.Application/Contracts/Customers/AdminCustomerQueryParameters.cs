@@ -26,6 +26,8 @@ public sealed partial record AdminCustomerQueryParameters
             {
                 "updatedat" or "updated_at" => "updatedAt",
                 "lastinquiryat" or "last_inquiry_at" => "lastInquiryAt",
+                "totalspent" or "total_spent" => "totalSpent",
+                "lastpurchaseat" or "last_purchase_at" => "lastPurchaseAtUtc",
                 _ => "createdAt"
             };
         }

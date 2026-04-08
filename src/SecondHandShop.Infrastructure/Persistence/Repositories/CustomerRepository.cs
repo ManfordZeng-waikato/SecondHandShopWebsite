@@ -57,12 +57,21 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
             Email = c.Email,
             Phone = c.PhoneNumber,
             Status = c.Status,
+            PrimarySource = c.PrimarySource,
+            LastContactAtUtc = c.LastContactAtUtc,
             CreatedAt = c.CreatedAt,
             UpdatedAt = c.UpdatedAt,
             InquiryCount = dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
             LastInquiryAt = dbContext.Inquiries
                 .Where(i => i.CustomerId == c.Id)
-                .Max(i => (DateTime?)i.CreatedAt)
+                .Max(i => (DateTime?)i.CreatedAt),
+            PurchaseCount = dbContext.ProductSales.Count(s => s.CustomerId == c.Id),
+            TotalSpent = dbContext.ProductSales
+                .Where(s => s.CustomerId == c.Id)
+                .Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m,
+            LastPurchaseAtUtc = dbContext.ProductSales
+                .Where(s => s.CustomerId == c.Id)
+                .Max(s => (DateTime?)s.SoldAtUtc)
         });
 
         var totalCount = await customersQuery.CountAsync(cancellationToken);
@@ -78,8 +87,13 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 c.Email,
                 c.Phone,
                 c.Status.ToString(),
+                c.PrimarySource.ToString(),
                 c.InquiryCount,
                 c.LastInquiryAt,
+                c.PurchaseCount,
+                c.TotalSpent,
+                c.LastPurchaseAtUtc,
+                c.LastContactAtUtc,
                 c.CreatedAt,
                 c.UpdatedAt))
             .ToListAsync(cancellationToken);
@@ -100,11 +114,20 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 c.Email,
                 c.PhoneNumber,
                 c.Status.ToString(),
+                c.PrimarySource.ToString(),
                 c.Notes,
                 dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
                 dbContext.Inquiries
                     .Where(i => i.CustomerId == c.Id)
                     .Max(i => (DateTime?)i.CreatedAt),
+                dbContext.ProductSales.Count(s => s.CustomerId == c.Id),
+                dbContext.ProductSales
+                    .Where(s => s.CustomerId == c.Id)
+                    .Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m,
+                dbContext.ProductSales
+                    .Where(s => s.CustomerId == c.Id)
+                    .Max(s => (DateTime?)s.SoldAtUtc),
+                c.LastContactAtUtc,
                 c.CreatedAt,
                 c.UpdatedAt))
             .FirstOrDefaultAsync(cancellationToken);
@@ -137,6 +160,22 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 .OrderBy(x => x.LastInquiryAt)
                 .ThenBy(x => x.CreatedAt)
                 .ThenBy(x => x.Id),
+            ("totalSpent", true) => query
+                .OrderByDescending(x => x.TotalSpent)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id),
+            ("totalSpent", false) => query
+                .OrderBy(x => x.TotalSpent)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id),
+            ("lastPurchaseAtUtc", true) => query
+                .OrderByDescending(x => x.LastPurchaseAtUtc)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id),
+            ("lastPurchaseAtUtc", false) => query
+                .OrderBy(x => x.LastPurchaseAtUtc)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id),
             ("createdAt", false) => query
                 .OrderBy(x => x.CreatedAt)
                 .ThenBy(x => x.Id),
@@ -153,9 +192,14 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
         public string? Email { get; init; }
         public string? Phone { get; init; }
         public required CustomerStatus Status { get; init; }
+        public required CustomerSource PrimarySource { get; init; }
+        public DateTime? LastContactAtUtc { get; init; }
         public required DateTime CreatedAt { get; init; }
         public required DateTime UpdatedAt { get; init; }
         public required int InquiryCount { get; init; }
         public DateTime? LastInquiryAt { get; init; }
+        public required int PurchaseCount { get; init; }
+        public required decimal TotalSpent { get; init; }
+        public DateTime? LastPurchaseAtUtc { get; init; }
     }
 }

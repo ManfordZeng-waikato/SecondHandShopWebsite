@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IProductSaleRepository, ProductSaleRepository>();
         services.AddScoped<IAdminCatalogService, AdminCatalogService>();
         services.AddScoped<IAdminSaleService, AdminSaleService>();
+        services.AddScoped<ICustomerResolutionService, CustomerResolutionService>();
         services.AddScoped<IAdminCustomerService, AdminCustomerService>();
         services.AddScoped<IInquiryService, InquiryService>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
