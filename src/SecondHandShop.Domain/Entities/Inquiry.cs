@@ -1,13 +1,11 @@
 using System.Text.RegularExpressions;
+using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Domain.Entities;
 
 public partial class Inquiry
 {
-    [GeneratedRegex(@"^[^\s@]+@[^\s@]+\.[^\s@]+$")]
-    private static partial Regex EmailRegex();
-
     [GeneratedRegex(@"^[0-9+\-\s()]+$")]
     private static partial Regex PhoneRegex();
 
@@ -116,7 +114,7 @@ public partial class Inquiry
             throw new ArgumentException("At least one contact method (email or phone) is required.");
         }
 
-        if (!string.IsNullOrWhiteSpace(email) && !EmailRegex().IsMatch(email.Trim()))
+        if (!string.IsNullOrWhiteSpace(email) && !EmailAddressSyntaxValidator.IsValid(email))
         {
             throw new ArgumentException("Invalid email format.", nameof(email));
         }

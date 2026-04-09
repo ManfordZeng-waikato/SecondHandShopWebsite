@@ -15,6 +15,7 @@ public class JwtTokenService : IJwtTokenService
     private readonly string _issuer;
     private readonly string _audience;
     private readonly byte[] _keyBytes;
+    private readonly double _accessTokenMinutes;
 
     public JwtTokenService(IConfiguration configuration)
     {
@@ -30,11 +31,17 @@ public class JwtTokenService : IJwtTokenService
             throw new InvalidOperationException("Jwt:Key must be at least 32 characters.");
 
         _keyBytes = Encoding.UTF8.GetBytes(key);
+
+        _accessTokenMinutes = configuration.GetValue("Jwt:AccessTokenMinutes", 20.0);
+        if (_accessTokenMinutes is < 5 or > 24 * 60)
+        {
+            throw new InvalidOperationException("Jwt:AccessTokenMinutes must be between 5 and 1440.");
+        }
     }
 
     public (string Token, DateTimeOffset ExpiresAt) CreateToken(AdminUser user)
     {
-        var expires = DateTimeOffset.UtcNow.AddMinutes(20);
+        var expires = DateTimeOffset.UtcNow.AddMinutes(_accessTokenMinutes);
 
         var claims = new List<Claim>
         {

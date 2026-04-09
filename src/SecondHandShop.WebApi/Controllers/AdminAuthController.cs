@@ -4,16 +4,21 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using SecondHandShop.Application.Contracts.Admin;
 using SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Application.UseCases.Admin.Me;
+using SecondHandShop.Application.UseCases.Admin.RefreshSession;
+using SecondHandShop.WebApi.Authentication;
 
 namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/auth")]
-public class AdminAuthController(IMediator mediator) : ControllerBase
+public class AdminAuthController(
+    IMediator mediator,
+    IOptions<AdminAuthCookieOptions> authCookieOptions) : ControllerBase
 {
     internal const string CookieName = "shs.admin.token";
 
@@ -26,7 +31,33 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
         var command = new LoginAdminCommand(request.UserName, request.Password);
         var response = await mediator.Send(command, cancellationToken);
 
-        Response.Cookies.Append(CookieName, response.Token, BuildCookieOptions(response.ExpiresAt));
+        var cookieOpts = authCookieOptions.Value;
+        AdminAuthCookies.AppendAuthTokenCookie(Response, response.Token, response.ExpiresAt, cookieOpts);
+        AdminAuthCookies.AppendSessionExpiresHeader(Response, response.ExpiresAt);
+
+        return Ok(new
+        {
+            expiresAt = response.ExpiresAt,
+            requiresPasswordChange = response.RequiresPasswordChange
+        });
+    }
+
+    /// <summary>
+    /// Issues a new access token and cookie using the current session. Used by the SPA on an interval
+    /// and complements sliding renewal on other /api/lord requests so long forms do not expire while idle.
+    /// </summary>
+    [HttpPost("refresh")]
+    [Authorize(Policy = "AdminSession")]
+    public async Task<IActionResult> RefreshAsync(CancellationToken cancellationToken)
+    {
+        var adminId = ResolveAdminUserId();
+        if (adminId is null)
+            return Unauthorized();
+
+        var response = await mediator.Send(new RefreshAdminSessionCommand(adminId.Value), cancellationToken);
+        var cookieOpts = authCookieOptions.Value;
+        AdminAuthCookies.AppendAuthTokenCookie(Response, response.Token, response.ExpiresAt, cookieOpts);
+        AdminAuthCookies.AppendSessionExpiresHeader(Response, response.ExpiresAt);
 
         return Ok(new
         {
@@ -38,7 +69,7 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        Response.Cookies.Delete(CookieName, BuildCookieOptions(DateTimeOffset.UtcNow));
+        AdminAuthCookies.DeleteAuthTokenCookie(Response, authCookieOptions.Value);
         return NoContent();
     }
 
@@ -61,7 +92,7 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
         await mediator.Send(command, cancellationToken);
 
         // End server session: user must authenticate again with the new password (avoids carrying old JWT).
-        Response.Cookies.Delete(CookieName, BuildCookieOptions(DateTimeOffset.UtcNow));
+        AdminAuthCookies.DeleteAuthTokenCookie(Response, authCookieOptions.Value);
 
         return Ok(new
         {
@@ -95,13 +126,4 @@ public class AdminAuthController(IMediator mediator) : ControllerBase
             ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         return Guid.TryParse(raw, out var id) ? id : null;
     }
-
-    private static CookieOptions BuildCookieOptions(DateTimeOffset expires) => new()
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.Strict,
-        Path = "/api/lord",
-        Expires = expires
-    };
 }

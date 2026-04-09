@@ -17,6 +17,12 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
     public DbSet<InquiryIpCooldown> InquiryIpCooldowns => Set<InquiryIpCooldown>();
     public DbSet<ProductSale> ProductSales => Set<ProductSale>();
 
+    public async Task<IDatabaseTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        var tx = await Database.BeginTransactionAsync(cancellationToken);
+        return new EfDatabaseTransaction(tx);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new AdminUserConfiguration());

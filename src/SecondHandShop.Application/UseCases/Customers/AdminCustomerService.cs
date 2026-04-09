@@ -1,5 +1,6 @@
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Application.UseCases.Customers;
@@ -27,7 +28,7 @@ public class AdminCustomerService(
             var existingByPhone = await customerRepository.GetByPhoneNumberAsync(targetPhone, cancellationToken);
             if (existingByPhone is not null && existingByPhone.Id != customerId)
             {
-                throw new InvalidOperationException("The phone number is already used by another customer.");
+                throw new ConflictException("The phone number is already used by another customer.");
             }
         }
 

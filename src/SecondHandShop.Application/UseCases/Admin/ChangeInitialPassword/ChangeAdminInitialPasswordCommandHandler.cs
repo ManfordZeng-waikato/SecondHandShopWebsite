@@ -3,6 +3,7 @@ using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Security;
+using SecondHandShop.Domain.Common;
 
 namespace SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 
@@ -37,7 +38,7 @@ public sealed class ChangeAdminInitialPasswordCommandHandler(
         if (!user.MustChangePassword)
         {
             // Not a forced-first-login account; keep message generic to avoid account enumeration.
-            throw new InvalidOperationException("This operation is not available for your account.");
+            throw new DomainRuleViolationException("This operation is not available for your account.");
         }
 
         if (string.Equals(request.CurrentPassword, request.NewPassword, StringComparison.Ordinal))

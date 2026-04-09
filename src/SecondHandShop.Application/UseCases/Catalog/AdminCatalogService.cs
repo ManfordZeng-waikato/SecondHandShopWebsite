@@ -1,6 +1,8 @@
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
+using SecondHandShop.Application.Common.Exceptions;
+using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -29,7 +31,7 @@ public class AdminCatalogService(
         var existingProduct = await productRepository.GetBySlugAsync(request.Slug.Trim().ToLowerInvariant(), cancellationToken);
         if (existingProduct is not null)
         {
-            throw new InvalidOperationException($"Product slug '{request.Slug}' already exists.");
+            throw new ConflictException($"Product slug '{request.Slug}' already exists.");
         }
 
         var category = await categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
@@ -113,7 +115,7 @@ public class AdminCatalogService(
 
         if (!AllowedImageContentTypes.Contains(request.ContentType.Trim()))
         {
-            throw new InvalidOperationException("Only JPEG, PNG and WEBP images are allowed.");
+            throw new ValidationException("Only JPEG, PNG and WEBP images are allowed.");
         }
 
         var objectKey = BuildObjectKey(request.ProductId, request.FileName);
@@ -131,7 +133,7 @@ public class AdminCatalogService(
 
     public async Task AddProductImageAsync(AddProductImageRequest request, CancellationToken cancellationToken = default)
     {
-        _ = await productRepository.GetByIdAsync(request.ProductId, cancellationToken)
+        var product = await productRepository.GetByIdAsync(request.ProductId, cancellationToken)
             ?? throw new KeyNotFoundException($"Product '{request.ProductId}' was not found.");
 
         if (string.IsNullOrWhiteSpace(request.ObjectKey))
@@ -142,7 +144,7 @@ public class AdminCatalogService(
         var expectedKeyPrefix = $"products/{request.ProductId:N}/";
         if (!request.ObjectKey.StartsWith(expectedKeyPrefix, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("ObjectKey does not belong to the target product.");
+            throw new ValidationException("ObjectKey does not belong to the target product.");
         }
 
         if (request.SortOrder < 0)
@@ -153,12 +155,12 @@ public class AdminCatalogService(
         var images = await productImageRepository.ListByProductIdAsync(request.ProductId, cancellationToken);
         if (images.Count >= MaxImagesPerProduct)
         {
-            throw new InvalidOperationException($"A product can have at most {MaxImagesPerProduct} images.");
+            throw new DomainRuleViolationException($"A product can have at most {MaxImagesPerProduct} images.");
         }
 
         if (request.IsPrimary && images.Any(x => x.IsPrimary))
         {
-            throw new InvalidOperationException("Product already has a primary image.");
+            throw new ConflictException("Product already has a primary image.");
         }
 
         var image = ProductImage.Create(
@@ -171,6 +173,11 @@ public class AdminCatalogService(
             clock.UtcNow);
 
         await productImageRepository.AddAsync(image, cancellationToken);
+
+        var mergedImages = images.Append(image).ToList();
+        var (coverKey, imageCount) = ComputeCoverAndImageCount(mergedImages);
+        product.SyncImageDenormalization(coverKey, imageCount, request.AdminUserId, clock.UtcNow);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -180,22 +187,46 @@ public class AdminCatalogService(
         Guid? adminUserId,
         CancellationToken cancellationToken = default)
     {
-        _ = await productRepository.GetByIdAsync(productId, cancellationToken)
+        var product = await productRepository.GetByIdAsync(productId, cancellationToken)
             ?? throw new KeyNotFoundException($"Product '{productId}' was not found.");
+
+        var images = await productImageRepository.ListByProductIdAsync(productId, cancellationToken);
 
         var image = await productImageRepository.GetByIdAsync(imageId, cancellationToken)
             ?? throw new KeyNotFoundException($"Image '{imageId}' was not found.");
 
         if (image.ProductId != productId)
         {
-            throw new InvalidOperationException("Image does not belong to the specified product.");
+            throw new ValidationException("Image does not belong to the specified product.");
         }
 
+        var remainingImages = images.Where(i => i.Id != imageId).ToList();
+
         productImageRepository.Remove(image);
+
+        var (coverKey, imageCount) = ComputeCoverAndImageCount(remainingImages);
+        product.SyncImageDenormalization(coverKey, imageCount, adminUserId, clock.UtcNow);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // R2 object is intentionally NOT deleted here to allow recovery.
         // A background cleanup job can purge orphaned R2 objects later.
+    }
+
+    private static (string? CoverKey, int Count) ComputeCoverAndImageCount(IReadOnlyCollection<ProductImage> images)
+    {
+        if (images.Count == 0)
+        {
+            return (null, 0);
+        }
+
+        var coverKey = images
+            .OrderByDescending(i => i.IsPrimary)
+            .ThenBy(i => i.SortOrder)
+            .First()
+            .CloudStorageKey;
+
+        return (coverKey, images.Count);
     }
 
     private static string BuildObjectKey(Guid productId, string fileName)

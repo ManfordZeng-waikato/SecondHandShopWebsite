@@ -87,10 +87,15 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             _ => query.OrderByDescending(p => p.CreatedAt),
         };
 
-        var projected = await orderedQuery
+        var pageSlice = orderedQuery
             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(p => new
+            .Take(pageSize);
+
+        var projected = await (
+            from p in pageSlice
+            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id into cg
+            from category in cg.DefaultIfEmpty()
+            select new
             {
                 p.Id,
                 p.Title,
@@ -99,16 +104,8 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
                 p.Status,
                 p.Condition,
                 p.CreatedAt,
-                CoverImageKey = dbContext.ProductImages
-                    .Where(i => i.ProductId == p.Id)
-                    .OrderByDescending(i => i.IsPrimary)
-                    .ThenBy(i => i.SortOrder)
-                    .Select(i => i.CloudStorageKey)
-                    .FirstOrDefault(),
-                CategoryName = dbContext.Categories
-                    .Where(c => c.Id == p.CategoryId)
-                    .Select(c => c.Name)
-                    .FirstOrDefault(),
+                p.CoverImageKey,
+                CategoryName = category != null ? category.Name : null,
             })
             .ToListAsync(cancellationToken);
 
@@ -140,13 +137,18 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             .Where(p => p.Status == ProductStatus.Available)
             .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
 
-        var projected = await query
+        var limitedQuery = query
             .OrderBy(p => p.FeaturedSortOrder.HasValue ? 0 : 1)
             .ThenBy(p => p.FeaturedSortOrder)
             .ThenByDescending(p => p.CreatedAt)
             .ThenBy(p => p.Id)
-            .Take(safeLimit)
-            .Select(p => new
+            .Take(safeLimit);
+
+        var projected = await (
+            from p in limitedQuery
+            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id into cg
+            from category in cg.DefaultIfEmpty()
+            select new
             {
                 p.Id,
                 p.Title,
@@ -155,16 +157,8 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
                 p.Status,
                 p.Condition,
                 p.CreatedAt,
-                CoverImageKey = dbContext.ProductImages
-                    .Where(i => i.ProductId == p.Id)
-                    .OrderByDescending(i => i.IsPrimary)
-                    .ThenBy(i => i.SortOrder)
-                    .Select(i => i.CloudStorageKey)
-                    .FirstOrDefault(),
-                CategoryName = dbContext.Categories
-                    .Where(c => c.Id == p.CategoryId)
-                    .Select(c => c.Name)
-                    .FirstOrDefault(),
+                p.CoverImageKey,
+                CategoryName = category != null ? category.Name : null,
             })
             .ToListAsync(cancellationToken);
 
@@ -225,10 +219,15 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
                 : query.OrderBy(x => x.UpdatedAt),
         };
 
-        var projected = await ordered
+        var adminPageSlice = ordered
             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(p => new
+            .Take(pageSize);
+
+        var projected = await (
+            from p in adminPageSlice
+            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id into cg
+            from category in cg.DefaultIfEmpty()
+            select new
             {
                 p.Id,
                 p.Title,
@@ -240,17 +239,9 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
                 p.FeaturedSortOrder,
                 p.CreatedAt,
                 p.UpdatedAt,
-                ImageCount = dbContext.ProductImages.Count(i => i.ProductId == p.Id),
-                CoverImageKey = dbContext.ProductImages
-                    .Where(i => i.ProductId == p.Id)
-                    .OrderByDescending(i => i.IsPrimary)
-                    .ThenBy(i => i.SortOrder)
-                    .Select(i => i.CloudStorageKey)
-                    .FirstOrDefault(),
-                CategoryName = dbContext.Categories
-                    .Where(c => c.Id == p.CategoryId)
-                    .Select(c => c.Name)
-                    .FirstOrDefault(),
+                p.ImageCount,
+                p.CoverImageKey,
+                CategoryName = category != null ? category.Name : null,
             })
             .ToListAsync(cancellationToken);
 

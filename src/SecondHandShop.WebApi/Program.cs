@@ -1,16 +1,35 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SecondHandShop.Application.Security;
 using SecondHandShop.Application.UseCases.Admin.Login;
+using SecondHandShop.Application.UseCases.Admin.RefreshSession;
 using SecondHandShop.Infrastructure;
+using SecondHandShop.Infrastructure.Persistence;
 using SecondHandShop.Infrastructure.Services;
+using SecondHandShop.WebApi.Authentication;
 using SecondHandShop.WebApi.Controllers;
 using SecondHandShop.WebApi.Filters;
+using SecondHandShop.WebApi.Middleware;
+using Serilog;
+using Serilog.Events;
 
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+try
+{
 var builder = WebApplication.CreateBuilder(args);
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
@@ -32,6 +51,8 @@ if (allowedOrigins.Length == 0)
 }
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.Configure<AdminAuthCookieOptions>(
+    builder.Configuration.GetSection(AdminAuthCookieOptions.SectionName));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblyContaining<LoginAdminCommand>());
 
@@ -60,6 +81,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     context.Token = token;
                 }
                 return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                if (context.SecurityToken is not JwtSecurityToken jwt)
+                {
+                    return;
+                }
+
+                var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+                var accessMinutes = config.GetValue("Jwt:AccessTokenMinutes", 20.0);
+                var fraction = Math.Clamp(config.GetValue("Jwt:SlidingRenewalFraction", 0.5), 0.05, 0.95);
+                var total = TimeSpan.FromMinutes(accessMinutes);
+                var threshold = TimeSpan.FromTicks((long)(total.Ticks * fraction));
+                var remaining = jwt.ValidTo - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero || remaining >= threshold)
+                {
+                    return;
+                }
+
+                var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                if (!Guid.TryParse(sub, out var adminId))
+                {
+                    return;
+                }
+
+                var mediator = context.HttpContext.RequestServices.GetRequiredService<IMediator>();
+                var cookieOpts = context.HttpContext.RequestServices.GetRequiredService<IOptions<AdminAuthCookieOptions>>().Value;
+
+                try
+                {
+                    var result = await mediator.Send(
+                        new RefreshAdminSessionCommand(adminId),
+                        context.HttpContext.RequestAborted);
+                    AdminAuthCookies.AppendAuthTokenCookie(
+                        context.HttpContext.Response,
+                        result.Token,
+                        result.ExpiresAt,
+                        cookieOpts);
+                    AdminAuthCookies.AppendSessionExpiresHeader(context.HttpContext.Response, result.ExpiresAt);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Account deactivated: do not extend; existing JWT expires naturally.
+                }
             }
         };
     });
@@ -140,6 +206,11 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ApiExceptionFilter>();
 });
+builder.Services.AddResponseCaching();
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("CategoriesList", builder => builder.Expire(TimeSpan.FromMinutes(5)));
+});
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
@@ -154,7 +225,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials());
+            .AllowCredentials()
+            .WithExposedHeaders(AdminAuthCookies.SessionExpiresHeaderName));
 });
 builder.Services.AddHttpsRedirection(options =>
 {
@@ -166,12 +238,53 @@ builder.Services.AddHsts(options =>
     options.IncludeSubDomains = true;
 });
 
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "SecondHandShop.WebApi");
+});
+
 var app = builder.Build();
+
+app.Services.GetRequiredService<IOptions<AdminAuthCookieOptions>>().Value.Validate();
+
+await using (var migrateScope = app.Services.CreateAsyncScope())
+{
+    var db = migrateScope.ServiceProvider.GetRequiredService<SecondHandShopDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 await AdminSeedService.SeedAdminUserAsync(app.Services);
 await CatalogSeedService.SeedDefaultCategoriesIfEmptyAsync(app.Services);
 
 app.UseForwardedHeaders();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, _, ex) =>
+    {
+        if (ex is not null)
+        {
+            return LogEventLevel.Error;
+        }
+
+        var status = httpContext.Response.StatusCode;
+        if (status >= StatusCodes.Status500InternalServerError)
+        {
+            return LogEventLevel.Error;
+        }
+
+        if (status >= StatusCodes.Status400BadRequest)
+        {
+            return LogEventLevel.Warning;
+        }
+
+        return LogEventLevel.Information;
+    };
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -184,8 +297,20 @@ else
 
 app.UseHttpsRedirection();
 app.UseCors(FrontendCorsPolicy);
+app.UseResponseCaching();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 app.MapControllers();
 app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}

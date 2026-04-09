@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Infrastructure.Services;
 using SecondHandShop.WebApi.Contracts;
+using SecondHandShop.WebApi.Utilities;
 
 namespace SecondHandShop.WebApi.Controllers;
 
@@ -13,12 +14,7 @@ public class ImageProcessingController(
     IBackgroundRemovalService backgroundRemovalService,
     RemoveBgOptions removeBgOptions) : ControllerBase
 {
-    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/jpeg",
-        "image/png",
-        "image/webp"
-    };
+    private const int SignatureReadLength = 12;
 
     [HttpPost("remove-background-preview")]
     [RequestSizeLimit(12 * 1024 * 1024)]
@@ -37,10 +33,10 @@ public class ImageProcessingController(
                 $"File size exceeds the {removeBgOptions.MaxFileSizeBytes / (1024 * 1024)} MB limit."));
         }
 
-        var contentType = file.ContentType?.Trim() ?? string.Empty;
-        if (!AllowedContentTypes.Contains(contentType))
+        if (!AdminPreviewImageValidation.TryGetSafeFileName(file.FileName, out var safeFileName, out var declaredExtension))
         {
-            return BadRequest(new ErrorResponse("Only JPEG, PNG and WEBP images are allowed."));
+            return BadRequest(new ErrorResponse(
+                "File name must use a .jpg, .jpeg, .png, or .webp extension and must not contain path segments."));
         }
 
         try
@@ -49,10 +45,34 @@ public class ImageProcessingController(
             await file.CopyToAsync(stream, cancellationToken);
             stream.Position = 0;
 
-            var resultBytes = await backgroundRemovalService.RemoveBackgroundAsync(
-                stream, file.FileName, contentType, cancellationToken);
+            var header = new byte[SignatureReadLength];
+            var read = await stream.ReadAsync(header.AsMemory(0, SignatureReadLength), cancellationToken);
+            stream.Position = 0;
 
-            return File(resultBytes, "image/png", $"preview-nobg-{Path.GetFileNameWithoutExtension(file.FileName)}.png");
+            if (!AdminPreviewImageValidation.TryDetectImageFormat(header.AsSpan(0, read), out var verifiedContentType, out var signatureExtension)
+                || !AdminPreviewImageValidation.ExtensionMatchesSignature(declaredExtension, signatureExtension))
+            {
+                return BadRequest(new ErrorResponse(
+                    "Only valid JPEG, PNG, or WEBP image data is allowed (content must match extension)."));
+            }
+
+            var baseName = Path.GetFileNameWithoutExtension(safeFileName);
+            if (string.IsNullOrEmpty(baseName))
+            {
+                baseName = "image";
+            }
+
+            if (baseName.Length > 120)
+            {
+                baseName = baseName[..120];
+            }
+
+            var multipartFileName = baseName + signatureExtension;
+
+            var resultBytes = await backgroundRemovalService.RemoveBackgroundAsync(
+                stream, multipartFileName, verifiedContentType, cancellationToken);
+
+            return File(resultBytes, "image/png", $"preview-nobg-{baseName}.png");
         }
         catch (InvalidOperationException ex)
         {

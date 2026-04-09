@@ -50,56 +50,34 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
             customersQuery = customersQuery.Where(c => c.PrimarySource == sourceFilter);
         }
 
-        var projectedQuery = customersQuery.Select(c => new CustomerAdminProjection
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Email = c.Email,
-            Phone = c.PhoneNumber,
-            Status = c.Status,
-            PrimarySource = c.PrimarySource,
-            LastContactAtUtc = c.LastContactAtUtc,
-            CreatedAt = c.CreatedAt,
-            UpdatedAt = c.UpdatedAt,
-            InquiryCount = dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
-            LastInquiryAt = dbContext.Inquiries
-                .Where(i => i.CustomerId == c.Id)
-                .Max(i => (DateTime?)i.CreatedAt),
-            PurchaseCount = dbContext.ProductSales.Count(s => s.CustomerId == c.Id),
-            TotalSpent = dbContext.ProductSales
-                .Where(s => s.CustomerId == c.Id)
-                .Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m,
-            LastPurchaseAtUtc = dbContext.ProductSales
-                .Where(s => s.CustomerId == c.Id)
-                .Max(s => (DateTime?)s.SoldAtUtc)
-        });
-
         var totalCount = await customersQuery.CountAsync(cancellationToken);
         var page = parameters.SafePage;
         var pageSize = parameters.SafePageSize;
 
-        var items = await projectedQuery
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
+        var items = await customersQuery
+            .OrderByDescending(c => c.CreatedAt)
+            .ThenByDescending(c => c.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(c => new CustomerListItemDto(
                 c.Id,
                 c.Name,
                 c.Email,
-                c.Phone,
+                c.PhoneNumber,
                 c.Status.ToString(),
                 c.PrimarySource.ToString(),
-                (c.PurchaseCount > 0 || c.PrimarySource == CustomerSource.Sale
+                (dbContext.ProductSales.Count(s => s.CustomerId == c.Id) > 0
+                        || c.PrimarySource == CustomerSource.Sale
                     ? CustomerSource.Sale
                     : c.PrimarySource == CustomerSource.Manual
                         ? CustomerSource.Manual
                         : CustomerSource.Inquiry).ToString(),
-                c.InquiryCount,
-                c.LastInquiryAt,
-                c.PurchaseCount,
-                c.TotalSpent,
-                c.LastPurchaseAtUtc,
+                dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
+                dbContext.Inquiries.Where(i => i.CustomerId == c.Id).Max(i => (DateTime?)i.CreatedAt),
+                dbContext.ProductSales.Count(s => s.CustomerId == c.Id),
+                dbContext.ProductSales.Where(s => s.CustomerId == c.Id).Sum(s => (decimal?)s.FinalSoldPrice)
+                    ?? 0m,
+                dbContext.ProductSales.Where(s => s.CustomerId == c.Id).Max(s => (DateTime?)s.SoldAtUtc),
                 c.LastContactAtUtc,
                 c.CreatedAt,
                 c.UpdatedAt))
@@ -124,16 +102,11 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 c.PrimarySource.ToString(),
                 c.Notes,
                 dbContext.Inquiries.Count(i => i.CustomerId == c.Id),
-                dbContext.Inquiries
-                    .Where(i => i.CustomerId == c.Id)
-                    .Max(i => (DateTime?)i.CreatedAt),
+                dbContext.Inquiries.Where(i => i.CustomerId == c.Id).Max(i => (DateTime?)i.CreatedAt),
                 dbContext.ProductSales.Count(s => s.CustomerId == c.Id),
-                dbContext.ProductSales
-                    .Where(s => s.CustomerId == c.Id)
-                    .Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m,
-                dbContext.ProductSales
-                    .Where(s => s.CustomerId == c.Id)
-                    .Max(s => (DateTime?)s.SoldAtUtc),
+                dbContext.ProductSales.Where(s => s.CustomerId == c.Id).Sum(s => (decimal?)s.FinalSoldPrice)
+                    ?? 0m,
+                dbContext.ProductSales.Where(s => s.CustomerId == c.Id).Max(s => (DateTime?)s.SoldAtUtc),
                 c.LastContactAtUtc,
                 c.CreatedAt,
                 c.UpdatedAt))
@@ -145,21 +118,4 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
         await dbContext.Customers.AddAsync(customer, cancellationToken);
     }
 
-    private sealed class CustomerAdminProjection
-    {
-        public required Guid Id { get; init; }
-        public string? Name { get; init; }
-        public string? Email { get; init; }
-        public string? Phone { get; init; }
-        public required CustomerStatus Status { get; init; }
-        public required CustomerSource PrimarySource { get; init; }
-        public DateTime? LastContactAtUtc { get; init; }
-        public required DateTime CreatedAt { get; init; }
-        public required DateTime UpdatedAt { get; init; }
-        public required int InquiryCount { get; init; }
-        public DateTime? LastInquiryAt { get; init; }
-        public required int PurchaseCount { get; init; }
-        public required decimal TotalSpent { get; init; }
-        public DateTime? LastPurchaseAtUtc { get; init; }
-    }
 }

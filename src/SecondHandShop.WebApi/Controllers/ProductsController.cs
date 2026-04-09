@@ -64,10 +64,9 @@ public class ProductsController(
             return NotFound(new ErrorResponse("Product was not found."));
         }
 
-        var categories = await categoryRepository.ListActiveAsync(cancellationToken);
-        var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
+        var categoryName = await ResolveCategoryNameForPublicProductAsync(product.CategoryId, cancellationToken);
         var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
-        return Ok(ToProductResponse(product, images, categoryMap));
+        return Ok(ToProductResponse(product, images, categoryName));
     }
 
     [HttpGet("slug/{slug}")]
@@ -80,19 +79,27 @@ public class ProductsController(
             return NotFound(new ErrorResponse("Product was not found."));
         }
 
-        var categories = await categoryRepository.ListActiveAsync(cancellationToken);
-        var categoryMap = categories.ToDictionary(x => x.Id, x => x.Name);
+        var categoryName = await ResolveCategoryNameForPublicProductAsync(product.CategoryId, cancellationToken);
         var images = await productImageRepository.ListByProductIdAsync(product.Id, cancellationToken);
-        return Ok(ToProductResponse(product, images, categoryMap));
+        return Ok(ToProductResponse(product, images, categoryName));
+    }
+
+    /// <summary>
+    /// Single category by id (PK lookup). Only exposes the name when the category is active, matching list/search behavior.
+    /// </summary>
+    private async Task<string?> ResolveCategoryNameForPublicProductAsync(
+        Guid categoryId,
+        CancellationToken cancellationToken)
+    {
+        var category = await categoryRepository.GetByIdAsync(categoryId, cancellationToken);
+        return category is { IsActive: true } ? category.Name : null;
     }
 
     private ProductResponse ToProductResponse(
         Domain.Entities.Product product,
         IReadOnlyList<Domain.Entities.ProductImage> images,
-        IReadOnlyDictionary<Guid, string> categoryMap)
+        string? categoryName)
     {
-        categoryMap.TryGetValue(product.CategoryId, out var categoryName);
-
         return new ProductResponse(
             product.Id,
             product.Title,

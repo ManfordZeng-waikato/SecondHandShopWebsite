@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using SecondHandShop.Application.Abstractions.Security;
+using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.UseCases.Inquiries;
+using SecondHandShop.Domain.Common;
 using SecondHandShop.WebApi.Contracts;
+using AppValidationException = SecondHandShop.Application.Common.Exceptions.ValidationException;
 
 namespace SecondHandShop.WebApi.Filters;
 
@@ -11,6 +15,15 @@ public sealed class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IEx
 {
     public void OnException(ExceptionContext context)
     {
+        // Client disconnected or aborted the request (e.g. React Strict Mode double-fetch, fast navigation).
+        // Do not surface as HTTP 500 or log as a server failure.
+        if (context.Exception is OperationCanceledException && context.HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            context.ExceptionHandled = true;
+            context.Result = new StatusCodeResult(StatusCodes.Status499ClientClosedRequest);
+            return;
+        }
+
         var (statusCode, message) = context.Exception switch
         {
             KeyNotFoundException ex =>
@@ -19,14 +32,20 @@ public sealed class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IEx
             ArgumentException ex =>
                 (StatusCodes.Status400BadRequest, ex.Message),
 
+            AppValidationException ex =>
+                (StatusCodes.Status400BadRequest, ex.Message),
+
             InquiryTurnstileValidationException ex =>
                 (StatusCodes.Status400BadRequest, ex.Message),
 
             UnauthorizedAccessException =>
                 (StatusCodes.Status401Unauthorized, "Invalid credentials"),
 
-            InvalidOperationException ex =>
+            ConflictException ex =>
                 (StatusCodes.Status409Conflict, ex.Message),
+
+            DomainRuleViolationException ex =>
+                (StatusCodes.Status422UnprocessableEntity, ex.Message),
 
             // DbUpdateConcurrencyException inherits from DbUpdateException; match it first.
             DbUpdateConcurrencyException =>
@@ -53,10 +72,18 @@ public sealed class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IEx
         if (statusCode == 0)
             return;
 
-        if (statusCode >= 500)
+        if (statusCode >= StatusCodes.Status500InternalServerError)
         {
             logger.LogError(context.Exception,
                 "Unhandled server error in {Action}", context.ActionDescriptor.DisplayName);
+        }
+        else if (statusCode >= StatusCodes.Status400BadRequest)
+        {
+            logger.LogWarning(context.Exception,
+                "Handled client error {StatusCode} in {Action}: {Message}",
+                statusCode,
+                context.ActionDescriptor.DisplayName,
+                message);
         }
 
         context.Result = new ObjectResult(new ErrorResponse(message!)) { StatusCode = statusCode };

@@ -1,5 +1,6 @@
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -37,7 +38,7 @@ public class CustomerResolutionService(
         if (customerByEmail is not null && customerByPhone is not null
             && customerByEmail.Id != customerByPhone.Id)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "Email and phone number belong to different customers.");
         }
 

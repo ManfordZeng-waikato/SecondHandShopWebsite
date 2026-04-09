@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Common;
@@ -9,6 +11,26 @@ namespace SecondHandShop.Infrastructure.Persistence.Repositories;
 
 public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepository
 {
+    public async Task AcquireAntiSpamConcurrencyLocksAsync(
+        string requestIpAddress,
+        Guid productId,
+        string? normalizedEmail,
+        string messageHash,
+        CancellationToken cancellationToken = default)
+    {
+        // Fixed lock order: message hash → IP+product → email+product (avoids deadlocks).
+        await AcquirePostgresAdvisoryXactLockAsync("msg\u001f" + messageHash, cancellationToken);
+        await AcquirePostgresAdvisoryXactLockAsync(
+            "ip\u001f" + requestIpAddress + "\u001f" + productId,
+            cancellationToken);
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            await AcquirePostgresAdvisoryXactLockAsync(
+                "em\u001f" + normalizedEmail + "\u001f" + productId,
+                cancellationToken);
+        }
+    }
+
     public async Task AddAsync(Inquiry inquiry, CancellationToken cancellationToken = default)
     {
         await dbContext.Inquiries.AddAsync(inquiry, cancellationToken);
@@ -130,5 +152,22 @@ public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepo
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CustomerInquiryItemDto>(items, page, pageSize, totalCount);
+    }
+
+    private static void DeriveAdvisoryLockKeys(string keyMaterial, out int k1, out int k2)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(keyMaterial));
+        k1 = BitConverter.ToInt32(hash.AsSpan(0, 4));
+        k2 = BitConverter.ToInt32(hash.AsSpan(4, 4));
+    }
+
+    private async Task AcquirePostgresAdvisoryXactLockAsync(
+        string keyMaterial,
+        CancellationToken cancellationToken)
+    {
+        DeriveAdvisoryLockKeys(keyMaterial, out var k1, out var k2);
+        await dbContext.Database.ExecuteSqlAsync(
+            $"""SELECT pg_advisory_xact_lock({k1}, {k2})""",
+            cancellationToken);
     }
 }

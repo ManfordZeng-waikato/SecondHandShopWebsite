@@ -58,6 +58,25 @@ export async function revokeLordCookie(): Promise<void> {
   }
 }
 
+/** Renews HttpOnly JWT + cookie; call periodically while signed in so idle forms do not lose the session. */
+export async function refreshAdminSession(): Promise<void> {
+  try {
+    const res = await fetch(`${env.apiBaseUrl}/api/lord/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      return;
+    }
+    const data = (await res.json()) as { expiresAt?: string };
+    if (typeof data.expiresAt === 'string') {
+      setSessionHintExpiresAt(data.expiresAt);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Call after successful login with API expiresAt (JWT clock); then await initializeAdminAuth(). */
 export function persistSessionAfterLogin(expiresAt: string): void {
   setSessionHintExpiresAt(expiresAt);

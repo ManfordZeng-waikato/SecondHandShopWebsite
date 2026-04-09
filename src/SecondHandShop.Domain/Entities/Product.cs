@@ -26,6 +26,16 @@ public class Product : AuditableEntity
     public bool IsFeatured { get; private set; }
     public int? FeaturedSortOrder { get; private set; }
 
+    /// <summary>
+    /// Denormalized from product images: primary first, then ascending sort order (same as list queries).
+    /// </summary>
+    public string? CoverImageKey { get; private set; }
+
+    /// <summary>
+    /// Denormalized count of images for this product.
+    /// </summary>
+    public int ImageCount { get; private set; }
+
     public static Product Create(
         string title,
         string slug,
@@ -57,8 +67,20 @@ public class Product : AuditableEntity
             Status = ProductStatus.Available
         };
 
+        product.CoverImageKey = null;
+        product.ImageCount = 0;
         product.SetCreatedAudit(createdByAdminUserId, utcNow);
         return product;
+    }
+
+    /// <summary>
+    /// Keeps cover key and image count in sync with the current image set after add/remove/reorder operations.
+    /// </summary>
+    public void SyncImageDenormalization(string? coverImageKey, int imageCount, Guid? updatedByAdminUserId, DateTime utcNow)
+    {
+        CoverImageKey = coverImageKey;
+        ImageCount = imageCount;
+        Touch(updatedByAdminUserId, utcNow);
     }
 
     public void UpdateDetails(
@@ -124,7 +146,7 @@ public class Product : AuditableEntity
     {
         if (isFeatured && Status != ProductStatus.Available)
         {
-            throw new InvalidOperationException("Only available products can be featured.");
+            throw new DomainRuleViolationException("Only available products can be featured.");
         }
 
         if (featuredSortOrder.HasValue &&

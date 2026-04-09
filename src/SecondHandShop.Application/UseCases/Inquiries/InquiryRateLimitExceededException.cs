@@ -6,4 +6,9 @@ public sealed class InquiryRateLimitExceededException : Exception
         : base(message)
     {
     }
+
+    public InquiryRateLimitExceededException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
+using SecondHandShop.Domain.Common;
 using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
@@ -28,7 +29,7 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
     }
 }
 
-public sealed record CreateInquiryRequest
+public sealed record CreateInquiryRequest : IValidatableObject
 {
     public required Guid ProductId { get; init; }
 
@@ -36,7 +37,6 @@ public sealed record CreateInquiryRequest
     public string? CustomerName { get; init; }
 
     [MaxLength(256)]
-    [RegularExpression(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", ErrorMessage = "Invalid email format.")]
     public string? Email { get; init; }
 
     [MaxLength(40)]
@@ -49,6 +49,14 @@ public sealed record CreateInquiryRequest
 
     [Required]
     public required string TurnstileToken { get; init; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!string.IsNullOrWhiteSpace(Email) && !EmailAddressSyntaxValidator.IsValid(Email))
+        {
+            yield return new ValidationResult("Invalid email format.", [nameof(Email)]);
+        }
+    }
 }
 
 public sealed record CreateInquiryResponse(Guid InquiryId);

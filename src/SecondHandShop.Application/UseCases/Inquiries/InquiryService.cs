@@ -4,13 +4,20 @@ using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Security;
+using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Customers;
+using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Application.UseCases.Inquiries;
 
+/// <summary>
+/// Public inquiry submission. Anti-spam windows are enforced under a DB transaction with
+/// PostgreSQL advisory locks so concurrent requests cannot all pass count checks before insert;
+/// Turnstile and IP cooldown remain best-effort layers on top.
+/// </summary>
 public class InquiryService(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
@@ -71,13 +78,13 @@ public class InquiryService(
 
         if (product.Status != ProductStatus.Available)
         {
-            throw new InvalidOperationException("Inquiries can only be submitted for available products.");
+            throw new DomainRuleViolationException("Inquiries can only be submitted for available products.");
         }
 
         var category = await categoryRepository.GetByIdAsync(product.CategoryId, cancellationToken);
         if (category is null || !category.IsActive)
         {
-            throw new InvalidOperationException("Inquiries can only be submitted for products in an active category.");
+            throw new DomainRuleViolationException("Inquiries can only be submitted for products in an active category.");
         }
 
         var normalizedName = Normalize(command.CustomerName);
@@ -87,6 +94,14 @@ public class InquiryService(
         var utcNow = clock.UtcNow;
 
         await EnsureIpNotInCooldownAsync(normalizedRequestIpAddress, utcNow, cancellationToken);
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+        await inquiryRepository.AcquireAntiSpamConcurrencyLocksAsync(
+            normalizedRequestIpAddress,
+            command.ProductId,
+            normalizedEmail,
+            messageHash,
+            cancellationToken);
 
         try
         {
@@ -106,8 +121,10 @@ public class InquiryService(
                 utcNow,
                 cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             throw new InquiryRateLimitExceededException(
-                $"{ex.Message} This IP is temporarily blocked for 5 minutes.");
+                $"{ex.Message} This IP is temporarily blocked for 5 minutes.",
+                ex);
         }
 
         var customer = await customerResolutionService.GetOrCreateCustomerAsync(
@@ -130,6 +147,7 @@ public class InquiryService(
 
         await inquiryRepository.AddAsync(inquiry, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         // The inquiry is persisted in Pending status with NextRetryAt = null so the background
         // InquiryEmailDispatcherService will pick it up immediately. Notify wakes the dispatcher
@@ -139,6 +157,10 @@ public class InquiryService(
         return inquiry.Id;
     }
 
+    /// <summary>
+    /// Sliding-window limits; must run after <see cref="IInquiryRepository.AcquireAntiSpamConcurrencyLocksAsync"/>
+    /// in the same transaction so counts and inserts are serialized.
+    /// </summary>
     private async Task EnforceAntiSpamRulesAsync(
         Guid productId,
         string requestIpAddress,

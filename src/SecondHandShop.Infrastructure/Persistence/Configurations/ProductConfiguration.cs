@@ -48,6 +48,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.FeaturedSortOrder)
             .IsRequired(false);
 
+        builder.Property(x => x.CoverImageKey)
+            .HasMaxLength(500);
+
+        builder.Property(x => x.ImageCount)
+            .HasDefaultValue(0)
+            .IsRequired();
+
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 

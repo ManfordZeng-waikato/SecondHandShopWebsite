@@ -1,3 +1,4 @@
+using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Domain.Entities;
@@ -100,6 +101,11 @@ public class Customer
         if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phoneNumber))
         {
             throw new ArgumentException("At least one contact method (email or phone) is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(email) && !EmailAddressSyntaxValidator.IsValid(email))
+        {
+            throw new ArgumentException("Invalid email format.", nameof(email));
         }
     }
 

@@ -6,6 +6,18 @@ namespace SecondHandShop.Application.Abstractions.Persistence;
 
 public interface IInquiryRepository
 {
+    /// <summary>
+    /// Acquires PostgreSQL transaction-scoped advisory locks so that anti-spam count checks and
+    /// subsequent inserts for the same logical keys cannot interleave. Must be called only while a
+    /// database transaction is active. Locks are acquired in a fixed order to avoid deadlocks.
+    /// </summary>
+    Task AcquireAntiSpamConcurrencyLocksAsync(
+        string requestIpAddress,
+        Guid productId,
+        string? normalizedEmail,
+        string messageHash,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(Inquiry inquiry, CancellationToken cancellationToken = default);
     Task<int> CountRecentByIpAndProductAsync(
         string requestIpAddress,

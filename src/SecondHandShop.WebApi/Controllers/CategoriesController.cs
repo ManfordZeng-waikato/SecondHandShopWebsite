@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using SecondHandShop.Application.Abstractions.Persistence;
 
 namespace SecondHandShop.WebApi.Controllers;
@@ -8,6 +9,8 @@ namespace SecondHandShop.WebApi.Controllers;
 public class CategoriesController(ICategoryRepository categoryRepository) : ControllerBase
 {
     [HttpGet]
+    [OutputCache(PolicyName = "CategoriesList")]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
     public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> ListAsync(CancellationToken cancellationToken)
     {
         var categories = await categoryRepository.ListActiveAsync(cancellationToken);
