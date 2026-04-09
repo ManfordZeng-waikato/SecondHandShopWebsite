@@ -90,6 +90,11 @@ public class CustomerRepository(SecondHandShopDbContext dbContext) : ICustomerRe
                 c.Phone,
                 c.Status.ToString(),
                 c.PrimarySource.ToString(),
+                (c.PurchaseCount > 0 || c.PrimarySource == CustomerSource.Sale
+                    ? CustomerSource.Sale
+                    : c.PrimarySource == CustomerSource.Manual
+                        ? CustomerSource.Manual
+                        : CustomerSource.Inquiry).ToString(),
                 c.InquiryCount,
                 c.LastInquiryAt,
                 c.PurchaseCount,
