@@ -711,23 +711,30 @@ export function AdminProductsPage() {
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          <Stack direction="row" spacing={0.5} alignItems="center">
-                            <Switch
-                              checked={draft.isFeatured}
-                              onChange={(event) => {
-                                const previousDraft = draft;
-                                setDraft(product.id, {
-                                  isFeatured: event.target.checked,
-                                  featuredSortOrder: event.target.checked ? previousDraft.featuredSortOrder : '',
-                                });
-                              }}
-                              disabled={featuredMutation.isPending || !canToggleFeatured}
-                              size="small"
-                              inputProps={{ 'aria-label': `Toggle featured state for ${product.title}` }}
-                            />
-                            <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
-                              Featured
-                            </Typography>
+                          <Stack spacing={0.25} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}>
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                              <Switch
+                                checked={draft.isFeatured}
+                                onChange={(event) => {
+                                  const previousDraft = draft;
+                                  setDraft(product.id, {
+                                    isFeatured: event.target.checked,
+                                    featuredSortOrder: event.target.checked ? previousDraft.featuredSortOrder : '',
+                                  });
+                                }}
+                                disabled={featuredMutation.isPending || !canToggleFeatured}
+                                size="small"
+                                inputProps={{ 'aria-label': `Toggle featured state for ${product.title}` }}
+                              />
+                              <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                Featured
+                              </Typography>
+                            </Stack>
+                            {!canEnableFeatured && (
+                              <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', pl: 0.5 }}>
+                                Only available products can be featured.
+                              </Typography>
+                            )}
                           </Stack>
 
                           <TextField
@@ -774,12 +781,6 @@ export function AdminProductsPage() {
                           </Button>
                         </Stack>
                       </Stack>
-
-                      {!canEnableFeatured && (
-                        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-                          Only available products can be featured.
-                        </Typography>
-                      )}
                     </Stack>
                   </Box>
                 </Stack>
