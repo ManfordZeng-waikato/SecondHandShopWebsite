@@ -1,11 +1,10 @@
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using SecondHandShop.Application.Abstractions.Storage;
 
 namespace SecondHandShop.Infrastructure.Services;
 
-public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageService
+public sealed class R2ObjectStorageService(IAmazonS3 s3Client, R2Options options) : IObjectStorageService
 {
     private static readonly TimeSpan DefaultPresignExpiry = TimeSpan.FromMinutes(5);
 
@@ -25,8 +24,6 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
             throw new ArgumentException("Content type is required.", nameof(request));
         }
 
-        using var client = CreateS3Client();
-
         var expiry = request.ExpiresIn <= TimeSpan.Zero ? DefaultPresignExpiry : request.ExpiresIn;
         var expiresAtUtc = DateTime.UtcNow.Add(expiry);
 
@@ -39,7 +36,7 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
             Expires = expiresAtUtc
         };
 
-        var url = await client.GetPreSignedURLAsync(preSignedRequest);
+        var url = await s3Client.GetPreSignedURLAsync(preSignedRequest);
         return new PresignedUploadUrlResult(url, expiresAtUtc);
     }
 
@@ -52,9 +49,7 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
             throw new ArgumentException("Object key is required.", nameof(objectKey));
         }
 
-        using var client = CreateS3Client();
-
-        await client.DeleteObjectAsync(new DeleteObjectRequest
+        await s3Client.DeleteObjectAsync(new DeleteObjectRequest
         {
             BucketName = options.BucketName,
             Key = objectKey
@@ -70,17 +65,5 @@ public sealed class R2ObjectStorageService(R2Options options) : IObjectStorageSe
 
         var trimmedBaseUrl = options.WorkerBaseUrl.TrimEnd('/');
         return $"{trimmedBaseUrl}/{objectKey}";
-    }
-
-    private AmazonS3Client CreateS3Client()
-    {
-        var endpoint = $"https://{options.AccountId}.r2.cloudflarestorage.com";
-        var credentials = new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey);
-        var config = new AmazonS3Config
-        {
-            ServiceURL = endpoint,
-            ForcePathStyle = true
-        };
-        return new AmazonS3Client(credentials, config);
     }
 }

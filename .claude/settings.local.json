@@ -12,7 +12,8 @@
       "Bash(dotnet ef:*)",
       "Bash(taskkill //PID 12524 //F)",
       "Bash(npm run:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }

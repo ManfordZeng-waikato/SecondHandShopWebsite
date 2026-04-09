@@ -13,7 +13,23 @@ using SecondHandShop.WebApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+allowedOrigins = allowedOrigins
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim().TrimEnd('/'))
+    .ToArray();
+
+// Fail-fast: a silently-empty CORS policy leads to confusing "request blocked" symptoms in the
+// browser and tempts maintainers to "fix" it with AllowAnyOrigin() + AllowCredentials() — a
+// combination ASP.NET rejects at runtime, which then tempts a regression to SetIsOriginAllowed(_ => true).
+// Both are insecure. Require the operator to configure Cors:AllowedOrigins explicitly instead.
+if (allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException(
+        "Cors:AllowedOrigins is not configured. Set at least one explicit origin (e.g. \"https://localhost:5173\"). " +
+        "DO NOT use AllowAnyOrigin() with AllowCredentials(), and DO NOT use SetIsOriginAllowed(_ => true).");
+}
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMediatR(cfg =>
@@ -127,16 +143,18 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
+    // SECURITY: this policy uses AllowCredentials() because the admin session cookie is HttpOnly
+    // and must be forwarded from the SPA origin. As a consequence:
+    //   - NEVER combine this with AllowAnyOrigin() — ASP.NET will throw at runtime.
+    //   - NEVER replace WithOrigins(...) with SetIsOriginAllowed(_ => true) as a "quick fix";
+    //     that is equivalent to allow-any-origin + credentials and exposes the site to CSRF
+    //     from arbitrary origins.
+    // To permit a new origin, add it to Cors:AllowedOrigins in configuration.
     options.AddPolicy(FrontendCorsPolicy, policy =>
-    {
-        if (allowedOrigins is { Length: > 0 })
-        {
-            policy.WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        }
-    });
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 builder.Services.AddHttpsRedirection(options =>
 {

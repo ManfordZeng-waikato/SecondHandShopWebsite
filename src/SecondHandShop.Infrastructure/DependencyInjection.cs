@@ -1,3 +1,5 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +49,19 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton(r2Options);
+        // AmazonS3Client is thread-safe and designed for singleton reuse — sharing the HTTP
+        // connection pool avoids rebuilding TLS sessions on every presign/delete call.
+        services.AddSingleton<IAmazonS3>(_ =>
+        {
+            r2Options.Validate();
+            var credentials = new BasicAWSCredentials(r2Options.AccessKeyId, r2Options.SecretAccessKey);
+            var config = new AmazonS3Config
+            {
+                ServiceURL = $"https://{r2Options.AccountId}.r2.cloudflarestorage.com",
+                ForcePathStyle = true
+            };
+            return new AmazonS3Client(credentials, config);
+        });
         services.AddScoped<IObjectStorageService, R2ObjectStorageService>();
         services.AddSingleton(removeBgOptions);
         services.AddHttpClient<IBackgroundRemovalService, RemoveBgService>(client =>
@@ -66,6 +81,10 @@ public static class DependencyInjection
             smtpOptions.Enabled
                 ? provider.GetRequiredService<SmtpEmailSender>()
                 : provider.GetRequiredService<NoOpEmailSender>());
+
+        // Singleton signal bridges the HTTP request pipeline and the background dispatcher.
+        services.AddSingleton<IInquiryDispatchSignal, InquiryDispatchSignal>();
+        services.AddHostedService<InquiryEmailDispatcherService>();
 
         return services;
     }

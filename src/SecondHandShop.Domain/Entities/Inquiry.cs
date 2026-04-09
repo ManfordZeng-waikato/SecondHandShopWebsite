@@ -88,6 +88,20 @@ public partial class Inquiry
         NextRetryAt = nextRetryAt;
     }
 
+    /// <summary>
+    /// Records a transient send failure while keeping the inquiry in the Pending queue so the
+    /// dispatcher will pick it up again after <paramref name="nextRetryAt"/>. Use MarkEmailFailed
+    /// instead for terminal failures (no further retries).
+    /// </summary>
+    public void RecordTransientFailure(string error, DateTime nextRetryAt)
+    {
+        EmailDeliveryStatus = EmailDeliveryStatus.Pending;
+        DeliveryError = string.IsNullOrWhiteSpace(error) ? "Unknown mail delivery error." : error.Trim();
+        DeliveredAt = null;
+        EmailSendAttempts += 1;
+        NextRetryAt = nextRetryAt;
+    }
+
     public void RequeueForEmail(DateTime? nextRetryAt)
     {
         EmailDeliveryStatus = EmailDeliveryStatus.Pending;
