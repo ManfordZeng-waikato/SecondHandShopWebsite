@@ -23,8 +23,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres;";
+        var connectionString = PostgresConnectionStringResolver.Resolve(configuration);
         var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
         var r2Options = R2Options.FromConfiguration(configuration);
         var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);

@@ -179,7 +179,37 @@ dotnet ef database update \
 dotnet run --project src/SecondHandShop.WebApi
 ```
 
-Configure `appsettings.Development.json` for database connection, JWT key, admin seed credentials, and optional integrations (R2, SMTP, Turnstile, remove.bg).
+Set the backend secrets via environment variables or `dotnet user-secrets` rather than committing them into `appsettings.Development.json`.
+
+For Supabase Postgres, set `ConnectionStrings__DefaultConnection` to the connection string from the Supabase dashboard. Both standard Npgsql strings and `postgresql://...` URIs are supported.
+
+Use `ConnectionStrings__MigrationConnection` if you want EF Core migrations to use a different connection string than the runtime app. This is useful with Supabase when you run the app through the pooler but run schema migrations through the direct database connection.
+
+PowerShell example:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = "Host=YOUR_HOST;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
+```
+
+Or with user secrets:
+
+```bash
+dotnet user-secrets --project src/SecondHandShop.WebApi set "ConnectionStrings:DefaultConnection" "Host=YOUR_HOST;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
+```
+
+Then apply migrations:
+
+```bash
+dotnet ef database update --project src/SecondHandShop.Infrastructure --startup-project src/SecondHandShop.WebApi
+```
+
+If you manage schema changes separately, disable startup auto-migrations:
+
+```powershell
+$env:Database__ApplyMigrationsOnStartup = "false"
+```
+
+Also configure JWT key, admin seed credentials, and optional integrations (R2, SMTP, Turnstile, remove.bg).
 
 ### Frontend
 

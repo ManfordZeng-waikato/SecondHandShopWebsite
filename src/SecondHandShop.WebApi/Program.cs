@@ -251,14 +251,25 @@ var app = builder.Build();
 
 app.Services.GetRequiredService<IOptions<AdminAuthCookieOptions>>().Value.Validate();
 
-await using (var migrateScope = app.Services.CreateAsyncScope())
+var applyMigrationsOnStartup = builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+if (applyMigrationsOnStartup)
 {
+    await using var migrateScope = app.Services.CreateAsyncScope();
     var db = migrateScope.ServiceProvider.GetRequiredService<SecondHandShopDbContext>();
     await db.Database.MigrateAsync();
 }
 
-await AdminSeedService.SeedAdminUserAsync(app.Services);
-await CatalogSeedService.SeedDefaultCategoriesIfEmptyAsync(app.Services);
+var seedAdminOnStartup = builder.Configuration.GetValue("Database:SeedAdminOnStartup", true);
+if (seedAdminOnStartup)
+{
+    await AdminSeedService.SeedAdminUserAsync(app.Services);
+}
+
+var seedCatalogOnStartup = builder.Configuration.GetValue("Database:SeedCatalogOnStartup", true);
+if (seedCatalogOnStartup)
+{
+    await CatalogSeedService.SeedDefaultCategoriesIfEmptyAsync(app.Services);
+}
 
 app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
