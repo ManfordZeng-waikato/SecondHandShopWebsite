@@ -1,6 +1,10 @@
 namespace SecondHandShop.Application.Contracts.Sales;
 
-public sealed record SaveProductSaleRequest(
+/// <summary>
+/// Input to mark a product as sold. Creates a new <c>ProductSale</c> row; never updates
+/// an existing one. Only valid when the product is currently Available or OffShelf.
+/// </summary>
+public sealed record MarkProductSoldRequest(
     Guid ProductId,
     decimal FinalSoldPrice,
     DateTime SoldAtUtc,

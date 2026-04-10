@@ -5,7 +5,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,15 +16,10 @@ import {
   Typography,
 } from '@mui/material';
 import type { AxiosError } from 'axios';
-import type { ProductSaleDto, SaveProductSaleInput } from '../../../entities/sale/types';
+import type { MarkProductSoldInput } from '../../../entities/sale/types';
 import { paymentMethodOptions, paymentMethodLabels } from '../../../entities/sale/types';
 import type { CustomerListItem } from '../../../entities/customer/types';
-import {
-  createProductSale,
-  fetchAdminCustomers,
-  fetchProductSale,
-  updateProductSale,
-} from '../api/adminApi';
+import { fetchAdminCustomers, markProductSold } from '../api/adminApi';
 
 export interface ProductSaleDialogProps {
   open: boolean;
@@ -58,6 +52,12 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
   return typeof msg === 'string' && msg.trim().length > 0 ? msg : fallback;
 }
 
+/**
+ * Dialog for recording a new sale on an Available or OffShelf product. Each submission
+ * creates a new ProductSale history row — this dialog never edits an existing sale
+ * (history is immutable; use the revert flow and then mark sold again if a correction
+ * is needed).
+ */
 export function ProductSaleDialog({
   open,
   productId,
@@ -68,7 +68,6 @@ export function ProductSaleDialog({
 }: ProductSaleDialogProps) {
   const queryClient = useQueryClient();
 
-  // Form state
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
@@ -79,14 +78,6 @@ export function ProductSaleDialog({
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerListItem | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
 
-  // Fetch existing sale record
-  const saleQuery = useQuery({
-    queryKey: ['product-sale', productId],
-    queryFn: () => fetchProductSale(productId!),
-    enabled: open && Boolean(productId),
-  });
-
-  // Customer search for autocomplete
   const customerSearchQuery = useQuery({
     queryKey: ['admin-customers-search', customerSearch],
     queryFn: () => fetchAdminCustomers({ search: customerSearch, pageSize: 10 }),
@@ -94,46 +85,29 @@ export function ProductSaleDialog({
     staleTime: 30_000,
   });
 
-  const existingSale: ProductSaleDto | null = saleQuery.data ?? null;
-  const isUpdate = existingSale !== null;
-
-  // Reset form when dialog opens or sale data loads
   useEffect(() => {
     if (!open) return;
 
-    if (existingSale) {
-      setBuyerName(existingSale.buyerName ?? '');
-      setBuyerPhone(existingSale.buyerPhone ?? '');
-      setBuyerEmail(existingSale.buyerEmail ?? '');
-      setFinalSoldPrice(String(existingSale.finalSoldPrice));
-      setSoldAtUtc(toLocalDateTimeValue(existingSale.soldAtUtc));
-      setPaymentMethod(existingSale.paymentMethod ?? '');
-      setNotes(existingSale.notes ?? '');
-      setSelectedCustomer(null);
-    } else {
-      setBuyerName('');
-      setBuyerPhone('');
-      setBuyerEmail('');
-      setFinalSoldPrice(String(productPrice));
-      setSoldAtUtc(toLocalDateTimeValue(null));
-      setPaymentMethod('');
-      setNotes('');
-      setSelectedCustomer(null);
-    }
+    setBuyerName('');
+    setBuyerPhone('');
+    setBuyerEmail('');
+    setFinalSoldPrice(String(productPrice));
+    setSoldAtUtc(toLocalDateTimeValue(null));
+    setPaymentMethod('');
+    setNotes('');
+    setSelectedCustomer(null);
     setCustomerSearch('');
-  }, [open, existingSale, productPrice]);
+  }, [open, productPrice]);
 
   const saveMutation = useMutation({
-    mutationFn: async (input: SaveProductSaleInput) => {
-      if (isUpdate) {
-        return updateProductSale(productId!, input);
-      }
-      return createProductSale(productId!, input);
+    mutationFn: async (input: MarkProductSoldInput) => {
+      if (!productId) throw new Error('Missing product id.');
+      return markProductSold(productId, input);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       await queryClient.invalidateQueries({ queryKey: ['product-sale', productId] });
-      // Also invalidate customer queries so newly created/linked customers appear immediately
+      await queryClient.invalidateQueries({ queryKey: ['product-sale-history', productId] });
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       onSaved();
     },
@@ -143,10 +117,10 @@ export function ProductSaleDialog({
     const price = Number(finalSoldPrice);
     if (Number.isNaN(price) || price < 0) return;
 
-    const input: SaveProductSaleInput = {
+    const input: MarkProductSoldInput = {
       finalSoldPrice: price,
       soldAtUtc: localDateTimeToUtcIso(soldAtUtc),
-      customerId: selectedCustomer?.id ?? (existingSale?.customerId || null),
+      customerId: selectedCustomer?.id ?? null,
       buyerName: buyerName.trim() || null,
       buyerPhone: buyerPhone.trim() || null,
       buyerEmail: buyerEmail.trim() || null,
@@ -167,7 +141,6 @@ export function ProductSaleDialog({
   })();
 
   const canSubmit = !priceError && soldAtUtc.trim() !== '' && !saveMutation.isPending;
-
   const hasBuyerContact = buyerEmail.trim() !== '' || buyerPhone.trim() !== '';
 
   return (
@@ -179,150 +152,142 @@ export function ProductSaleDialog({
       slotProps={{ paper: { sx: { maxHeight: '90vh' } } }}
     >
       <DialogTitle>
-        {isUpdate ? 'Edit Sale Info' : 'Mark as Sold'}
+        Mark as Sold
         <Typography variant="body2" color="text.secondary">
           {productTitle}
         </Typography>
       </DialogTitle>
 
       <DialogContent dividers>
-        {saleQuery.isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Stack spacing={2.5} sx={{ pt: 1 }}>
-            {saveMutation.isError && (
-              <Alert severity="error">
-                {resolveErrorMessage(saveMutation.error, 'Failed to save sale record.')}
-              </Alert>
-            )}
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
+          {saveMutation.isError && (
+            <Alert severity="error">
+              {resolveErrorMessage(saveMutation.error, 'Failed to record sale.')}
+            </Alert>
+          )}
 
-            {/* Price & Date row */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="Final Sold Price"
-                type="number"
-                value={finalSoldPrice}
-                onChange={(e) => setFinalSoldPrice(e.target.value)}
-                error={Boolean(priceError && finalSoldPrice !== '')}
-                helperText={
-                  finalSoldPrice !== '' ? priceError : `Listed price: $${productPrice}`
-                }
-                inputProps={{ min: 0, step: '0.01' }}
-                fullWidth
-                required
-              />
-              <TextField
-                label="Sold At"
-                type="datetime-local"
-                value={soldAtUtc}
-                onChange={(e) => setSoldAtUtc(e.target.value)}
-                fullWidth
-                required
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-            </Stack>
-
-            {/* Buyer info */}
-            <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Buyer Information
-              </Typography>
-              <Typography variant="caption" color="text.disabled">
-                Providing email or phone will automatically create or link a customer record.
-              </Typography>
-            </Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Buyer Name"
-              value={buyerName}
-              onChange={(e) => setBuyerName(e.target.value)}
-              inputProps={{ maxLength: 200 }}
-              fullWidth
-            />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="Buyer Phone"
-                value={buyerPhone}
-                onChange={(e) => setBuyerPhone(e.target.value)}
-                inputProps={{ maxLength: 40 }}
-                fullWidth
-              />
-              <TextField
-                label="Buyer Email"
-                value={buyerEmail}
-                onChange={(e) => setBuyerEmail(e.target.value)}
-                inputProps={{ maxLength: 256 }}
-                fullWidth
-              />
-            </Stack>
-
-            {hasBuyerContact && !selectedCustomer && !existingSale?.customerId && (
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                A customer record will be automatically created or matched from the buyer info above.
-              </Alert>
-            )}
-
-            {/* Linked Customer */}
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Link to Existing Customer (Optional)
-            </Typography>
-            <Autocomplete
-              options={customerSearchQuery.data?.items ?? []}
-              getOptionLabel={(option) =>
-                [option.name, option.email, option.phone].filter(Boolean).join(' — ')
+              label="Final Sold Price"
+              type="number"
+              value={finalSoldPrice}
+              onChange={(e) => setFinalSoldPrice(e.target.value)}
+              error={Boolean(priceError && finalSoldPrice !== '')}
+              helperText={
+                finalSoldPrice !== '' ? priceError : `Listed price: $${productPrice}`
               }
-              getOptionKey={(option) => option.id}
-              value={selectedCustomer}
-              onChange={(_, value) => setSelectedCustomer(value)}
-              onInputChange={(_, value) => setCustomerSearch(value)}
-              loading={customerSearchQuery.isFetching}
-              noOptionsText={customerSearch.length < 2 ? 'Type at least 2 characters' : 'No customers found'}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Linked Customer"
-                  placeholder="Search by name, email or phone..."
-                  helperText={
-                    !selectedCustomer && existingSale?.customerId
-                      ? `Currently linked: ${existingSale.customerId}`
-                      : 'If left empty and buyer email/phone is provided, a customer will be auto-resolved.'
-                  }
-                />
-              )}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-            />
-
-            {/* Payment & Notes */}
-            <Select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              displayEmpty
+              inputProps={{ min: 0, step: '0.01' }}
               fullWidth
-              size="small"
-            >
-              <MenuItem value="">
-                <Typography color="text.secondary">Payment Method (optional)</Typography>
-              </MenuItem>
-              {paymentMethodOptions.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {paymentMethodLabels[m]}
-                </MenuItem>
-              ))}
-            </Select>
-
+              required
+            />
             <TextField
-              label="Notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              multiline
-              minRows={2}
-              maxRows={4}
-              inputProps={{ maxLength: 2000 }}
+              label="Sold At"
+              type="datetime-local"
+              value={soldAtUtc}
+              onChange={(e) => setSoldAtUtc(e.target.value)}
+              fullWidth
+              required
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Stack>
+
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Buyer Information
+            </Typography>
+            <Typography variant="caption" color="text.disabled">
+              Providing email or phone will automatically create or link a customer record.
+            </Typography>
+          </Stack>
+          <TextField
+            label="Buyer Name"
+            value={buyerName}
+            onChange={(e) => setBuyerName(e.target.value)}
+            inputProps={{ maxLength: 200 }}
+            fullWidth
+          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              label="Buyer Phone"
+              value={buyerPhone}
+              onChange={(e) => setBuyerPhone(e.target.value)}
+              inputProps={{ maxLength: 40 }}
+              fullWidth
+            />
+            <TextField
+              label="Buyer Email"
+              value={buyerEmail}
+              onChange={(e) => setBuyerEmail(e.target.value)}
+              inputProps={{ maxLength: 256 }}
               fullWidth
             />
           </Stack>
-        )}
+
+          {hasBuyerContact && !selectedCustomer && (
+            <Alert severity="info" sx={{ py: 0.5 }}>
+              A customer record will be automatically created or matched from the buyer info above.
+            </Alert>
+          )}
+
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Link to Existing Customer (Optional)
+          </Typography>
+          <Autocomplete
+            options={customerSearchQuery.data?.items ?? []}
+            getOptionLabel={(option) =>
+              [option.name, option.email, option.phone].filter(Boolean).join(' — ')
+            }
+            getOptionKey={(option) => option.id}
+            value={selectedCustomer}
+            onChange={(_, value) => setSelectedCustomer(value)}
+            onInputChange={(_, value) => setCustomerSearch(value)}
+            loading={customerSearchQuery.isFetching}
+            noOptionsText={customerSearch.length < 2 ? 'Type at least 2 characters' : 'No customers found'}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Linked Customer"
+                placeholder="Search by name, email or phone..."
+              />
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+          />
+
+          <Select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            displayEmpty
+            fullWidth
+            size="small"
+          >
+            <MenuItem value="">
+              <Typography color="text.secondary">Payment Method (optional)</Typography>
+            </MenuItem>
+            {paymentMethodOptions.map((m) => (
+              <MenuItem key={m} value={m}>
+                {paymentMethodLabels[m]}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <TextField
+            label="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            multiline
+            minRows={2}
+            maxRows={4}
+            inputProps={{ maxLength: 2000 }}
+            fullWidth
+          />
+
+          <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1.25 }}>
+            <Typography variant="caption" color="text.secondary">
+              Each submission creates a new sale record. Once recorded, buyer/price/time fields
+              cannot be edited — to make corrections, revert the sale first.
+            </Typography>
+          </Box>
+        </Stack>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
@@ -331,10 +296,11 @@ export function ProductSaleDialog({
         </Button>
         <Button
           variant="contained"
+          color="error"
           onClick={handleSubmit}
           disabled={!canSubmit}
         >
-          {saveMutation.isPending ? 'Saving...' : isUpdate ? 'Update Sale' : 'Mark as Sold'}
+          {saveMutation.isPending ? 'Saving...' : 'Mark as Sold'}
         </Button>
       </DialogActions>
     </Dialog>

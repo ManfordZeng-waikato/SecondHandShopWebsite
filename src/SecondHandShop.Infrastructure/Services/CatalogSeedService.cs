@@ -22,7 +22,10 @@ public static class CatalogSeedService
         }
 
         var utcNow = DateTime.UtcNow;
-        var createdBy = await dbContext.AdminUsers.Select(x => (Guid?)x.Id).FirstOrDefaultAsync();
+        var createdBy = await dbContext.AdminUsers
+            .OrderBy(x => x.Id)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync();
 
         var categories = new[]
         {

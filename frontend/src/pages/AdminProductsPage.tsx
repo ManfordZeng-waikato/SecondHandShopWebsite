@@ -38,8 +38,14 @@ import {
 import { fetchCategories } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
 import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialog';
+import { RevertSaleDialog } from '../features/admin/components/RevertSaleDialog';
+import { ProductSaleHistoryDialog } from '../features/admin/components/ProductSaleHistoryDialog';
 
+// Filter options (what the admin can search for).
 const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
+// Status values the admin can set directly from the dropdown. "Sold" goes through the
+// sale dialog instead, because it needs a buyer/price; reverting Sold needs a reason.
+const writableStatusOptions: ProductStatus[] = ['Available', 'OffShelf'];
 type FeaturedFilter = 'all' | 'featured' | 'not-featured';
 const FEATURED_SORT_ORDER_MIN = 0;
 const FEATURED_SORT_ORDER_MAX = 999;
@@ -136,8 +142,10 @@ export function AdminProductsPage() {
   const [featuredDrafts, setFeaturedDrafts] = useState<Record<string, FeaturedDraftState>>({});
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
 
-  // Sale dialog
+  // Sale-related dialogs
   const [saleTarget, setSaleTarget] = useState<AdminProductListItem | null>(null);
+  const [revertTarget, setRevertTarget] = useState<AdminProductListItem | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<AdminProductListItem | null>(null);
 
   const featuredFilterParam = useMemo<boolean | undefined>(() => {
     if (featuredFilter === 'all') {
@@ -656,14 +664,18 @@ export function AdminProductsPage() {
                         spacing={2}
                         alignItems={{ xs: 'stretch', lg: 'center' }}
                       >
-                        {/* Status control */}
+                        {/* Status control — Sold is locked; it's only set via Mark as Sold
+                            and only cleared via Revert Sale so history is always recorded. */}
                         <FormControl sx={{ minWidth: 160, maxWidth: 200 }} size="small">
                           <InputLabel id={`status-${product.id}`}>Status</InputLabel>
                           <Select
                             labelId={`status-${product.id}`}
                             label="Status"
                             value={product.status}
-                            disabled={statusMutation.isPending && statusMutation.variables?.productId === product.id}
+                            disabled={
+                              product.status === 'Sold' ||
+                              (statusMutation.isPending && statusMutation.variables?.productId === product.id)
+                            }
                             onChange={(event) =>
                               statusMutation.mutate({
                                 productId: product.id,
@@ -671,23 +683,52 @@ export function AdminProductsPage() {
                               })
                             }
                           >
-                            {statusOptions.map((status) => (
-                              <MenuItem key={status} value={status}>
-                                {status}
+                            {product.status === 'Sold' ? (
+                              <MenuItem value="Sold" disabled>
+                                Sold
                               </MenuItem>
-                            ))}
+                            ) : (
+                              writableStatusOptions.map((status) => (
+                                <MenuItem key={status} value={status}>
+                                  {status}
+                                </MenuItem>
+                              ))
+                            )}
                           </Select>
                         </FormControl>
 
-                        {/* Sale action button */}
+                        {/* Sale action button — Mark as Sold / Revert Sale */}
+                        {product.status === 'Sold' ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="warning"
+                            onClick={() => setRevertTarget(product)}
+                            sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                          >
+                            Revert Sale
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="error"
+                            onClick={() => setSaleTarget(product)}
+                            sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                          >
+                            Mark as Sold
+                          </Button>
+                        )}
+
+                        {/* Sale history button */}
                         <Button
                           size="small"
-                          variant={product.status === 'Sold' ? 'outlined' : 'contained'}
-                          color={product.status === 'Sold' ? 'info' : 'error'}
-                          onClick={() => setSaleTarget(product)}
-                          sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                          variant="text"
+                          color="inherit"
+                          onClick={() => setHistoryTarget(product)}
+                          sx={{ minWidth: 90, alignSelf: { xs: 'stretch', sm: 'center' } }}
                         >
-                          {product.status === 'Sold' ? 'Edit Sale Info' : 'Mark as Sold'}
+                          History
                         </Button>
 
                         {/* Vertical divider on desktop */}
@@ -814,8 +855,26 @@ export function AdminProductsPage() {
         onClose={() => setSaleTarget(null)}
         onSaved={() => {
           setSaleTarget(null);
-          setFeedback({ severity: 'success', message: 'Sale record saved successfully.' });
+          setFeedback({ severity: 'success', message: 'Sale recorded successfully.' });
         }}
+      />
+
+      <RevertSaleDialog
+        open={Boolean(revertTarget)}
+        productId={revertTarget?.id ?? null}
+        productTitle={revertTarget?.title ?? ''}
+        onClose={() => setRevertTarget(null)}
+        onReverted={() => {
+          setRevertTarget(null);
+          setFeedback({ severity: 'success', message: 'Sale reverted. Product is back to Available.' });
+        }}
+      />
+
+      <ProductSaleHistoryDialog
+        open={Boolean(historyTarget)}
+        productId={historyTarget?.id ?? null}
+        productTitle={historyTarget?.title ?? ''}
+        onClose={() => setHistoryTarget(null)}
       />
 
       <Snackbar

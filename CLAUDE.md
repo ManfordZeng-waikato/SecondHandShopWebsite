@@ -105,3 +105,73 @@ PostgreSQL in development (default connection: `Host=localhost;Database=SecondHa
 ## Local HTTPS
 
 The frontend uses `vite-plugin-mkcert` for local HTTPS on port 5173. The backend Kestrel listens on HTTPS port 7266. Both must use HTTPS because cookies use `SameSite=None; Secure`.
+
+
+# Code Generation Rules
+
+## 1. Git Commit Requirement (MANDATORY)
+
+Whenever you modify code, you MUST also generate a Git commit message.
+
+The commit message must follow this format:
+
+<type>(<scope>): <short summary>
+
+- type must be one of:
+  - feat (new feature)
+  - fix (bug fix)
+  - refactor (code improvement, no behavior change)
+  - perf (performance improvement)
+  - docs (documentation)
+  - style (formatting only)
+  - test (tests)
+  - chore (config, build, tooling)
+
+- scope must reflect the module:
+  - product
+  - sale
+  - customer
+  - api
+  - frontend
+  - db
+  - auth
+
+- summary must:
+  - be concise (<= 72 chars)
+  - use present tense (e.g. "add", not "added")
+  - describe what changed
+
+## 2. Commit Body (REQUIRED for non-trivial changes)
+
+For medium/large changes, include:
+
+- Why the change was made
+- What was changed
+- Any important side effects
+
+## 3. Output Format (STRICT)
+
+At the end of your response, ALWAYS output:
+
+---COMMIT MESSAGE---
+<commit message here>
+
+Do NOT skip this.
+
+## 4. Example
+
+feat(sale): add product sale history tracking
+
+- introduce ProductSale status field
+- support cancelling sale instead of overwriting
+- enforce single active sale per product
+
+## 5. If multiple logical changes
+
+Split into multiple commits.
+
+## 6. Never output vague messages like:
+
+- "update code"
+- "fix stuff"
+- "changes"

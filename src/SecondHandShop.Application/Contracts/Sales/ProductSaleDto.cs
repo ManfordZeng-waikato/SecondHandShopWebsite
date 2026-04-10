@@ -13,5 +13,12 @@ public sealed record ProductSaleDto(
     DateTime SoldAtUtc,
     string? PaymentMethod,
     string? Notes,
+    // Lifecycle
+    string Status,                    // "Completed" | "Cancelled"
+    DateTime? CancelledAtUtc,
+    string? CancellationReason,       // nullable enum string
+    string? CancellationNote,
+    // Audit
+    Guid? CreatedByAdminUserId,
     DateTime CreatedAt,
     DateTime UpdatedAt);

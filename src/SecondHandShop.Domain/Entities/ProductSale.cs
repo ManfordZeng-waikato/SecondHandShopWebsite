@@ -3,6 +3,11 @@ using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Domain.Entities;
 
+/// <summary>
+/// Immutable record of a single sale event for a product.
+/// Business fields (buyer, price, sold time) are set at creation and never changed.
+/// A sale can only transition from <c>Completed</c> to <c>Cancelled</c>; it cannot be "uncancelled".
+/// </summary>
 public class ProductSale : AuditableEntity
 {
     private ProductSale()
@@ -21,6 +26,11 @@ public class ProductSale : AuditableEntity
     public DateTime SoldAtUtc { get; private set; }
     public PaymentMethod? PaymentMethod { get; private set; }
     public string? Notes { get; private set; }
+
+    public SaleRecordStatus Status { get; private set; } = SaleRecordStatus.Completed;
+    public DateTime? CancelledAtUtc { get; private set; }
+    public SaleCancellationReason? CancellationReason { get; private set; }
+    public string? CancellationNote { get; private set; }
 
     public static ProductSale Create(
         Guid productId,
@@ -52,37 +62,35 @@ public class ProductSale : AuditableEntity
             BuyerEmail = buyerEmail?.Trim(),
             SoldAtUtc = soldAtUtc,
             PaymentMethod = paymentMethod,
-            Notes = notes?.Trim()
+            Notes = notes?.Trim(),
+            Status = SaleRecordStatus.Completed
         };
 
         sale.SetCreatedAudit(adminUserId, utcNow);
         return sale;
     }
 
-    public void Update(
-        decimal finalSoldPrice,
-        DateTime soldAtUtc,
+    /// <summary>
+    /// Mark this sale record as cancelled. Business fields (buyer, price, sold time) remain
+    /// untouched so the historical sale is preserved verbatim.
+    /// </summary>
+    public void Cancel(
+        SaleCancellationReason reason,
+        string? cancellationNote,
         Guid? adminUserId,
-        DateTime utcNow,
-        Guid? customerId = null,
-        Guid? inquiryId = null,
-        string? buyerName = null,
-        string? buyerPhone = null,
-        string? buyerEmail = null,
-        PaymentMethod? paymentMethod = null,
-        string? notes = null)
+        DateTime utcNow)
     {
-        ValidateFinalSoldPrice(finalSoldPrice);
+        if (Status == SaleRecordStatus.Cancelled)
+        {
+            throw new DomainRuleViolationException("Sale record is already cancelled.");
+        }
 
-        FinalSoldPrice = finalSoldPrice;
-        SoldAtUtc = soldAtUtc;
-        CustomerId = customerId;
-        InquiryId = inquiryId;
-        BuyerName = buyerName?.Trim();
-        BuyerPhone = buyerPhone?.Trim();
-        BuyerEmail = buyerEmail?.Trim();
-        PaymentMethod = paymentMethod;
-        Notes = notes?.Trim();
+        Status = SaleRecordStatus.Cancelled;
+        CancelledAtUtc = utcNow;
+        CancellationReason = reason;
+        CancellationNote = string.IsNullOrWhiteSpace(cancellationNote)
+            ? null
+            : cancellationNote.Trim();
         Touch(adminUserId, utcNow);
     }
 

@@ -64,17 +64,37 @@ public class AdminCatalogService(
         var product = await productRepository.GetByIdAsync(productId, cancellationToken)
             ?? throw new KeyNotFoundException($"Product '{productId}' was not found.");
 
+        // Sold transitions go through AdminSaleService so every sale gets a history row and
+        // a buyer attached. Similarly, reverting a Sold product needs a cancellation reason,
+        // so that path also lives in AdminSaleService.
         switch (status)
         {
             case ProductStatus.Available:
-                product.MarkAsAvailable(adminUserId, clock.UtcNow);
+                if (product.Status == ProductStatus.Sold)
+                {
+                    throw new ConflictException(
+                        "Sold products must be reverted via the revert-sale endpoint so a cancellation reason is recorded.");
+                }
+                if (product.Status == ProductStatus.OffShelf)
+                {
+                    product.RestoreFromOffShelf(adminUserId, clock.UtcNow);
+                }
+                // Available → Available is a no-op.
                 break;
+
             case ProductStatus.Sold:
-                product.MarkAsSold(adminUserId, clock.UtcNow);
-                break;
+                throw new ValidationException(
+                    "Use the mark-sold endpoint to record a sale. Status cannot be set to Sold directly.");
+
             case ProductStatus.OffShelf:
+                if (product.Status == ProductStatus.Sold)
+                {
+                    throw new ConflictException(
+                        "Cannot take a sold product off the shelf. Revert the sale first.");
+                }
                 product.OffShelf(adminUserId, clock.UtcNow);
                 break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported product status.");
         }

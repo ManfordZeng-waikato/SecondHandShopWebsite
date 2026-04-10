@@ -27,6 +27,13 @@ public class Product : AuditableEntity
     public int? FeaturedSortOrder { get; private set; }
 
     /// <summary>
+    /// Pointer to the currently active <see cref="ProductSale"/>. Non-null iff
+    /// <see cref="Status"/> == <see cref="ProductStatus.Sold"/>. History lives on
+    /// <c>ProductSales</c> (one row per sale attempt, never mutated after creation).
+    /// </summary>
+    public Guid? CurrentSaleId { get; private set; }
+
+    /// <summary>
     /// Denormalized from product images: primary first, then ascending sort order (same as list queries).
     /// </summary>
     public string? CoverImageKey { get; private set; }
@@ -111,18 +118,94 @@ public class Product : AuditableEntity
         Touch(updatedByAdminUserId, utcNow);
     }
 
-    public void MarkAsSold(Guid? updatedByAdminUserId, DateTime utcNow)
+    /// <summary>
+    /// Transitions the product to Sold and returns a newly created <see cref="ProductSale"/>
+    /// history record. Only valid from Available or OffShelf — reverting a Sold product must
+    /// go through <see cref="RevertSoldToAvailable"/> first so the previous sale is preserved
+    /// as a cancelled history row.
+    /// </summary>
+    public ProductSale MarkAsSold(
+        decimal finalSoldPrice,
+        DateTime soldAtUtc,
+        Guid? adminUserId,
+        DateTime utcNow,
+        Guid? customerId = null,
+        Guid? inquiryId = null,
+        string? buyerName = null,
+        string? buyerPhone = null,
+        string? buyerEmail = null,
+        PaymentMethod? paymentMethod = null,
+        string? notes = null)
     {
+        if (Status == ProductStatus.Sold)
+        {
+            throw new DomainRuleViolationException(
+                "Product is already sold. Revert the current sale before marking it sold again.");
+        }
+
+        var sale = ProductSale.Create(
+            productId: Id,
+            listedPriceAtSale: Price,
+            finalSoldPrice: finalSoldPrice,
+            soldAtUtc: soldAtUtc,
+            adminUserId: adminUserId,
+            utcNow: utcNow,
+            customerId: customerId,
+            inquiryId: inquiryId,
+            buyerName: buyerName,
+            buyerPhone: buyerPhone,
+            buyerEmail: buyerEmail,
+            paymentMethod: paymentMethod,
+            notes: notes);
+
         Status = ProductStatus.Sold;
-        SoldAt = utcNow;
+        SoldAt = soldAtUtc;
         OffShelvedAt = null;
         IsFeatured = false;
         FeaturedSortOrder = null;
-        Touch(updatedByAdminUserId, utcNow);
+        CurrentSaleId = sale.Id;
+        Touch(adminUserId, utcNow);
+        return sale;
+    }
+
+    /// <summary>
+    /// Reverts a sold product back to Available. Marks the current sale as Cancelled with a
+    /// reason — history is preserved, nothing is deleted or overwritten.
+    /// </summary>
+    public void RevertSoldToAvailable(
+        ProductSale currentSale,
+        SaleCancellationReason reason,
+        string? cancellationNote,
+        Guid? adminUserId,
+        DateTime utcNow)
+    {
+        if (Status != ProductStatus.Sold)
+        {
+            throw new DomainRuleViolationException("Only sold products can be reverted to available.");
+        }
+
+        if (CurrentSaleId is null || currentSale.Id != CurrentSaleId || currentSale.ProductId != Id)
+        {
+            throw new DomainRuleViolationException(
+                "The provided sale record does not match the product's current sale.");
+        }
+
+        currentSale.Cancel(reason, cancellationNote, adminUserId, utcNow);
+
+        Status = ProductStatus.Available;
+        SoldAt = null;
+        CurrentSaleId = null;
+        Touch(adminUserId, utcNow);
     }
 
     public void OffShelf(Guid? updatedByAdminUserId, DateTime utcNow)
     {
+        if (Status == ProductStatus.Sold)
+        {
+            throw new DomainRuleViolationException(
+                "Cannot take a sold product off the shelf. Revert the sale first.");
+        }
+
         Status = ProductStatus.OffShelf;
         OffShelvedAt = utcNow;
         IsFeatured = false;
@@ -130,10 +213,21 @@ public class Product : AuditableEntity
         Touch(updatedByAdminUserId, utcNow);
     }
 
-    public void MarkAsAvailable(Guid? updatedByAdminUserId, DateTime utcNow)
+    /// <summary>
+    /// Restore an off-shelf product back to the available pool. This path is NOT used for the
+    /// Sold→Available transition — that goes through <see cref="RevertSoldToAvailable"/> so a
+    /// cancellation reason is captured.
+    /// </summary>
+    public void RestoreFromOffShelf(Guid? updatedByAdminUserId, DateTime utcNow)
     {
+        if (Status != ProductStatus.OffShelf)
+        {
+            throw new DomainRuleViolationException(
+                "Only off-shelf products can be restored via this path. " +
+                "Use RevertSoldToAvailable for sold products.");
+        }
+
         Status = ProductStatus.Available;
-        SoldAt = null;
         OffShelvedAt = null;
         Touch(updatedByAdminUserId, utcNow);
     }

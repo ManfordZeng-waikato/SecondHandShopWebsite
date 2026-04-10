@@ -46,12 +46,37 @@ public class ProductSaleConfiguration : IEntityTypeConfiguration<ProductSale>
             .HasMaxLength(2000)
             .IsRequired(false);
 
+        // Lifecycle
+        builder.Property(x => x.Status)
+            .HasConversion<byte>()
+            .HasDefaultValue(SaleRecordStatus.Completed)
+            .HasSentinel((SaleRecordStatus)0)
+            .IsRequired();
+
+        builder.Property(x => x.CancelledAtUtc)
+            .IsRequired(false);
+
+        builder.Property(x => x.CancellationReason)
+            .HasConversion<byte?>()
+            .IsRequired(false);
+
+        builder.Property(x => x.CancellationNote)
+            .HasMaxLength(2000)
+            .IsRequired(false);
+
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 
-        // One sale per product (unique index)
+        // A product may accumulate many cancelled sale records in its history, but at most
+        // one can be active (Completed) at any time. Enforced at the DB level via a filtered
+        // unique index so misbehaving application code cannot corrupt the invariant.
         builder.HasIndex(x => x.ProductId)
-            .IsUnique();
+            .HasDatabaseName("IX_ProductSales_ProductId_Active")
+            .IsUnique()
+            .HasFilter("\"Status\" = 1");
+
+        builder.HasIndex(x => new { x.ProductId, x.SoldAtUtc })
+            .HasDatabaseName("IX_ProductSales_ProductId_SoldAtUtc");
 
         builder.HasIndex(x => x.CustomerId);
         builder.HasIndex(x => x.InquiryId);

@@ -13,7 +13,8 @@ import type {
 } from '../../../entities/customer/types';
 import type {
   ProductSaleDto,
-  SaveProductSaleInput,
+  MarkProductSoldInput,
+  RevertProductSaleInput,
   CustomerSaleItem,
 } from '../../../entities/sale/types';
 import { httpClient } from '../../../shared/api/httpClient';
@@ -284,7 +285,8 @@ export async function uploadBlobToR2(putUrl: string, blob: Blob, contentType: st
 
 // --- Product Sales ---
 
-export async function fetchProductSale(productId: string): Promise<ProductSaleDto | null> {
+/** Current active (Completed) sale for a product, or null if the product is not sold. */
+export async function fetchCurrentProductSale(productId: string): Promise<ProductSaleDto | null> {
   try {
     const response = await httpClient.get<ProductSaleDto>(`/api/lord/products/${productId}/sale`);
     return response.data;
@@ -297,26 +299,30 @@ export async function fetchProductSale(productId: string): Promise<ProductSaleDt
   }
 }
 
-export async function createProductSale(
+/** Full sale history (including cancelled rows), most recent first. */
+export async function fetchProductSaleHistory(productId: string): Promise<ProductSaleDto[]> {
+  const response = await httpClient.get<ProductSaleDto[]>(`/api/lord/products/${productId}/sales`);
+  return response.data;
+}
+
+/** Mark a product as sold — always creates a brand new sale record. */
+export async function markProductSold(
   productId: string,
-  input: SaveProductSaleInput,
+  input: MarkProductSoldInput,
 ): Promise<ProductSaleDto> {
   const response = await httpClient.post<ProductSaleDto>(
-    `/api/lord/products/${productId}/sale`,
+    `/api/lord/products/${productId}/mark-sold`,
     input,
   );
   return response.data;
 }
 
-export async function updateProductSale(
+/** Revert a sold product back to Available — cancels the current sale with a reason. */
+export async function revertProductSale(
   productId: string,
-  input: SaveProductSaleInput,
-): Promise<ProductSaleDto> {
-  const response = await httpClient.put<ProductSaleDto>(
-    `/api/lord/products/${productId}/sale`,
-    input,
-  );
-  return response.data;
+  input: RevertProductSaleInput,
+): Promise<void> {
+  await httpClient.post(`/api/lord/products/${productId}/revert-sale`, input);
 }
 
 export async function fetchCustomerSales(customerId: string): Promise<CustomerSaleItem[]> {

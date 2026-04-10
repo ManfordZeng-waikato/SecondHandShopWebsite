@@ -55,6 +55,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(0)
             .IsRequired();
 
+        builder.Property(x => x.CurrentSaleId)
+            .IsRequired(false);
+
+        // Pointer to the active ProductSale row. Intentionally not a navigation property —
+        // the sale-side FK (ProductSale.ProductId -> Product.Id) is the authoritative join key.
+        builder.HasIndex(x => x.CurrentSaleId);
+
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 
