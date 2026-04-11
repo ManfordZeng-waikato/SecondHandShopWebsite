@@ -13,7 +13,13 @@
       "Bash(taskkill //PID 12524 //F)",
       "Bash(npm run:*)",
       "Bash(npx eslint:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(grep:*)",
+      "Bash(curl -s https://api.nuget.org/v3-flatcontainer/npgsql/index.json)",
+      "Bash(curl -s https://api.nuget.org/v3-flatcontainer/npgsql.entityframeworkcore.postgresql/index.json)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet user-secrets:*)"
     ]
   }
 }

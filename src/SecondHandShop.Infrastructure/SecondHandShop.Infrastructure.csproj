@@ -14,7 +14,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <!--
+      Pinned to 10.0.0 to avoid a race condition in Npgsql 10.0.1/10.0.2 where
+      NpgsqlConnector.ResetCancellation() calls Reset() on a disposed
+      ManualResetEventSlim, surfacing as ObjectDisposedException wrapped in
+      DbUpdateException. See npgsql/npgsql#6415 and npgsql/efcore.pg#3699.
+    -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="Npgsql" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.4" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.4" />

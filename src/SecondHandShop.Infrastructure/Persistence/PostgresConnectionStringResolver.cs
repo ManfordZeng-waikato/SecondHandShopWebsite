@@ -41,6 +41,7 @@ internal static class PostgresConnectionStringResolver
             var directBuilder = new NpgsqlConnectionStringBuilder(trimmed);
             NormalizeHost(directBuilder);
             ApplySupabasePoolerDefaults(directBuilder);
+            ApplyLocalhostDefaults(directBuilder);
             return directBuilder.ConnectionString;
         }
 
@@ -68,6 +69,7 @@ internal static class PostgresConnectionStringResolver
         ApplyQueryString(uri.Query, builder);
         NormalizeHost(builder);
         ApplySupabasePoolerDefaults(builder);
+        ApplyLocalhostDefaults(builder);
         return builder.ConnectionString;
     }
 
@@ -119,6 +121,37 @@ internal static class PostgresConnectionStringResolver
         }
     }
 
+    private static readonly string[] LocalhostAliases =
+    [
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0"
+    ];
+
+    // Npgsql 10.0.x has an unresolved race in NpgsqlConnector.ResetCancellation() that throws
+    // ObjectDisposedException on a disposed ManualResetEventSlim when a pooled connector is
+    // reused after a prior request's cancellation callbacks unwound in the wrong order
+    // (npgsql/npgsql#6415, npgsql/efcore.pg#3699). The pool ends up handing out a broken
+    // connector on the next SaveChanges. For loopback connections the cost of a fresh
+    // connection per request is negligible, so we sidestep the pool entirely there and keep
+    // the app usable until an upstream fix ships.
+    private static void ApplyLocalhostDefaults(NpgsqlConnectionStringBuilder builder)
+    {
+        if (string.IsNullOrWhiteSpace(builder.Host))
+        {
+            return;
+        }
+
+        var host = builder.Host.Trim();
+        if (!LocalhostAliases.Contains(host, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        builder.Pooling = false;
+    }
+
     private static void ApplySupabasePoolerDefaults(NpgsqlConnectionStringBuilder builder)
     {
         if (string.IsNullOrWhiteSpace(builder.Host))
@@ -135,5 +168,13 @@ internal static class PostgresConnectionStringResolver
         // layering two pools and sidesteps intermittent connector-reset failures during design-time
         // migrations and short-lived CLI processes.
         builder.Pooling = false;
+
+        // Supavisor (Supabase's session pooler) does not support GSS session encryption and will
+        // immediately shut down the connection when Npgsql attempts to negotiate it. Npgsql then
+        // marks the host offline and clears the pool, disposing a ManualResetEventSlim that the
+        // in-flight connector still references — the next ResetCancellation() call throws
+        // ObjectDisposedException. Explicitly disabling GSS negotiation removes the trigger.
+        // Upstream: npgsql/npgsql#6415.
+        builder.GssEncryptionMode = GssEncryptionMode.Disable;
     }
 }

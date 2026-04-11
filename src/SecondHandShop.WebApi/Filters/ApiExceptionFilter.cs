@@ -47,14 +47,13 @@ public sealed class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IEx
             DomainRuleViolationException ex =>
                 (StatusCodes.Status422UnprocessableEntity, ex.Message),
 
-            // DbUpdateConcurrencyException inherits from DbUpdateException; match it first.
+            // Only optimistic-concurrency failures are real 409s. Other DbUpdateException
+            // variants (constraint violations, driver faults like the Npgsql
+            // ObjectDisposedException race) must not be masqueraded as conflicts — that
+            // hides root causes and confuses clients. Fall through to the 500 branch.
             DbUpdateConcurrencyException =>
                 (StatusCodes.Status409Conflict,
                  "The resource was modified by another request. Please refresh and try again."),
-
-            DbUpdateException =>
-                (StatusCodes.Status409Conflict,
-                 "A data conflict occurred while saving changes. Please try again."),
 
             InquiryRateLimitExceededException ex =>
                 (StatusCodes.Status429TooManyRequests, ex.Message),
