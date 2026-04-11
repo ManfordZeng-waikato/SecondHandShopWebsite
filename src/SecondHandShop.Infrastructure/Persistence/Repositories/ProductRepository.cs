@@ -65,8 +65,27 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         if (safeCategory is not null)
         {
             var categorySlug = safeCategory.ToLowerInvariant();
-            query = query.Where(p =>
-                dbContext.Categories.Any(c => c.Id == p.CategoryId && c.Slug == categorySlug));
+            var activeCategories = await dbContext.Categories
+                .AsNoTracking()
+                .Where(c => c.IsActive)
+                .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
+                .ToListAsync(cancellationToken);
+
+            var selectedCategory = activeCategories
+                .FirstOrDefault(c => c.Slug == categorySlug);
+
+            if (selectedCategory is null)
+            {
+                query = query.Where(_ => false);
+            }
+            else
+            {
+                var descendantCategoryIds = CollectDescendantCategoryIds(selectedCategory.Id, activeCategories);
+                query = query.Where(p =>
+                    dbContext.ProductCategories.Any(pc =>
+                        pc.ProductId == p.Id &&
+                        descendantCategoryIds.Contains(pc.CategoryId)));
+            }
         }
 
         var safeCategoryIds = parameters.SafeCategoryIds;
@@ -285,4 +304,38 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
     {
         await dbContext.Products.AddAsync(product, cancellationToken);
     }
+
+    private static List<Guid> CollectDescendantCategoryIds(
+        Guid categoryId,
+        IReadOnlyCollection<CategoryHierarchyNode> categories)
+    {
+        var childCategoriesByParentId = categories
+            .Where(category => category.ParentId.HasValue)
+            .GroupBy(category => category.ParentId!.Value)
+            .ToDictionary(group => group.Key, group => group.Select(x => x.Id).ToList());
+
+        var descendantCategoryIds = new List<Guid>();
+        var queue = new Queue<Guid>();
+        queue.Enqueue(categoryId);
+
+        while (queue.Count > 0)
+        {
+            var currentCategoryId = queue.Dequeue();
+            descendantCategoryIds.Add(currentCategoryId);
+
+            if (!childCategoriesByParentId.TryGetValue(currentCategoryId, out var childCategoryIds))
+            {
+                continue;
+            }
+
+            foreach (var childCategoryId in childCategoryIds)
+            {
+                queue.Enqueue(childCategoryId);
+            }
+        }
+
+        return descendantCategoryIds;
+    }
+
+    private sealed record CategoryHierarchyNode(Guid Id, string Slug, Guid? ParentId);
 }

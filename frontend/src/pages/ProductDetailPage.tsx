@@ -159,6 +159,13 @@ export function ProductDetailPage() {
         >
           {product.status === 'Sold' ? 'Item Sold' : 'Send Inquiry'}
         </Button>
+
+        <Typography
+          color="text.secondary"
+          sx={{ mt: 3, mb: 1, fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.8 }}
+        >
+          We welcome you to visit in-store to view this item in person.
+        </Typography>
       </Box>
     </Stack>
   );
