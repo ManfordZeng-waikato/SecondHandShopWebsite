@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Box,
@@ -77,6 +77,7 @@ function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
 
 export function AdminNewProductPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -248,7 +249,13 @@ export function AdminNewProductPage() {
         }
       }
 
-      navigate('/lord/products');
+      await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      navigate('/lord/products', {
+        state: {
+          forceRefreshProducts: true,
+          refreshedAt: Date.now(),
+        },
+      });
     } catch (submissionError) {
       const message = submissionError instanceof Error ? submissionError.message : '';
       if (message.startsWith('IMAGE_UPLOAD_PARTIAL:')) {

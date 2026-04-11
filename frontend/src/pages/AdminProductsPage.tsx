@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -41,6 +41,7 @@ import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialo
 import { RevertSaleDialog } from '../features/admin/components/RevertSaleDialog';
 import { ProductSaleHistoryDialog } from '../features/admin/components/ProductSaleHistoryDialog';
 import { ProductCategoryDialog } from '../features/admin/components/ProductCategoryDialog';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Filter options (what the admin can search for).
 const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
@@ -121,6 +122,8 @@ const productCardSx = {
 
 export function AdminProductsPage() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Filters
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
@@ -192,6 +195,21 @@ export function AdminProductsPage() {
       sortDirection,
     }),
   });
+
+  useEffect(() => {
+    if (!location.state || typeof location.state !== 'object') {
+      return;
+    }
+
+    const state = location.state as { forceRefreshProducts?: boolean };
+    if (!state.forceRefreshProducts) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    void productsQuery.refetch();
+    navigate(location.pathname, { replace: true });
+  }, [location.pathname, location.state, navigate, productsQuery, queryClient]);
 
   const statusMutation = useMutation({
     mutationFn: ({ productId, status }: { productId: string; status: ProductStatus }) =>
