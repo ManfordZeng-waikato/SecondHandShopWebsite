@@ -14,6 +14,13 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         return await dbContext.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
+    public async Task<Product?> GetByIdWithCategoriesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Products
+            .Include(x => x.ProductCategories)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
     public async Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         return await dbContext.Products.FirstOrDefaultAsync(x => x.Slug == slug, cancellationToken);
@@ -60,6 +67,15 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             var categorySlug = safeCategory.ToLowerInvariant();
             query = query.Where(p =>
                 dbContext.Categories.Any(c => c.Id == p.CategoryId && c.Slug == categorySlug));
+        }
+
+        var safeCategoryIds = parameters.SafeCategoryIds;
+        if (safeCategoryIds.Count > 0)
+        {
+            query = query.Where(p =>
+                dbContext.ProductCategories.Any(pc =>
+                    pc.ProductId == p.Id &&
+                    safeCategoryIds.Contains(pc.CategoryId)));
         }
 
         if (parameters.MinPrice.HasValue)

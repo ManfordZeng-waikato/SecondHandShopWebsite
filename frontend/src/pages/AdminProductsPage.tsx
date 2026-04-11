@@ -35,11 +35,12 @@ import {
   updateProductFeatured,
   updateProductStatus,
 } from '../features/admin/api/adminApi';
-import { fetchCategories } from '../features/catalog/api/catalogApi';
+import { fetchCategories, fetchCategoryTree } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
 import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialog';
 import { RevertSaleDialog } from '../features/admin/components/RevertSaleDialog';
 import { ProductSaleHistoryDialog } from '../features/admin/components/ProductSaleHistoryDialog';
+import { ProductCategoryDialog } from '../features/admin/components/ProductCategoryDialog';
 
 // Filter options (what the admin can search for).
 const statusOptions: ProductStatus[] = ['Available', 'Sold', 'OffShelf'];
@@ -146,6 +147,7 @@ export function AdminProductsPage() {
   const [saleTarget, setSaleTarget] = useState<AdminProductListItem | null>(null);
   const [revertTarget, setRevertTarget] = useState<AdminProductListItem | null>(null);
   const [historyTarget, setHistoryTarget] = useState<AdminProductListItem | null>(null);
+  const [categoryTarget, setCategoryTarget] = useState<AdminProductListItem | null>(null);
 
   const featuredFilterParam = useMemo<boolean | undefined>(() => {
     if (featuredFilter === 'all') {
@@ -158,6 +160,12 @@ export function AdminProductsPage() {
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const categoryTreeQuery = useQuery({
+    queryKey: ['category-tree'],
+    queryFn: fetchCategoryTree,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -222,6 +230,7 @@ export function AdminProductsPage() {
   });
 
   const categories = categoriesQuery.data ?? [];
+  const categoryTree = categoryTreeQuery.data ?? [];
   const products = productsQuery.data?.items ?? [];
   const totalCount = productsQuery.data?.totalCount ?? 0;
 
@@ -731,6 +740,16 @@ export function AdminProductsPage() {
                           History
                         </Button>
 
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setCategoryTarget(product)}
+                          disabled={categoryTreeQuery.isLoading || categoryTreeQuery.isError}
+                          sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                        >
+                          Edit categories
+                        </Button>
+
                         {/* Vertical divider on desktop */}
                         <Divider
                           orientation="vertical"
@@ -875,6 +894,14 @@ export function AdminProductsPage() {
         productId={historyTarget?.id ?? null}
         productTitle={historyTarget?.title ?? ''}
         onClose={() => setHistoryTarget(null)}
+      />
+
+      <ProductCategoryDialog
+        open={Boolean(categoryTarget)}
+        productId={categoryTarget?.id ?? null}
+        productTitle={categoryTarget?.title ?? ''}
+        categoryTree={categoryTree}
+        onClose={() => setCategoryTarget(null)}
       />
 
       <Snackbar

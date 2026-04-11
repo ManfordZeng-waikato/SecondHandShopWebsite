@@ -5,11 +5,7 @@ import {
   Box,
   Button,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -19,21 +15,24 @@ import {
   addProductImage,
   createProduct,
   createProductImageUploadUrl,
+  updateProductCategories,
   uploadBlobToR2,
   uploadImageToR2,
 } from '../features/admin/api/adminApi';
-import { fetchCategories } from '../features/catalog/api/catalogApi';
+import { fetchCategoryTree } from '../features/catalog/api/catalogApi';
 import {
   ImageUploadWithPreview,
   type ImageUploadResult,
 } from '../features/admin/components/ImageUploadWithPreview';
+import { CategoryTreeSelector } from '../features/admin/components/CategoryTreeSelector';
 
 interface NewProductFormState {
   title: string;
   slug: string;
   description: string;
   price: string;
-  categoryId: string;
+  mainCategoryId: string;
+  selectedCategoryIds: string[];
 }
 
 const initialFormState: NewProductFormState = {
@@ -41,7 +40,8 @@ const initialFormState: NewProductFormState = {
   slug: '',
   description: '',
   price: '',
-  categoryId: '',
+  mainCategoryId: '',
+  selectedCategoryIds: [],
 };
 const maxImagesPerProduct = 5;
 
@@ -63,6 +63,18 @@ function isValidSlug(slug: string): boolean {
   return slug === '' || SLUG_REGEX.test(slug);
 }
 
+function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error && typeof error === 'object') {
+    const maybeResponse = (error as { response?: { data?: { message?: unknown } } }).response;
+    const message = maybeResponse?.data?.message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
+}
+
 export function AdminNewProductPage() {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<NewProductFormState>(initialFormState);
@@ -76,8 +88,8 @@ export function AdminNewProductPage() {
   const imageResultsRef = useRef<Map<number, ImageUploadResult>>(new Map());
 
   const categoriesQuery = useQuery({
-    queryKey: ['categories'],
-    queryFn: fetchCategories,
+    queryKey: ['category-tree'],
+    queryFn: fetchCategoryTree,
   });
 
   const createProductMutation = useMutation({
@@ -142,6 +154,7 @@ export function AdminNewProductPage() {
     event.preventDefault();
     setError(null);
     setUploadProgress(null);
+    let createdProductId: string | null = null;
 
     const price = Number(formState.price);
     if (!formState.title.trim() || !formState.slug.trim() || !formState.description.trim()) {
@@ -154,8 +167,13 @@ export function AdminNewProductPage() {
       return;
     }
 
-    if (!formState.categoryId) {
-      setError('Please select a category.');
+    if (!formState.mainCategoryId) {
+      setError('Please choose a main category.');
+      return;
+    }
+
+    if (formState.selectedCategoryIds.length === 0) {
+      setError('Please select at least one category.');
       return;
     }
 
@@ -182,7 +200,13 @@ export function AdminNewProductPage() {
         slug: formState.slug.trim(),
         description: formState.description.trim(),
         price,
-        categoryId: formState.categoryId,
+        categoryId: formState.mainCategoryId,
+      });
+      createdProductId = createdProduct.id;
+
+      await updateProductCategories(createdProduct.id, {
+        mainCategoryId: formState.mainCategoryId,
+        selectedCategoryIds: formState.selectedCategoryIds,
       });
 
       if (selectedFiles.length > 0) {
@@ -236,7 +260,15 @@ export function AdminNewProductPage() {
         return;
       }
 
-      setError('Failed to create product. Please try again.');
+      if (createdProductId) {
+        setError(
+          `Product was created successfully (ID: ${createdProductId}), but a follow-up step failed. ` +
+          'Refresh the product list before trying again so you do not create a duplicate slug.',
+        );
+        return;
+      }
+
+      setError(resolveErrorMessage(submissionError, 'Failed to create product. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -288,21 +320,18 @@ export function AdminNewProductPage() {
           value={formState.price}
           onChange={(event) => setFormState((prev) => ({ ...prev, price: event.target.value }))}
         />
-        <FormControl>
-          <InputLabel id="category-select-label">Category</InputLabel>
-          <Select
-            labelId="category-select-label"
-            value={formState.categoryId}
-            label="Category"
-            onChange={(event) => setFormState((prev) => ({ ...prev, categoryId: event.target.value }))}
-          >
-            {categories.map((category) => (
-              <MenuItem key={category.id} value={category.id}>
-                {category.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <CategoryTreeSelector
+          categories={categories}
+          selectedCategoryIds={formState.selectedCategoryIds}
+          mainCategoryId={formState.mainCategoryId}
+          onChange={(selectedCategoryIds, mainCategoryId) =>
+            setFormState((prev) => ({
+              ...prev,
+              selectedCategoryIds,
+              mainCategoryId,
+            }))
+          }
+        />
 
         <Button variant="outlined" component="label" disabled={isFormBusy}>
           Select product images *

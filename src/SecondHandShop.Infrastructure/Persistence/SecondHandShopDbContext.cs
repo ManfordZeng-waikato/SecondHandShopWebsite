@@ -12,6 +12,7 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<InquiryIpCooldown> InquiryIpCooldowns => Set<InquiryIpCooldown>();
@@ -29,6 +30,7 @@ public class SecondHandShopDbContext(DbContextOptions<SecondHandShopDbContext> o
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
         modelBuilder.ApplyConfiguration(new CustomerConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductCategoryConfiguration());
         modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
         modelBuilder.ApplyConfiguration(new InquiryConfiguration());
         modelBuilder.ApplyConfiguration(new InquiryIpCooldownConfiguration());

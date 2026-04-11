@@ -130,6 +130,37 @@ export async function createProduct(input: CreateProductInput): Promise<{ id: st
   return response.data;
 }
 
+export interface ProductCategorySelectionResponse {
+  productId: string;
+  mainCategoryId: string;
+  selectedCategoryIds: string[];
+}
+
+export interface UpdateProductCategoriesInput {
+  mainCategoryId: string;
+  selectedCategoryIds: string[];
+}
+
+export async function fetchProductCategorySelection(
+  productId: string,
+): Promise<ProductCategorySelectionResponse> {
+  const response = await httpClient.get<ProductCategorySelectionResponse>(
+    `/api/lord/products/${productId}/categories`,
+    );
+  return response.data;
+}
+
+export async function updateProductCategories(
+  productId: string,
+  input: UpdateProductCategoriesInput,
+): Promise<ProductCategorySelectionResponse> {
+  const response = await httpClient.put<ProductCategorySelectionResponse>(
+    `/api/lord/products/${productId}/categories`,
+    input,
+  );
+  return response.data;
+}
+
 export async function updateProductStatus(productId: string, status: ProductStatus): Promise<void> {
   await httpClient.put(`/api/lord/products/${productId}/status`, { status });
 }

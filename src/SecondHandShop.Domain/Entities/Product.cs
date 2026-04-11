@@ -26,6 +26,7 @@ public class Product : AuditableEntity
     public bool IsFeatured { get; private set; }
     public int? FeaturedSortOrder { get; private set; }
     public Category Category { get; private set; } = null!;
+    public ICollection<ProductCategory> ProductCategories { get; private set; } = new List<ProductCategory>();
 
     /// <summary>
     /// Pointer to the currently active <see cref="ProductSale"/>. Non-null iff
@@ -115,6 +116,17 @@ public class Product : AuditableEntity
         Description = description?.Trim() ?? string.Empty;
         Price = price;
         Condition = condition;
+        CategoryId = categoryId;
+        Touch(updatedByAdminUserId, utcNow);
+    }
+
+    public void UpdateMainCategory(Guid categoryId, Guid? updatedByAdminUserId, DateTime utcNow)
+    {
+        if (CategoryId == categoryId)
+        {
+            return;
+        }
+
         CategoryId = categoryId;
         Touch(updatedByAdminUserId, utcNow);
     }

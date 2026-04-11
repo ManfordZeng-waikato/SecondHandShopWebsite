@@ -19,6 +19,7 @@ public class Category : AuditableEntity
     public bool IsActive { get; private set; } = true;
     public Category? Parent { get; private set; }
     public ICollection<Category> Children { get; private set; } = new List<Category>();
+    public ICollection<ProductCategory> ProductCategories { get; private set; } = new List<ProductCategory>();
 
     public static Category Create(
         string name,

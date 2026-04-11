@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.Persistence;
@@ -7,6 +8,7 @@ using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.Contracts.Catalog;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.UseCases.Catalog;
+using SecondHandShop.Application.UseCases.Catalog.ProductCategories;
 using SecondHandShop.Domain.Enums;
 using SecondHandShop.WebApi.Contracts;
 
@@ -14,11 +16,13 @@ namespace SecondHandShop.WebApi.Controllers;
 
 [ApiController]
 [Route("api/lord/products")]
+[Route("api/admin/products")]
 [Authorize(Policy = "AdminFullAccess")]
 public class AdminProductsController(
     IAdminCatalogService adminCatalogService,
     IProductRepository productRepository,
-    IObjectStorageService objectStorageService) : ControllerBase
+    IObjectStorageService objectStorageService,
+    IMediator mediator) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<AdminProductListItem>>> ListAsync(
@@ -108,6 +112,38 @@ public class AdminProductsController(
             adminUserId,
             cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("{productId:guid}/categories")]
+    public async Task<ActionResult<ProductCategorySelectionResponse>> GetCategorySelectionAsync(
+        Guid productId,
+        CancellationToken cancellationToken)
+    {
+        var selection = await mediator.Send(new GetProductCategorySelectionQuery(productId), cancellationToken);
+        return Ok(new ProductCategorySelectionResponse(
+            selection.ProductId,
+            selection.MainCategoryId,
+            selection.SelectedCategoryIds));
+    }
+
+    [HttpPut("{productId:guid}/categories")]
+    public async Task<ActionResult<ProductCategorySelectionResponse>> UpdateCategoriesAsync(
+        Guid productId,
+        [FromBody] UpdateProductCategoriesApiRequest request,
+        CancellationToken cancellationToken)
+    {
+        var selection = await mediator.Send(
+            new UpdateProductCategoriesCommand(
+                productId,
+                request.MainCategoryId,
+                request.SelectedCategoryIds,
+                GetAdminUserId()),
+            cancellationToken);
+
+        return Ok(new ProductCategorySelectionResponse(
+            selection.ProductId,
+            selection.MainCategoryId,
+            selection.SelectedCategoryIds));
     }
 
     [HttpPost("{productId:guid}/images/presigned-url")]
@@ -211,6 +247,15 @@ public sealed record AddProductImageApiRequest(
     string? AltText,
     int SortOrder,
     bool IsPrimary);
+
+public sealed record UpdateProductCategoriesApiRequest(
+    Guid MainCategoryId,
+    IReadOnlyCollection<Guid>? SelectedCategoryIds);
+
+public sealed record ProductCategorySelectionResponse(
+    Guid ProductId,
+    Guid MainCategoryId,
+    IReadOnlyList<Guid> SelectedCategoryIds);
 
 public sealed record AdminProductListItem(
     Guid Id,

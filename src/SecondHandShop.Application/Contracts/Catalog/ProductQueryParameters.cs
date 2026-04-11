@@ -10,6 +10,7 @@ public sealed partial record ProductQueryParameters
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 24;
     public string? Category { get; init; }
+    public string? CategoryIds { get; init; }
     public string? Search { get; init; }
     public decimal? MinPrice { get; init; }
     public decimal? MaxPrice { get; init; }
@@ -20,6 +21,7 @@ public sealed partial record ProductQueryParameters
     public int SafePageSize => Math.Clamp(PageSize, 1, 100);
     public string? SafeSearch => Sanitize(Search, MaxSearchLength);
     public string? SafeCategory => Sanitize(Category, MaxCategoryLength);
+    public IReadOnlyList<Guid> SafeCategoryIds => ParseCategoryIds(CategoryIds);
 
     private static string? Sanitize(string? value, int maxLength)
     {
@@ -35,4 +37,19 @@ public sealed partial record ProductQueryParameters
 
     [GeneratedRegex(@"[\x00-\x1F\x7F]")]
     private static partial Regex ControlCharRegex();
+
+    private static IReadOnlyList<Guid> ParseCategoryIds(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return value
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(segment => Guid.TryParse(segment, out var categoryId) ? categoryId : Guid.Empty)
+            .Where(categoryId => categoryId != Guid.Empty)
+            .Distinct()
+            .ToList();
+    }
 }

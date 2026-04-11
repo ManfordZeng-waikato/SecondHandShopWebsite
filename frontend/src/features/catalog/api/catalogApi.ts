@@ -1,4 +1,4 @@
-import type { Category } from '../../../entities/category/types';
+import type { Category, CategoryTreeNode } from '../../../entities/category/types';
 import type {
   PagedResult,
   Product,
@@ -9,6 +9,11 @@ import { httpClient } from '../../../shared/api/httpClient';
 
 export async function fetchCategories(): Promise<Category[]> {
   const response = await httpClient.get<Category[]>('/api/categories');
+  return response.data;
+}
+
+export async function fetchCategoryTree(): Promise<CategoryTreeNode[]> {
+  const response = await httpClient.get<CategoryTreeNode[]>('/api/categories/tree');
   return response.data;
 }
 

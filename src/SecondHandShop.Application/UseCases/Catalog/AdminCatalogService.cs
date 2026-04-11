@@ -51,6 +51,7 @@ public class AdminCatalogService(
             request.Condition);
 
         await productRepository.AddAsync(product, cancellationToken);
+        product.ProductCategories.Add(ProductCategory.Create(product.Id, request.CategoryId));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return product.Id;
     }

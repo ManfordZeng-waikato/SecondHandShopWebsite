@@ -21,6 +21,19 @@ public class CategoryRepository(SecondHandShopDbContext dbContext) : ICategoryRe
         return await dbContext.Categories.AnyAsync(x => x.Slug == slug, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Category>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var categoryIds = ids.Distinct().ToArray();
+        if (categoryIds.Length == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Categories
+            .Where(x => categoryIds.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Category>> ListAllAsync(CancellationToken cancellationToken = default)
     {
         return await dbContext.Categories

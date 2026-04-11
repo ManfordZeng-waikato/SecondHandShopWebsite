@@ -7,6 +7,7 @@ namespace SecondHandShop.Application.Abstractions.Persistence;
 public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Product?> GetByIdWithCategoriesAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<Product?> GetPublicBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<Product?> GetPublicByIdAsync(Guid id, CancellationToken cancellationToken = default);
