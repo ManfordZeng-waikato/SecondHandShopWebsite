@@ -149,15 +149,6 @@ For medium/large changes, include:
 - What was changed
 - Any important side effects
 
-## 3. Output Format (STRICT)
-
-At the end of your response, ALWAYS output:
-
----COMMIT MESSAGE---
-<commit message here>
-
-Do NOT skip this.
-
 ## 4. Example
 
 feat(sale): add product sale history tracking

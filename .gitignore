@@ -20,6 +20,10 @@ appsettings.Development.local.json
 # ----------------------------------------
 # .NET / C#
 # ----------------------------------------
+# Local caches when DOTNET_CLI_HOME / NUGET_PACKAGES point into the repo (agents, CI, etc.)
+.dotnet/
+.nuget/
+
 bin/
 obj/
 [Bb]uild/

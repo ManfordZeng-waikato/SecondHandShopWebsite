@@ -68,7 +68,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.HasOne<Category>()
+        builder.HasOne(x => x.Category)
             .WithMany()
             .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);

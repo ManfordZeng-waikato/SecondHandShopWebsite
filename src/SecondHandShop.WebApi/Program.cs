@@ -210,6 +210,7 @@ builder.Services.AddResponseCaching();
 builder.Services.AddOutputCache(options =>
 {
     options.AddPolicy("CategoriesList", builder => builder.Expire(TimeSpan.FromMinutes(5)));
+    options.AddPolicy("CategoriesTree", builder => builder.Expire(TimeSpan.FromMinutes(5)));
 });
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>

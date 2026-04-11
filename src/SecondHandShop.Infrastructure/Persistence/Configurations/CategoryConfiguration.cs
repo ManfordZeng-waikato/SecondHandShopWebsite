@@ -15,7 +15,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .IsRowVersion();
 
         builder.Property(x => x.Name)
-            .HasMaxLength(120)
+            .HasMaxLength(Category.NameMaxLength)
             .IsRequired();
 
         builder.Property(x => x.Slug)
@@ -34,9 +34,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(x => x.UpdatedAt)
             .IsRequired();
 
-        builder.HasOne<Category>()
-            .WithMany()
-            .HasForeignKey(x => x.ParentCategoryId)
+        builder.HasOne(x => x.Parent)
+            .WithMany(x => x.Children)
+            .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<AdminUser>()
@@ -52,6 +52,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasIndex(x => x.Slug)
             .IsUnique();
 
-        builder.HasIndex(x => new { x.ParentCategoryId, x.SortOrder });
+        builder.HasIndex(x => x.ParentId);
+
+        builder.HasIndex(x => new { x.ParentId, x.SortOrder });
     }
 }

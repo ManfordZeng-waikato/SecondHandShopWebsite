@@ -29,14 +29,25 @@ public static class CatalogSeedService
 
         var categories = new[]
         {
-            Category.Create("Electronics", "electronics", null, 1, createdBy, utcNow),
-            Category.Create("Furniture", "furniture", null, 2, createdBy, utcNow),
-            Category.Create("Home Appliances", "home-appliances", null, 3, createdBy, utcNow),
+            Category.Create("Furniture", "furniture", null, 1, true, createdBy, utcNow),
+            Category.Create("Antique", "antique", null, 2, true, createdBy, utcNow),
+            Category.Create("Outdoor", "outdoor", null, 3, true, createdBy, utcNow),
         };
 
         await dbContext.Categories.AddRangeAsync(categories);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Seeded {Count} default categories.", categories.Length);
+        var furniture = categories.Single(x => x.Slug == "furniture");
+        var childCategories = new[]
+        {
+            Category.Create("Sofa", "sofa", furniture.Id, 1, true, createdBy, utcNow),
+            Category.Create("Chair", "chair", furniture.Id, 2, true, createdBy, utcNow),
+            Category.Create("Table", "table", furniture.Id, 3, true, createdBy, utcNow),
+        };
+
+        await dbContext.Categories.AddRangeAsync(childCategories);
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Seeded {Count} default categories.", categories.Length + childCategories.Length);
     }
 }

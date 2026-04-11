@@ -25,6 +25,7 @@ public class Product : AuditableEntity
     public DateTime? OffShelvedAt { get; private set; }
     public bool IsFeatured { get; private set; }
     public int? FeaturedSortOrder { get; private set; }
+    public Category Category { get; private set; } = null!;
 
     /// <summary>
     /// Pointer to the currently active <see cref="ProductSale"/>. Non-null iff
