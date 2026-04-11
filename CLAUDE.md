@@ -111,7 +111,7 @@ The frontend uses `vite-plugin-mkcert` for local HTTPS on port 5173. The backend
 
 ## 1. Git Commit Requirement (MANDATORY)
 
-Whenever you modify code, you MUST also generate a Git commit message.
+Whenever you modify code, you MUST also generate a Git commit message and stage/commit/ changes to Git.
 
 The commit message must follow this format:
 
