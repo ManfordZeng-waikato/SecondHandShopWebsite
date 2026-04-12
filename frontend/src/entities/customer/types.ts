@@ -84,7 +84,6 @@ export interface CreateCustomerInput {
   name?: string;
   email?: string;
   phoneNumber?: string;
-  status?: CustomerStatus;
   notes?: string;
 }
 

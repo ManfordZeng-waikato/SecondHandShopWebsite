@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogTitle,
   Link,
-  MenuItem,
   Stack,
   TextField,
 } from '@mui/material';
@@ -15,7 +14,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import type {
   CreateCustomerInput,
   CustomerConflictDetail,
-  CustomerStatus,
 } from '../../../entities/customer/types';
 
 interface CustomerCreateDialogProps {
@@ -34,8 +32,6 @@ const EMAIL_MAX_LENGTH = 254;
 const PHONE_MAX_LENGTH = 40;
 const NOTES_MAX_LENGTH = 2000;
 
-const STATUS_OPTIONS: CustomerStatus[] = ['New', 'Contacted', 'Qualified', 'Archived'];
-
 export function CustomerCreateDialog({
   open,
   isSubmitting,
@@ -47,7 +43,6 @@ export function CustomerCreateDialog({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [status, setStatus] = useState<CustomerStatus>('New');
   const [notes, setNotes] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -58,7 +53,6 @@ export function CustomerCreateDialog({
     setName('');
     setEmail('');
     setPhone('');
-    setStatus('New');
     setNotes('');
     setValidationError(null);
   }, [open]);
@@ -108,7 +102,6 @@ export function CustomerCreateDialog({
         name: name.trim() || undefined,
         email: email.trim() || undefined,
         phoneNumber: phone.trim() || undefined,
-        status,
         notes: notes.trim() || undefined,
       });
     } catch {
@@ -161,19 +154,6 @@ export function CustomerCreateDialog({
             disabled={isSubmitting}
             inputProps={{ maxLength: PHONE_MAX_LENGTH }}
           />
-          <TextField
-            select
-            label="Status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value as CustomerStatus)}
-            disabled={isSubmitting}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </TextField>
           <TextField
             label="Notes"
             value={notes}
