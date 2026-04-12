@@ -32,6 +32,9 @@ public static class DependencyInjection
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        services.AddMemoryCache();
+        services.AddScoped<ICategoryHierarchyCache, CategoryHierarchyCache>();
+
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<SecondHandShopDbContext>());
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductImageRepository, ProductImageRepository>();

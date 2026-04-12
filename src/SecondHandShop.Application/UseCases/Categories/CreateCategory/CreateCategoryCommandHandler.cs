@@ -11,6 +11,7 @@ namespace SecondHandShop.Application.UseCases.Categories.CreateCategory;
 public sealed class CreateCategoryCommandHandler(
     ICategoryRepository categoryRepository,
     IUnitOfWork unitOfWork,
+    ICategoryHierarchyCache categoryHierarchyCache,
     IClock clock) : IRequestHandler<CreateCategoryCommand, CategoryDto>
 {
     public async Task<CategoryDto> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
@@ -61,6 +62,8 @@ public sealed class CreateCategoryCommandHandler(
 
         await categoryRepository.AddAsync(category, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        categoryHierarchyCache.Invalidate();
 
         return new CategoryDto(category.Id, category.Name, category.Slug, []);
     }

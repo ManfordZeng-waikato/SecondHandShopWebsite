@@ -7,7 +7,9 @@ using SecondHandShop.Domain.Enums;
 
 namespace SecondHandShop.Infrastructure.Persistence.Repositories;
 
-public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepository
+public class ProductRepository(
+    SecondHandShopDbContext dbContext,
+    ICategoryHierarchyCache categoryHierarchyCache) : IProductRepository
 {
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -65,14 +67,8 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         if (safeCategory is not null)
         {
             var categorySlug = safeCategory.ToLowerInvariant();
-            var activeCategories = await dbContext.Categories
-                .AsNoTracking()
-                .Where(c => c.IsActive)
-                .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
-                .ToListAsync(cancellationToken);
-
-            var selectedCategory = activeCategories
-                .FirstOrDefault(c => c.Slug == categorySlug);
+            var snapshot = await categoryHierarchyCache.GetAsync(cancellationToken);
+            var selectedCategory = snapshot.FindBySlug(categorySlug);
 
             if (selectedCategory is null)
             {
@@ -80,7 +76,7 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
             }
             else
             {
-                var descendantCategoryIds = CollectDescendantCategoryIds(selectedCategory.Id, activeCategories);
+                var descendantCategoryIds = snapshot.GetDescendantIds(selectedCategory.Id);
                 query = query.Where(p =>
                     dbContext.ProductCategories.Any(pc =>
                         pc.ProductId == p.Id &&
@@ -229,20 +225,15 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
 
         if (parameters.CategoryId.HasValue)
         {
-            var activeCategories = await dbContext.Categories
-                .AsNoTracking()
-                .Where(c => c.IsActive)
-                .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
-                .ToListAsync(cancellationToken);
-
+            var snapshot = await categoryHierarchyCache.GetAsync(cancellationToken);
             var selectedCategoryId = parameters.CategoryId.Value;
-            if (!activeCategories.Any(c => c.Id == selectedCategoryId))
+            if (!snapshot.ById.ContainsKey(selectedCategoryId))
             {
                 query = query.Where(_ => false);
             }
             else
             {
-                var descendantCategoryIds = CollectDescendantCategoryIds(selectedCategoryId, activeCategories);
+                var descendantCategoryIds = snapshot.GetDescendantIds(selectedCategoryId);
                 query = query.Where(p =>
                     dbContext.ProductCategories.Any(pc =>
                         pc.ProductId == p.Id &&
@@ -325,37 +316,4 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         await dbContext.Products.AddAsync(product, cancellationToken);
     }
 
-    private static List<Guid> CollectDescendantCategoryIds(
-        Guid categoryId,
-        IReadOnlyCollection<CategoryHierarchyNode> categories)
-    {
-        var childCategoriesByParentId = categories
-            .Where(category => category.ParentId.HasValue)
-            .GroupBy(category => category.ParentId!.Value)
-            .ToDictionary(group => group.Key, group => group.Select(x => x.Id).ToList());
-
-        var descendantCategoryIds = new List<Guid>();
-        var queue = new Queue<Guid>();
-        queue.Enqueue(categoryId);
-
-        while (queue.Count > 0)
-        {
-            var currentCategoryId = queue.Dequeue();
-            descendantCategoryIds.Add(currentCategoryId);
-
-            if (!childCategoriesByParentId.TryGetValue(currentCategoryId, out var childCategoryIds))
-            {
-                continue;
-            }
-
-            foreach (var childCategoryId in childCategoryIds)
-            {
-                queue.Enqueue(childCategoryId);
-            }
-        }
-
-        return descendantCategoryIds;
-    }
-
-    private sealed record CategoryHierarchyNode(Guid Id, string Slug, Guid? ParentId);
 }
