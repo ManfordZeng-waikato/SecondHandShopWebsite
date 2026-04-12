@@ -26,6 +26,7 @@ import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import StarIcon from '@mui/icons-material/StarRounded';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import type { ProductStatus } from '../entities/product/types';
 import {
   type AdminProductListItem,
@@ -332,6 +333,15 @@ export function AdminProductsPage() {
             {hasActiveFilters ? ' (filtered)' : ''}
           </Typography>
         </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/lord/products/new')}
+          sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+        >
+          New product
+        </Button>
       </Stack>
     </Box>
   );

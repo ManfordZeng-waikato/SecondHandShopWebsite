@@ -10,7 +10,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   addProductImage,
   createProduct,
@@ -284,9 +285,19 @@ export function AdminNewProductPage() {
   const isFormBusy = createProductMutation.isPending || submitting;
 
   return (
-    <Paper sx={{ p: 3, maxWidth: 900 }}>
-      <Stack spacing={2} component="form" onSubmit={handleSubmit}>
-        <Typography variant="h5">Create new product</Typography>
+    <Box sx={{ maxWidth: 900 }}>
+      <Button
+        component={RouterLink}
+        to="/lord/products"
+        startIcon={<ArrowBackIcon />}
+        size="small"
+        sx={{ mb: 2 }}
+      >
+        Back to products
+      </Button>
+      <Paper sx={{ p: 3 }}>
+        <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+          <Typography variant="h5">Create new product</Typography>
         {error && <Alert severity="error">{error}</Alert>}
         <TextField
           label="Title"
@@ -388,7 +399,8 @@ export function AdminNewProductPage() {
             {isFormBusy ? 'Creating...' : 'Create product'}
           </Button>
         </Box>
-      </Stack>
-    </Paper>
+        </Stack>
+      </Paper>
+    </Box>
   );
 }

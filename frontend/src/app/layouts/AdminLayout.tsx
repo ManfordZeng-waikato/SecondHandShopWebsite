@@ -30,9 +30,6 @@ export function AdminLayout({ children }: PropsWithChildren) {
             <Button color="inherit" component={RouterLink} to="/lord/customers">
               Customers
             </Button>
-            <Button color="inherit" component={RouterLink} to="/lord/products/new">
-              New product
-            </Button>
             <Button color="inherit" onClick={handleLogout}>
               Logout
             </Button>
