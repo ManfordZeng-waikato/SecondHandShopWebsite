@@ -1,28 +1,30 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Box,
-  Checkbox,
-  Chip,
-  Collapse,
-  FormControlLabel,
+  ButtonBase,
   IconButton,
   Paper,
-  Radio,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
-import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
+import StarOutlineRoundedIcon from '@mui/icons-material/StarOutlineRounded';
 import type { CategoryTreeNode } from '../../../entities/category/types';
 
 interface CategoryTreeSelectorProps {
   categories: CategoryTreeNode[];
   selectedCategoryIds: string[];
   mainCategoryId: string;
-  onChange: (nextSelectedCategoryIds: string[], nextMainCategoryId: string) => void;
+  onChange: (
+    nextSelectedCategoryIds: string[],
+    nextMainCategoryId: string,
+  ) => void;
 }
+
+const SERIF = "'Cormorant Garamond', Georgia, serif";
+const SANS = "'DM Sans', sans-serif";
 
 export function CategoryTreeSelector({
   categories,
@@ -30,241 +32,391 @@ export function CategoryTreeSelector({
   mainCategoryId,
   onChange,
 }: CategoryTreeSelectorProps) {
-  const [expandedIds, setExpandedIds] = useState<string[]>(() => categories.map((category) => category.id));
-
-  const selectedIdSet = useMemo(() => new Set(selectedCategoryIds), [selectedCategoryIds]);
-  const selectedItems = useMemo(
-    () => flattenCategoryTree(categories).filter((category) => selectedIdSet.has(category.id)),
-    [categories, selectedIdSet],
+  const selectedIdSet = useMemo(
+    () => new Set(selectedCategoryIds),
+    [selectedCategoryIds],
   );
 
-  const toggleExpanded = (categoryId: string) => {
-    setExpandedIds((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId],
-    );
+  const flatIndex = useMemo(() => {
+    const index = new Map<string, CategoryTreeNode>();
+    const walk = (nodes: CategoryTreeNode[]) => {
+      nodes.forEach((node) => {
+        index.set(node.id, node);
+        walk(node.children);
+      });
+    };
+    walk(categories);
+    return index;
+  }, [categories]);
+
+  const mainCategoryName = mainCategoryId
+    ? flatIndex.get(mainCategoryId)?.name ?? null
+    : null;
+
+  const toggleSelection = (categoryId: string) => {
+    if (selectedIdSet.has(categoryId)) {
+      const next = selectedCategoryIds.filter((id) => id !== categoryId);
+      if (next.length === 0) {
+        onChange([], '');
+        return;
+      }
+      const nextMain = mainCategoryId === categoryId ? next[0] : mainCategoryId;
+      onChange(next, nextMain);
+      return;
+    }
+
+    const next = [...selectedCategoryIds, categoryId];
+    const nextMain = mainCategoryId || categoryId;
+    onChange(next, nextMain);
   };
 
-  const handleCheckedChange = (categoryId: string, checked: boolean) => {
-    if (checked) {
-      const nextSelectedCategoryIds = selectedIdSet.has(categoryId)
-        ? selectedCategoryIds
-        : [...selectedCategoryIds, categoryId];
-      const nextMainCategoryId = mainCategoryId || categoryId;
-      onChange(nextSelectedCategoryIds, nextMainCategoryId);
-      return;
-    }
-
-    const nextSelectedCategoryIds = selectedCategoryIds.filter((id) => id !== categoryId);
-    if (nextSelectedCategoryIds.length === 0) {
-      onChange([], '');
-      return;
-    }
-
-    const nextMainCategoryId = mainCategoryId === categoryId
-      ? nextSelectedCategoryIds[0]
-      : mainCategoryId;
-    onChange(nextSelectedCategoryIds, nextMainCategoryId);
-  };
-
-  const handleMainCategoryChange = (categoryId: string) => {
-    if (!selectedIdSet.has(categoryId)) {
-      return;
-    }
-
+  const setMain = (categoryId: string) => {
+    if (!selectedIdSet.has(categoryId)) return;
     onChange(selectedCategoryIds, categoryId);
   };
 
+  const selectedCount = selectedCategoryIds.length;
+
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       <Paper
         variant="outlined"
         sx={{
-          p: 2,
+          p: { xs: 2, sm: 2.5 },
           borderRadius: 3,
+          borderColor: 'rgba(0,0,0,0.12)',
           background:
-            'linear-gradient(180deg, rgba(39,39,39,0.03) 0%, rgba(39,39,39,0.01) 100%)',
+            'linear-gradient(180deg, #f0ebe4 0%, rgba(240,235,228,0.35) 100%)',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <Stack spacing={0.75}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CategoryOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-            <Typography variant="subtitle1" fontWeight={700}>
-              Categories
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage:
+              'radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+            pointerEvents: 'none',
+            opacity: 0.6,
+          }}
+        />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={{ xs: 2, sm: 3 }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          sx={{ position: 'relative' }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Overline>Selection</Overline>
+            <Typography
+              sx={{
+                fontFamily: SERIF,
+                fontSize: { xs: '1.5rem', sm: '1.75rem' },
+                lineHeight: 1.1,
+                fontWeight: 700,
+                color: 'text.primary',
+                mt: 0.25,
+              }}
+            >
+              {selectedCount === 0
+                ? 'Nothing selected'
+                : `${selectedCount} categor${selectedCount === 1 ? 'y' : 'ies'}`}
             </Typography>
-          </Stack>
-          <Typography variant="body2" color="text.secondary">
-            Tick any categories that apply. Parent and child categories can both be selected.
-          </Typography>
-        </Stack>
+          </Box>
 
-        <Stack spacing={1.25} sx={{ mt: 2 }}>
-          {categories.map((category) => (
-            <CategoryBranch
-              key={category.id}
-              category={category}
-              depth={0}
-              expandedIds={expandedIds}
-              selectedIdSet={selectedIdSet}
-              mainCategoryId={mainCategoryId}
-              onToggleExpanded={toggleExpanded}
-              onCheckedChange={handleCheckedChange}
-              onMainCategoryChange={handleMainCategoryChange}
-            />
-          ))}
+          <Box
+            aria-hidden
+            sx={{
+              display: { xs: 'none', sm: 'block' },
+              width: '1px',
+              alignSelf: 'stretch',
+              bgcolor: 'rgba(0,0,0,0.12)',
+            }}
+          />
+
+          <Box sx={{ flex: 1.2, minWidth: 0 }}>
+            <Overline>Main category</Overline>
+            <Typography
+              sx={{
+                fontFamily: SERIF,
+                fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                lineHeight: 1.2,
+                fontWeight: 600,
+                fontStyle: mainCategoryName ? 'normal' : 'italic',
+                color: mainCategoryName ? 'text.primary' : 'text.disabled',
+                mt: 0.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {mainCategoryName ?? 'none yet'}
+            </Typography>
+          </Box>
         </Stack>
       </Paper>
 
-      <Paper
-        variant="outlined"
+      <Stack spacing={2}>
+        {categories.map((root, index) => (
+          <DepartmentPanel
+            key={root.id}
+            index={index}
+            root={root}
+            selectedIdSet={selectedIdSet}
+            mainCategoryId={mainCategoryId}
+            onToggle={toggleSelection}
+            onSetMain={setMain}
+          />
+        ))}
+      </Stack>
+
+      <Typography
+        variant="caption"
         sx={{
-          p: 2,
-          borderRadius: 3,
-          backgroundColor: 'background.paper',
+          fontFamily: SANS,
+          color: 'text.secondary',
+          fontSize: '0.72rem',
+          letterSpacing: '0.02em',
+          lineHeight: 1.6,
+          display: 'block',
         }}
       >
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Selection summary
-          </Typography>
-          {selectedItems.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No categories selected yet.
-            </Typography>
-          ) : (
-            <>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {selectedItems.map((category) => (
-                  <Chip
-                    key={category.id}
-                    label={category.id === mainCategoryId ? `${category.name} · Main` : category.name}
-                    color={category.id === mainCategoryId ? 'primary' : 'default'}
-                    variant={category.id === mainCategoryId ? 'filled' : 'outlined'}
-                  />
-                ))}
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Pick one selected category as the main category. This is used for primary navigation and compatibility.
-              </Typography>
-            </>
-          )}
-        </Stack>
-      </Paper>
+        Tap a category to select it. Click the ★ on any selected category to
+        promote it as the main category used for navigation and legacy
+        compatibility.
+      </Typography>
     </Stack>
   );
 }
 
-interface CategoryBranchProps {
-  category: CategoryTreeNode;
-  depth: number;
-  expandedIds: string[];
+interface DepartmentPanelProps {
+  index: number;
+  root: CategoryTreeNode;
   selectedIdSet: Set<string>;
   mainCategoryId: string;
-  onToggleExpanded: (categoryId: string) => void;
-  onCheckedChange: (categoryId: string, checked: boolean) => void;
-  onMainCategoryChange: (categoryId: string) => void;
+  onToggle: (categoryId: string) => void;
+  onSetMain: (categoryId: string) => void;
 }
 
-function CategoryBranch({
-  category,
-  depth,
-  expandedIds,
+function DepartmentPanel({
+  index,
+  root,
   selectedIdSet,
   mainCategoryId,
-  onToggleExpanded,
-  onCheckedChange,
-  onMainCategoryChange,
-}: CategoryBranchProps) {
-  const hasChildren = category.children.length > 0;
-  const isExpanded = expandedIds.includes(category.id);
-  const isSelected = selectedIdSet.has(category.id);
-  const isMain = mainCategoryId === category.id;
+  onToggle,
+  onSetMain,
+}: DepartmentPanelProps) {
+  const selectedChildCount = useMemo(
+    () => root.children.filter((c) => selectedIdSet.has(c.id)).length,
+    [root.children, selectedIdSet],
+  );
+  const hasChildren = root.children.length > 0;
+  const rootSelected = selectedIdSet.has(root.id);
 
   return (
-    <Fragment>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: { xs: 2, sm: 2.5 },
+        borderRadius: 3,
+        borderColor: 'rgba(0,0,0,0.12)',
+        bgcolor: '#fff',
+        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+        '&:hover': {
+          borderColor: 'rgba(0,0,0,0.25)',
+        },
+      }}
+    >
       <Stack
         direction="row"
-        alignItems="center"
-        spacing={1}
-        sx={{
-          pl: depth * 2,
-          py: 0.5,
-          pr: 1,
-          borderRadius: 2,
-          backgroundColor: isSelected ? 'rgba(39,39,39,0.04)' : 'transparent',
-        }}
+        alignItems="baseline"
+        spacing={1.5}
+        sx={{ mb: 1.75 }}
       >
-        {hasChildren ? (
-          <IconButton size="small" onClick={() => onToggleExpanded(category.id)} sx={{ color: 'text.secondary' }}>
-            {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </IconButton>
-        ) : (
-          <Box sx={{ width: 32, display: 'flex', justifyContent: 'center', color: 'text.disabled' }}>
-            <SubdirectoryArrowRightIcon sx={{ fontSize: 18, opacity: depth === 0 ? 0 : 1 }} />
-          </Box>
+        <Typography
+          sx={{
+            fontFamily: SANS,
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            letterSpacing: '0.14em',
+            color: 'text.disabled',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {String(index + 1).padStart(2, '0')}
+        </Typography>
+        <Typography
+          sx={{
+            fontFamily: SERIF,
+            fontSize: { xs: '1.35rem', sm: '1.55rem' },
+            fontWeight: 700,
+            lineHeight: 1,
+            color: 'text.primary',
+            flex: 1,
+          }}
+        >
+          {root.name}
+        </Typography>
+        {hasChildren && (
+          <Overline sx={{ whiteSpace: 'nowrap' }}>
+            {selectedChildCount > 0
+              ? `${selectedChildCount} / ${root.children.length} selected`
+              : `${root.children.length} types`}
+          </Overline>
         )}
-
-        <FormControlLabel
-          sx={{ flex: 1, mr: 0 }}
-          control={
-            <Checkbox
-              checked={isSelected}
-              onChange={(event) => onCheckedChange(category.id, event.target.checked)}
-            />
-          }
-          label={
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="body1" fontWeight={depth === 0 ? 700 : 500}>
-                {category.name}
-              </Typography>
-              {depth === 0 && (
-                <Chip label="Parent" size="small" variant="outlined" sx={{ height: 22 }} />
-              )}
-            </Stack>
-          }
-        />
-
-        <FormControlLabel
-          sx={{ mr: 0 }}
-          control={
-            <Radio
-              checked={isMain}
-              onChange={() => onMainCategoryChange(category.id)}
-              disabled={!isSelected}
-            />
-          }
-          label={
-            <Typography variant="body2" color={isSelected ? 'text.primary' : 'text.disabled'}>
-              Main
-            </Typography>
-          }
-        />
       </Stack>
 
-      {hasChildren && (
-        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-          <Stack spacing={0.75} sx={{ mt: 0.5 }}>
-            {category.children.map((child) => (
-              <CategoryBranch
-                key={child.id}
-                category={child}
-                depth={depth + 1}
-                expandedIds={expandedIds}
-                selectedIdSet={selectedIdSet}
-                mainCategoryId={mainCategoryId}
-                onToggleExpanded={onToggleExpanded}
-                onCheckedChange={onCheckedChange}
-                onMainCategoryChange={onMainCategoryChange}
-              />
-            ))}
-          </Stack>
-        </Collapse>
-      )}
-    </Fragment>
+      <Box
+        aria-hidden
+        sx={{
+          width: 32,
+          height: '1.5px',
+          bgcolor: 'primary.main',
+          mb: 1.75,
+        }}
+      />
+
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        {!hasChildren && (
+          <CategoryPill
+            label={root.name}
+            selected={rootSelected}
+            main={mainCategoryId === root.id}
+            onToggleSelect={() => onToggle(root.id)}
+            onSetMain={() => onSetMain(root.id)}
+          />
+        )}
+        {root.children.map((child) => (
+          <CategoryPill
+            key={child.id}
+            label={child.name}
+            selected={selectedIdSet.has(child.id)}
+            main={mainCategoryId === child.id}
+            onToggleSelect={() => onToggle(child.id)}
+            onSetMain={() => onSetMain(child.id)}
+          />
+        ))}
+      </Box>
+    </Paper>
   );
 }
 
-function flattenCategoryTree(categories: CategoryTreeNode[]): CategoryTreeNode[] {
-  return categories.flatMap((category) => [category, ...flattenCategoryTree(category.children)]);
+interface CategoryPillProps {
+  label: string;
+  selected: boolean;
+  main: boolean;
+  onToggleSelect: () => void;
+  onSetMain: () => void;
+}
+
+function CategoryPill({
+  label,
+  selected,
+  main,
+  onToggleSelect,
+  onSetMain,
+}: CategoryPillProps) {
+  return (
+    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+      <ButtonBase
+        onClick={onToggleSelect}
+        aria-pressed={selected}
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.65,
+          pl: selected ? 1.5 : 1.75,
+          pr: selected ? 4.25 : 1.75,
+          py: 0.85,
+          minHeight: 34,
+          borderRadius: '999px',
+          border: '1px solid',
+          borderColor: selected ? 'primary.main' : 'rgba(0,0,0,0.18)',
+          bgcolor: selected ? 'primary.main' : 'transparent',
+          color: selected ? '#ffffff' : 'text.primary',
+          fontFamily: SANS,
+          fontSize: '0.82rem',
+          fontWeight: selected ? 600 : 500,
+          letterSpacing: '0.005em',
+          transition:
+            'background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, padding 0.22s ease',
+          '&:hover': {
+            borderColor: selected ? 'primary.main' : 'text.primary',
+            bgcolor: selected ? '#363636' : 'rgba(0,0,0,0.035)',
+          },
+        }}
+      >
+        {selected && (
+          <CheckRoundedIcon
+            sx={{
+              fontSize: 15,
+              opacity: 0.95,
+            }}
+          />
+        )}
+        {label}
+      </ButtonBase>
+      {selected && (
+        <Tooltip
+          title={main ? 'Main category' : 'Set as main category'}
+          placement="top"
+          arrow
+        >
+          <IconButton
+            size="small"
+            onClick={onSetMain}
+            aria-label={main ? 'Main category' : 'Set as main category'}
+            sx={{
+              position: 'absolute',
+              right: 3,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              p: 0.35,
+              color: main ? '#ffcf4d' : 'rgba(255,255,255,0.55)',
+              bgcolor: 'transparent',
+              transition: 'color 0.18s ease, background-color 0.18s ease',
+              '&:hover': {
+                color: '#ffcf4d',
+                bgcolor: 'rgba(255,255,255,0.12)',
+              },
+            }}
+          >
+            {main ? (
+              <StarRoundedIcon sx={{ fontSize: 16 }} />
+            ) : (
+              <StarOutlineRoundedIcon sx={{ fontSize: 16 }} />
+            )}
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
+  );
+}
+
+interface OverlineProps {
+  children: React.ReactNode;
+  sx?: React.ComponentProps<typeof Typography>['sx'];
+}
+
+function Overline({ children, sx }: OverlineProps) {
+  return (
+    <Typography
+      component="span"
+      sx={{
+        display: 'inline-block',
+        fontFamily: SANS,
+        fontSize: '0.66rem',
+        fontWeight: 600,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        color: 'text.secondary',
+        ...sx,
+      }}
+    >
+      {children}
+    </Typography>
+  );
 }

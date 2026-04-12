@@ -228,7 +228,27 @@ public class ProductRepository(SecondHandShopDbContext dbContext) : IProductRepo
         }
 
         if (parameters.CategoryId.HasValue)
-            query = query.Where(x => x.CategoryId == parameters.CategoryId.Value);
+        {
+            var activeCategories = await dbContext.Categories
+                .AsNoTracking()
+                .Where(c => c.IsActive)
+                .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
+                .ToListAsync(cancellationToken);
+
+            var selectedCategoryId = parameters.CategoryId.Value;
+            if (!activeCategories.Any(c => c.Id == selectedCategoryId))
+            {
+                query = query.Where(_ => false);
+            }
+            else
+            {
+                var descendantCategoryIds = CollectDescendantCategoryIds(selectedCategoryId, activeCategories);
+                query = query.Where(p =>
+                    dbContext.ProductCategories.Any(pc =>
+                        pc.ProductId == p.Id &&
+                        descendantCategoryIds.Contains(pc.CategoryId)));
+            }
+        }
 
         if (parameters.IsFeatured.HasValue)
             query = query.Where(x => x.IsFeatured == parameters.IsFeatured.Value);

@@ -112,30 +112,87 @@ export function ProductCategoryDialog({
       onClose={saveMutation.isPending ? undefined : onClose}
       fullWidth
       maxWidth="md"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          border: '1px solid rgba(0,0,0,0.12)',
+        },
+      }}
     >
-      <DialogTitle>Edit product categories</DialogTitle>
-      <DialogContent dividers>
+      <DialogTitle sx={{ pt: 3, pb: 1.5, px: { xs: 3, sm: 4 } }}>
+        <Typography
+          component="span"
+          sx={{
+            display: 'block',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: '0.68rem',
+            fontWeight: 600,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'text.secondary',
+            mb: 0.5,
+          }}
+        >
+          Curate this product
+        </Typography>
+        <Typography
+          component="span"
+          sx={{
+            display: 'block',
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: { xs: '1.75rem', sm: '2rem' },
+            lineHeight: 1.1,
+            fontWeight: 700,
+            color: 'text.primary',
+          }}
+        >
+          {productTitle}
+        </Typography>
+        <Box
+          aria-hidden
+          sx={{
+            width: 40,
+            height: '2px',
+            bgcolor: 'primary.main',
+            mt: 1.25,
+          }}
+        />
+      </DialogTitle>
+      <DialogContent
+        dividers
+        sx={{
+          px: { xs: 3, sm: 4 },
+          py: 3,
+          bgcolor: '#fafaf8',
+        }}
+      >
         <Stack spacing={2}>
-          <Box>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {productTitle}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {selectedCount === 0
-                ? 'No categories selected yet.'
-                : `${selectedCount} categor${selectedCount === 1 ? 'y' : 'ies'} selected.`}
-            </Typography>
-          </Box>
-
           {selectionQuery.isLoading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4 }}>
-              <CircularProgress size={22} />
-              <Typography variant="body2" color="text.secondary">
-                Loading current category selection...
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                py: 6,
+                justifyContent: 'center',
+              }}
+            >
+              <CircularProgress size={20} sx={{ color: 'text.secondary' }} />
+              <Typography
+                sx={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.02em',
+                  color: 'text.secondary',
+                }}
+              >
+                Loading current category selection…
               </Typography>
             </Box>
           ) : selectionQuery.isError ? (
-            <Alert severity="error">Unable to load the current category selection.</Alert>
+            <Alert severity="error" sx={{ borderRadius: 2 }}>
+              Unable to load the current category selection.
+            </Alert>
           ) : (
             <CategoryTreeSelector
               categories={categoryTree}
@@ -149,19 +206,36 @@ export function ProductCategoryDialog({
             />
           )}
 
-          {localError && <Alert severity="error">{localError}</Alert>}
+          {localError && (
+            <Alert severity="error" sx={{ borderRadius: 2 }}>
+              {localError}
+            </Alert>
+          )}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} disabled={saveMutation.isPending}>
+      <DialogActions sx={{ px: { xs: 3, sm: 4 }, py: 2, gap: 1 }}>
+        <Button
+          onClick={onClose}
+          disabled={saveMutation.isPending}
+          sx={{ color: 'text.secondary' }}
+        >
           Cancel
         </Button>
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={selectionQuery.isLoading || selectionQuery.isError || saveMutation.isPending}
+          disabled={
+            selectionQuery.isLoading ||
+            selectionQuery.isError ||
+            saveMutation.isPending
+          }
+          sx={{ px: 3 }}
         >
-          {saveMutation.isPending ? 'Saving...' : 'Save categories'}
+          {saveMutation.isPending
+            ? 'Saving…'
+            : selectedCount === 0
+              ? 'Save'
+              : `Save ${selectedCount} categor${selectedCount === 1 ? 'y' : 'ies'}`}
         </Button>
       </DialogActions>
     </Dialog>

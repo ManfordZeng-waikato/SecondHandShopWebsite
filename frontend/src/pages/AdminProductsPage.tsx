@@ -35,7 +35,7 @@ import {
   updateProductFeatured,
   updateProductStatus,
 } from '../features/admin/api/adminApi';
-import { fetchCategories, fetchCategoryTree } from '../features/catalog/api/catalogApi';
+import { fetchCategoryTree } from '../features/catalog/api/catalogApi';
 import { StatusChip } from '../shared/components/StatusChip';
 import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialog';
 import { RevertSaleDialog } from '../features/admin/components/RevertSaleDialog';
@@ -160,12 +160,6 @@ export function AdminProductsPage() {
     return featuredFilter === 'featured';
   }, [featuredFilter]);
 
-  const categoriesQuery = useQuery({
-    queryKey: ['categories'],
-    queryFn: fetchCategories,
-    staleTime: 5 * 60 * 1000,
-  });
-
   const categoryTreeQuery = useQuery({
     queryKey: ['category-tree'],
     queryFn: fetchCategoryTree,
@@ -247,8 +241,19 @@ export function AdminProductsPage() {
     },
   });
 
-  const categories = categoriesQuery.data ?? [];
   const categoryTree = categoryTreeQuery.data ?? [];
+
+  const activeCategoryRoot = useMemo(() => {
+    if (!selectedCategoryId) return null;
+    for (const root of categoryTree) {
+      if (root.id === selectedCategoryId) return root;
+      if (root.children.some((child) => child.id === selectedCategoryId)) {
+        return root;
+      }
+    }
+    return null;
+  }, [categoryTree, selectedCategoryId]);
+
   const products = productsQuery.data?.items ?? [];
   const totalCount = productsQuery.data?.totalCount ?? 0;
 
@@ -433,6 +438,21 @@ export function AdminProductsPage() {
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Category
             </Typography>
+            {activeCategoryRoot && (
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.66rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'text.disabled',
+                  ml: 0.5,
+                }}
+              >
+                · {activeCategoryRoot.name}
+                {selectedCategoryId !== activeCategoryRoot.id && ' ›'}
+              </Typography>
+            )}
           </Stack>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
             <Chip
@@ -442,20 +462,88 @@ export function AdminProductsPage() {
               onClick={() => { setSelectedCategoryId(undefined); setPage(1); }}
               sx={filterChipSx(!selectedCategoryId)}
             />
-            {categories.map((cat) => {
-              const isActive = selectedCategoryId === cat.id;
+            {categoryTree.map((root) => {
+              const isActiveRoot = activeCategoryRoot?.id === root.id;
               return (
                 <Chip
-                  key={cat.id}
-                  label={cat.name}
+                  key={root.id}
+                  label={root.name}
                   size="small"
-                  variant={isActive ? 'filled' : 'outlined'}
-                  onClick={() => { setSelectedCategoryId(isActive ? undefined : cat.id); setPage(1); }}
-                  sx={filterChipSx(isActive)}
+                  variant={isActiveRoot ? 'filled' : 'outlined'}
+                  onClick={() => {
+                    if (selectedCategoryId === root.id) {
+                      setSelectedCategoryId(undefined);
+                    } else {
+                      setSelectedCategoryId(root.id);
+                    }
+                    setPage(1);
+                  }}
+                  sx={filterChipSx(isActiveRoot)}
                 />
               );
             })}
           </Box>
+
+          {activeCategoryRoot && activeCategoryRoot.children.length > 0 && (
+            <Box
+              sx={{
+                mt: 1.25,
+                pl: 1.5,
+                py: 1,
+                pr: 1,
+                borderLeft: '2px solid',
+                borderColor: 'primary.main',
+                bgcolor: 'rgba(240,235,228,0.5)',
+                borderRadius: '0 6px 6px 0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 0.75,
+                animation: 'adminSubFilterReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
+                '@keyframes adminSubFilterReveal': {
+                  from: { opacity: 0, transform: 'translateY(-3px)' },
+                  to: { opacity: 1, transform: 'translateY(0)' },
+                },
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.64rem',
+                  letterSpacing: '0.11em',
+                  textTransform: 'uppercase',
+                  fontWeight: 600,
+                  color: 'text.disabled',
+                  mr: 0.25,
+                }}
+              >
+                Within
+              </Typography>
+              <Chip
+                label={`All ${activeCategoryRoot.name}`}
+                size="small"
+                variant={selectedCategoryId === activeCategoryRoot.id ? 'filled' : 'outlined'}
+                onClick={() => { setSelectedCategoryId(activeCategoryRoot.id); setPage(1); }}
+                sx={filterChipSx(selectedCategoryId === activeCategoryRoot.id)}
+              />
+              {activeCategoryRoot.children.map((child) => {
+                const isActive = selectedCategoryId === child.id;
+                return (
+                  <Chip
+                    key={child.id}
+                    label={child.name}
+                    size="small"
+                    variant={isActive ? 'filled' : 'outlined'}
+                    onClick={() => {
+                      setSelectedCategoryId(isActive ? activeCategoryRoot.id : child.id);
+                      setPage(1);
+                    }}
+                    sx={filterChipSx(isActive)}
+                  />
+                );
+              })}
+            </Box>
+          )}
         </Box>
 
         <Divider />
