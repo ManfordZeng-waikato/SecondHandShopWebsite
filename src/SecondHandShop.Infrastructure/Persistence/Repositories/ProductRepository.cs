@@ -60,7 +60,8 @@ public class ProductRepository(
         var safeSearch = parameters.SafeSearch;
         if (safeSearch is not null)
         {
-            query = query.Where(p => p.Title.Contains(safeSearch));
+            var pattern = $"%{EscapeLikePattern(safeSearch)}%";
+            query = query.Where(p => EF.Functions.ILike(p.Title, pattern, "\\"));
         }
 
         var safeCategory = parameters.SafeCategory;
@@ -215,7 +216,10 @@ public class ProductRepository(
 
         var search = parameters.SafeSearch;
         if (search is not null)
-            query = query.Where(x => x.Title.Contains(search));
+        {
+            var pattern = $"%{EscapeLikePattern(search)}%";
+            query = query.Where(x => EF.Functions.ILike(x.Title, pattern, "\\"));
+        }
 
         if (!string.IsNullOrWhiteSpace(parameters.Status)
             && Enum.TryParse<ProductStatus>(parameters.Status, ignoreCase: true, out var statusEnum))
@@ -316,4 +320,6 @@ public class ProductRepository(
         await dbContext.Products.AddAsync(product, cancellationToken);
     }
 
+    private static string EscapeLikePattern(string value)
+        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 }
