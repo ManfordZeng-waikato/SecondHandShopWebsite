@@ -1,14 +1,15 @@
 -- ============================================================================
 --  dev-reset-data.sql
---  PURPOSE: Wipe transactional data from the development database so the app
---           starts from a clean slate. Categories and AdminUsers are preserved;
---           AdminSeedService will re-ensure the seed admin on the next startup.
+--  PURPOSE: Wipe transactional + category data from the development database
+--           so the app starts from a clean slate. AdminUsers are preserved;
+--           AdminSeedService re-ensures the seed admin on the next startup and
+--           CatalogSeedService re-plants the default category hierarchy when
+--           the Categories table is empty.
 --
 --  DO NOT RUN THIS AGAINST ANY NON-DEVELOPMENT DATABASE.
 --  There is no undo. Everything listed in the TRUNCATE block is gone.
 --
 --  Tables preserved:
---    - "Categories"           (business reference data)
 --    - "AdminUsers"           (admin accounts; seed is idempotent but custom
 --                              accounts/password changes would be lost)
 --    - "__EFMigrationsHistory" (must never be truncated, EF would re-run all
@@ -17,6 +18,7 @@
 --  Tables cleared (order does not matter because CASCADE handles FKs):
 --    - "ProductImages"        (FK -> Products)
 --    - "ProductSales"         (FK -> Products)
+--    - "ProductCategories"    (FK -> Products, FK -> Categories)
 --    - "Inquiries"            (FK -> Products, FK -> Customers)
 --    - "InquiryIpCooldowns"   (standalone rate-limit state)
 --    - "Products"             (cover-image/image-count denorm will reset on
@@ -24,6 +26,8 @@
 --    - "Customers"            (customer rows get re-created via inquiries;
 --                              there are no admin-authored customers in
 --                              current flows, so this is safe to wipe)
+--    - "Categories"           (cleared so CatalogSeedService re-plants the
+--                              default hierarchy on next startup)
 --
 --  HOW TO RUN
 --    Option A — psql (preferred, gives row-count confirmation per table):
@@ -39,10 +43,12 @@ BEGIN;
 TRUNCATE TABLE
     "ProductImages",
     "ProductSales",
+    "ProductCategories",
     "Inquiries",
     "InquiryIpCooldowns",
     "Products",
-    "Customers"
+    "Customers",
+    "Categories"
 RESTART IDENTITY CASCADE;
 
 COMMIT;

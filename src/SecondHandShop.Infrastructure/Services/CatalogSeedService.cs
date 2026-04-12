@@ -27,27 +27,66 @@ public static class CatalogSeedService
             .Select(x => (Guid?)x.Id)
             .FirstOrDefaultAsync();
 
-        var categories = new[]
+        var rootDefinitions = new (string Name, string Slug, string[][] Children)[]
         {
-            Category.Create("Furniture", "furniture", null, 1, true, createdBy, utcNow),
-            Category.Create("Antique", "antique", null, 2, true, createdBy, utcNow),
-            Category.Create("Outdoor", "outdoor", null, 3, true, createdBy, utcNow),
+            ("Furniture", "furniture", new[]
+            {
+                new[] { "Sofa", "sofa" },
+                new[] { "Chair", "chair" },
+                new[] { "Table", "table" },
+                new[] { "Cabinet & Storage", "cabinet-storage" },
+                new[] { "Bed", "bed" },
+                new[] { "Bedroom Furniture", "bedroom-furniture" },
+                new[] { "Dining Furniture", "dining-furniture" },
+                new[] { "Office Furniture", "office-furniture" },
+                new[] { "Shelving & Bookcases", "shelving-bookcases" },
+            }),
+            ("Antiques & Vintage", "antiques-vintage", new[]
+            {
+                new[] { "Antique Furniture", "antique-furniture" },
+                new[] { "Vintage Decor", "vintage-decor" },
+                new[] { "Collectibles", "collectibles" },
+                new[] { "Clocks", "clocks" },
+                new[] { "Mirrors", "mirrors" },
+                new[] { "Artwork", "artwork" },
+            }),
+            ("Home Decor", "home-decor", new[]
+            {
+                new[] { "Lamps & Lighting", "lamps-lighting" },
+                new[] { "Rugs", "rugs" },
+                new[] { "Wall Decor", "wall-decor" },
+                new[] { "Decorative Objects", "decorative-objects" },
+            }),
+            ("Outdoor", "outdoor", new[]
+            {
+                new[] { "Outdoor Seating", "outdoor-seating" },
+                new[] { "Outdoor Tables", "outdoor-tables" },
+                new[] { "Garden Decor", "garden-decor" },
+                new[] { "Planters", "planters" },
+            }),
+            ("Appliances & Household", "appliances-household", new[]
+            {
+                new[] { "Kitchen Appliances", "kitchen-appliances" },
+                new[] { "Small Appliances", "small-appliances" },
+                new[] { "Household Items", "household-items" },
+            }),
         };
 
-        await dbContext.Categories.AddRangeAsync(categories);
+        var roots = rootDefinitions
+            .Select((def, index) => Category.Create(def.Name, def.Slug, null, index + 1, true, createdBy, utcNow))
+            .ToArray();
+
+        await dbContext.Categories.AddRangeAsync(roots);
         await dbContext.SaveChangesAsync();
 
-        var furniture = categories.Single(x => x.Slug == "furniture");
-        var childCategories = new[]
-        {
-            Category.Create("Sofa", "sofa", furniture.Id, 1, true, createdBy, utcNow),
-            Category.Create("Chair", "chair", furniture.Id, 2, true, createdBy, utcNow),
-            Category.Create("Table", "table", furniture.Id, 3, true, createdBy, utcNow),
-        };
+        var children = rootDefinitions
+            .SelectMany((def, rootIndex) => def.Children.Select((child, childIndex) =>
+                Category.Create(child[0], child[1], roots[rootIndex].Id, childIndex + 1, true, createdBy, utcNow)))
+            .ToArray();
 
-        await dbContext.Categories.AddRangeAsync(childCategories);
+        await dbContext.Categories.AddRangeAsync(children);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Seeded {Count} default categories.", categories.Length + childCategories.Length);
+        logger.LogInformation("Seeded {Count} default categories.", roots.Length + children.Length);
     }
 }
