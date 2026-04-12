@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from '@mui/material';
+import { AppBar, Box, Button, Container, Divider, Stack, Toolbar, Typography } from '@mui/material';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../../features/admin/auth/adminAuth';
 import { logoutAdmin } from '../../features/admin/api/adminApi';
@@ -23,14 +24,35 @@ export function AdminLayout({ children }: PropsWithChildren) {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Admin Dashboard
           </Typography>
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} alignItems="center">
             <Button color="inherit" component={RouterLink} to="/lord/products">
               Products
             </Button>
             <Button color="inherit" component={RouterLink} to="/lord/customers">
               Customers
             </Button>
-            <Button color="inherit" onClick={handleLogout}>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ mx: 0.5, my: 1.25, borderColor: 'rgba(255,255,255,0.24)' }}
+            />
+            <Button
+              onClick={handleLogout}
+              startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
+              variant="outlined"
+              size="small"
+              sx={{
+                color: '#ff8a80',
+                borderColor: 'rgba(255,138,128,0.5)',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                '&:hover': {
+                  borderColor: '#ff5252',
+                  backgroundColor: 'rgba(255,82,82,0.12)',
+                  color: '#ff5252',
+                },
+              }}
+            >
               Logout
             </Button>
           </Stack>
