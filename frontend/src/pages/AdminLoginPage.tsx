@@ -68,7 +68,11 @@ export function AdminLoginPage() {
     }
   };
 
-  if (!isAuthInitialized) {
+  // Also suppress the form while already-authenticated state is being handled by the
+  // redirect effect below. Otherwise the commit->effect ordering briefly paints the
+  // login form after initializeAdminAuth() flips isAuthenticated=true but before the
+  // navigate() call fires.
+  if (!isAuthInitialized || isAuthenticated) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
