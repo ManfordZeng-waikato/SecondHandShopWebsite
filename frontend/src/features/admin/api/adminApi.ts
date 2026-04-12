@@ -5,6 +5,8 @@ import type {
 } from '../../../entities/product/types';
 import type {
   AdminCustomerQueryParams,
+  CreateCustomerInput,
+  CreateCustomerResult,
   CustomerDetail,
   CustomerInquiryItem,
   CustomerInquiryQueryParams,
@@ -207,6 +209,13 @@ export async function updateAdminCustomer(
   input: UpdateCustomerInput,
 ): Promise<void> {
   await httpClient.patch(`/api/lord/customers/${customerId}`, input);
+}
+
+export async function createAdminCustomer(
+  input: CreateCustomerInput,
+): Promise<CreateCustomerResult> {
+  const response = await httpClient.post<{ id: string }>('/api/lord/customers', input);
+  return { id: response.data.id };
 }
 
 export interface PresignedUploadResult {

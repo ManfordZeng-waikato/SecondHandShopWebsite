@@ -80,6 +80,24 @@ export interface UpdateCustomerInput {
   notes?: string;
 }
 
+export interface CreateCustomerInput {
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  status?: CustomerStatus;
+  notes?: string;
+}
+
+export interface CreateCustomerResult {
+  id: string;
+}
+
+export interface CustomerConflictDetail {
+  existingCustomerId: string;
+  conflictField: 'email' | 'phoneNumber';
+  message: string;
+}
+
 export interface EditableCustomer {
   id: string;
   name: string;

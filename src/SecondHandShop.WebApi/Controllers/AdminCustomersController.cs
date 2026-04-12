@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
 using SecondHandShop.Application.Contracts.Sales;
@@ -79,6 +80,47 @@ public class AdminCustomersController(
         return Ok(sales);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> CreateAsync(
+        [FromBody] CreateCustomerApiRequest request,
+        CancellationToken cancellationToken)
+    {
+        CustomerStatus? status = null;
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            if (!TryParseStatus(request.Status, out var parsedStatus))
+            {
+                return BadRequest(new ErrorResponse($"Unsupported customer status '{request.Status}'."));
+            }
+
+            status = parsedStatus;
+        }
+
+        try
+        {
+            var newId = await adminCustomerService.CreateCustomerAsync(
+                new CreateCustomerRequest(
+                    request.Name,
+                    request.Email,
+                    request.PhoneNumber,
+                    status,
+                    request.Notes),
+                cancellationToken);
+
+            return CreatedAtAction(
+                nameof(GetDetailAsync),
+                new { customerId = newId },
+                new CreateCustomerApiResponse(newId));
+        }
+        catch (CustomerConflictException ex)
+        {
+            return Conflict(new CustomerConflictApiResponse(
+                ex.Message,
+                ex.ExistingCustomerId,
+                ex.ConflictField));
+        }
+    }
+
     [HttpPatch("{customerId:guid}")]
     public async Task<IActionResult> UpdateAsync(
         Guid customerId,
@@ -128,3 +170,30 @@ public sealed record UpdateCustomerApiRequest
     [MaxLength(2000)]
     public string? Notes { get; init; }
 }
+
+public sealed record CreateCustomerApiRequest
+{
+    [MaxLength(120)]
+    public string? Name { get; init; }
+
+    [MaxLength(254)]
+    [EmailAddress]
+    public string? Email { get; init; }
+
+    [MaxLength(40)]
+    [RegularExpression(@"^[0-9+\-\s()]*$", ErrorMessage = "Phone number can only contain digits, +, -, spaces, and parentheses.")]
+    public string? PhoneNumber { get; init; }
+
+    [MaxLength(50)]
+    public string? Status { get; init; }
+
+    [MaxLength(2000)]
+    public string? Notes { get; init; }
+}
+
+public sealed record CreateCustomerApiResponse(Guid Id);
+
+public sealed record CustomerConflictApiResponse(
+    string Message,
+    Guid ExistingCustomerId,
+    string ConflictField);

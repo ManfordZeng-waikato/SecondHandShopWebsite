@@ -27,23 +27,28 @@ import { Link as RouterLink } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+import PersonAddIcon from '@mui/icons-material/PersonAddAlt1';
 import type { AxiosError } from 'axios';
 import {
   customerSourceFilterLabels,
   customerSourceOptions,
 } from '../entities/customer/types';
 import type {
+  CreateCustomerInput,
+  CustomerConflictDetail,
   CustomerListItem,
   EditableCustomer,
   UpdateCustomerInput,
   CustomerSource,
 } from '../entities/customer/types';
 import {
+  createAdminCustomer,
   fetchAdminCustomerDetail,
   fetchAdminCustomers,
   updateAdminCustomer,
 } from '../features/admin/api/adminApi';
 import { CustomerEditDialog } from '../features/admin/components/CustomerEditDialog';
+import { CustomerCreateDialog } from '../features/admin/components/CustomerCreateDialog';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
@@ -135,6 +140,11 @@ export function AdminCustomersPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
 
+  // Create
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createConflict, setCreateConflict] = useState<CustomerConflictDetail | null>(null);
+
   const customersQuery = useQuery({
     queryKey: ['admin-customers', page, pageSize, searchKeyword, sourceFilter],
     queryFn: () =>
@@ -162,6 +172,56 @@ export function AdminCustomersPage() {
       setFeedback({ severity: 'error', message });
     },
   });
+
+  const createCustomerMutation = useMutation({
+    mutationFn: (input: CreateCustomerInput) => createAdminCustomer(input),
+    onSuccess: async () => {
+      setCreateError(null);
+      setCreateConflict(null);
+      setCreateOpen(false);
+      setFeedback({ severity: 'success', message: 'Customer created successfully.' });
+      await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+    },
+    onError: (error) => {
+      const axiosError = error as AxiosError<{
+        message?: string;
+        existingCustomerId?: string;
+        conflictField?: 'email' | 'phoneNumber';
+      }>;
+      const data = axiosError.response?.data;
+      if (
+        axiosError.response?.status === 409 &&
+        data?.existingCustomerId &&
+        (data.conflictField === 'email' || data.conflictField === 'phoneNumber')
+      ) {
+        setCreateConflict({
+          existingCustomerId: data.existingCustomerId,
+          conflictField: data.conflictField,
+          message: data.message ?? 'A customer with this contact already exists.',
+        });
+        setCreateError(null);
+        return;
+      }
+      const message = resolveErrorMessage(error, 'Failed to create customer.');
+      setCreateError(message);
+      setCreateConflict(null);
+    },
+  });
+
+  const openCreateDialog = () => {
+    setCreateError(null);
+    setCreateConflict(null);
+    setCreateOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    if (createCustomerMutation.isPending) {
+      return;
+    }
+    setCreateOpen(false);
+    setCreateError(null);
+    setCreateConflict(null);
+  };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -202,15 +262,33 @@ export function AdminCustomersPage() {
   // --- Page header ---
   const headerSection = (
     <Box sx={{ mb: 1 }}>
-      <Typography variant="h4" sx={{ lineHeight: 1.2 }}>
-        Customer Management
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-        {customersQuery.isLoading
-          ? 'Loading...'
-          : `${totalCount} ${totalCount === 1 ? 'customer' : 'customers'} total`}
-        {hasActiveFilters ? ' (filtered)' : ''}
-      </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={1}
+      >
+        <Box>
+          <Typography variant="h4" sx={{ lineHeight: 1.2 }}>
+            Customer Management
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {customersQuery.isLoading
+              ? 'Loading...'
+              : `${totalCount} ${totalCount === 1 ? 'customer' : 'customers'} total`}
+            {hasActiveFilters ? ' (filtered)' : ''}
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PersonAddIcon />}
+          onClick={openCreateDialog}
+          sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+        >
+          Add customer
+        </Button>
+      </Stack>
     </Box>
   );
 
@@ -560,6 +638,17 @@ export function AdminCustomersPage() {
           rowsPerPageOptions={PAGE_SIZE_OPTIONS}
         />
       </Paper>
+
+      <CustomerCreateDialog
+        open={createOpen}
+        isSubmitting={createCustomerMutation.isPending}
+        errorMessage={createError}
+        conflict={createConflict}
+        onClose={closeCreateDialog}
+        onSubmit={async (input) => {
+          await createCustomerMutation.mutateAsync(input);
+        }}
+      />
 
       <CustomerEditDialog
         open={Boolean(editTarget)}
