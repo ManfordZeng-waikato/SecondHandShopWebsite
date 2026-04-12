@@ -357,6 +357,20 @@ export function AdminCustomersPage() {
     </Paper>
   );
 
+  // --- Create dialog (mounted in every branch so the header button always works) ---
+  const createDialog = (
+    <CustomerCreateDialog
+      open={createOpen}
+      isSubmitting={createCustomerMutation.isPending}
+      errorMessage={createError}
+      conflict={createConflict}
+      onClose={closeCreateDialog}
+      onSubmit={async (input) => {
+        await createCustomerMutation.mutateAsync(input);
+      }}
+    />
+  );
+
   // --- Loading state ---
   if (customersQuery.isLoading) {
     return (
@@ -370,6 +384,7 @@ export function AdminCustomersPage() {
             Loading customers...
           </Typography>
         </Box>
+        {createDialog}
       </Stack>
     );
   }
@@ -382,6 +397,7 @@ export function AdminCustomersPage() {
         {searchSection}
         {filterSection}
         <Alert severity="error">Unable to load customers. Please refresh and try again.</Alert>
+        {createDialog}
       </Stack>
     );
   }
@@ -417,6 +433,7 @@ export function AdminCustomersPage() {
             </Alert>
           ) : undefined}
         </Snackbar>
+        {createDialog}
       </Stack>
     );
   }
@@ -639,16 +656,7 @@ export function AdminCustomersPage() {
         />
       </Paper>
 
-      <CustomerCreateDialog
-        open={createOpen}
-        isSubmitting={createCustomerMutation.isPending}
-        errorMessage={createError}
-        conflict={createConflict}
-        onClose={closeCreateDialog}
-        onSubmit={async (input) => {
-          await createCustomerMutation.mutateAsync(input);
-        }}
-      />
+      {createDialog}
 
       <CustomerEditDialog
         open={Boolean(editTarget)}
