@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react';
-import { AppBar, Box, Button, Container, Divider, Stack, Toolbar, Typography } from '@mui/material';
+import { AppBar, Box, Button, Container, Divider, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../../features/admin/auth/adminAuth';
 import { logoutAdmin } from '../../features/admin/api/adminApi';
@@ -31,6 +32,18 @@ export function AdminLayout({ children }: PropsWithChildren) {
             <Button color="inherit" component={RouterLink} to="/lord/customers">
               Customers
             </Button>
+            <Tooltip title="Open public site in a new tab">
+              <Button
+                color="inherit"
+                component="a"
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+              >
+                View site
+              </Button>
+            </Tooltip>
             <Divider
               orientation="vertical"
               flexItem
