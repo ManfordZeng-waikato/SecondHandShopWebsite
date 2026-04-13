@@ -89,6 +89,7 @@ public class SmtpEmailSender(
 
     private MailMessage BuildAdminLoginNotificationMailMessage(AdminLoginNotificationMessage message)
     {
+        var localOccurredAt = ConvertUtcToNewZealandTime(message.OccurredAtUtc);
         var subject = $"[Admin Login] {message.UserName}";
         var textBody = $"""
             An administrator signed in successfully.
@@ -100,8 +101,8 @@ public class SmtpEmailSender(
             - User ID: {message.AdminUserId}
 
             Session:
-            - Time (UTC): {message.OccurredAtUtc:yyyy-MM-dd HH:mm:ss} UTC
-            - Source IP: {message.SourceIpAddress ?? "(not available)"}
+            - Time (NZ): {localOccurredAt:yyyy-MM-dd HH:mm:ss} {GetNewZealandTimeZoneAbbreviation(localOccurredAt)}
+            - Source: {DescribeSourceIpAddress(message.SourceIpAddress)}
 
             If this login was not expected, rotate the password immediately and revoke active sessions.
             """;
@@ -126,6 +127,63 @@ public class SmtpEmailSender(
         }
 
         return $"{options.FrontendBaseUrl.TrimEnd('/')}/products/{productSlug}";
+    }
+
+    private static DateTimeOffset ConvertUtcToNewZealandTime(DateTime utcTime)
+    {
+        var utc = DateTime.SpecifyKind(utcTime, DateTimeKind.Utc);
+        var zone = ResolveNewZealandTimeZone();
+        return TimeZoneInfo.ConvertTime(new DateTimeOffset(utc), zone);
+    }
+
+    private static string GetNewZealandTimeZoneAbbreviation(DateTimeOffset localTime)
+        => localTime.Offset == TimeSpan.FromHours(13) ? "NZDT" : "NZST";
+
+    private static string DescribeSourceIpAddress(string? sourceIpAddress)
+    {
+        if (string.IsNullOrWhiteSpace(sourceIpAddress))
+            return "(not available)";
+
+        var trimmed = sourceIpAddress.Trim();
+        if (!IPAddress.TryParse(trimmed, out var ipAddress))
+            return trimmed;
+
+        if (IPAddress.IsLoopback(ipAddress))
+            return $"{trimmed} (localhost / local development)";
+
+        if (IsPrivateAddress(ipAddress))
+            return $"{trimmed} (private network)";
+
+        return trimmed;
+    }
+
+    private static bool IsPrivateAddress(IPAddress ipAddress)
+    {
+        if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = ipAddress.GetAddressBytes();
+            return bytes[0] switch
+            {
+                10 => true,
+                172 when bytes[1] >= 16 && bytes[1] <= 31 => true,
+                192 when bytes[1] == 168 => true,
+                _ => false
+            };
+        }
+
+        return ipAddress.IsIPv6LinkLocal || ipAddress.IsIPv6SiteLocal || ipAddress.IsIPv6UniqueLocal;
+    }
+
+    private static TimeZoneInfo ResolveNewZealandTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("New Zealand Standard Time");
+        }
     }
 
     private void EnsureConfigured()
