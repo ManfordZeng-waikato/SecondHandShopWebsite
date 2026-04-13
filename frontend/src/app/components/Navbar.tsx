@@ -35,14 +35,20 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
+  const submitSearch = () => {
     const trimmed = searchValue.trim();
     if (trimmed) {
       navigate(`/products?search=${encodeURIComponent(trimmed)}`);
-      setSearchValue('');
-      setMobileOpen(false);
+    } else {
+      navigate('/products');
     }
+    setSearchValue('');
+    setMobileOpen(false);
+  };
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    submitSearch();
   };
 
   const isProductsActive =
@@ -81,6 +87,7 @@ export function Navbar() {
               searchValue={searchValue}
               setSearchValue={setSearchValue}
               handleSearch={handleSearch}
+              submitSearch={submitSearch}
               mobileOpen={mobileOpen}
               setMobileOpen={setMobileOpen}
             />
@@ -89,6 +96,7 @@ export function Navbar() {
               searchValue={searchValue}
               setSearchValue={setSearchValue}
               handleSearch={handleSearch}
+              submitSearch={submitSearch}
               navLinkSx={navLinkSx}
               isProductsActive={isProductsActive}
               isMyStoryActive={isMyStoryActive}
@@ -106,6 +114,7 @@ interface DesktopNavProps {
   searchValue: string;
   setSearchValue: (v: string) => void;
   handleSearch: (e: FormEvent) => void;
+  submitSearch: () => void;
   navLinkSx: (active: boolean) => Record<string, unknown>;
   isProductsActive: boolean;
   isMyStoryActive: boolean;
@@ -115,6 +124,7 @@ function DesktopNav({
   searchValue,
   setSearchValue,
   handleSearch,
+  submitSearch,
   navLinkSx,
   isProductsActive,
   isMyStoryActive,
@@ -202,8 +212,7 @@ function DesktopNav({
       {/* CTA */}
       <Button
         variant="outlined"
-        component={RouterLink}
-        to="/products"
+        onClick={submitSearch}
         endIcon={<ArrowForwardIcon />}
         sx={{
           color: '#fff',
@@ -232,6 +241,7 @@ interface MobileNavProps {
   searchValue: string;
   setSearchValue: (v: string) => void;
   handleSearch: (e: FormEvent) => void;
+  submitSearch: () => void;
   mobileOpen: boolean;
   setMobileOpen: (v: boolean) => void;
 }
@@ -240,6 +250,7 @@ function MobileNav({
   searchValue,
   setSearchValue,
   handleSearch,
+  submitSearch,
   mobileOpen,
   setMobileOpen,
 }: MobileNavProps) {
@@ -387,9 +398,7 @@ function MobileNav({
           <Button
             variant="contained"
             fullWidth
-            component={RouterLink}
-            to="/products"
-            onClick={() => setMobileOpen(false)}
+            onClick={submitSearch}
             endIcon={<ArrowForwardIcon />}
             sx={{
               py: 1.5,
