@@ -28,7 +28,10 @@ public class AdminAuthController(
         [FromBody] LoginAdminRequest request,
         CancellationToken cancellationToken)
     {
-        var command = new LoginAdminCommand(request.UserName, request.Password);
+        var command = new LoginAdminCommand(
+            request.UserName,
+            request.Password,
+            HttpContext.Connection.RemoteIpAddress?.ToString());
         var response = await mediator.Send(command, cancellationToken);
 
         var cookieOpts = authCookieOptions.Value;

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code ([claude.ai/code](https://claude.ai/code)) when working in this repository.
 
 ## Commands
 
@@ -20,7 +20,7 @@ dotnet ef migrations add <MigrationName> --project src/SecondHandShop.Infrastruc
 dotnet build SecondHandShopWebsite.slnx
 ```
 
-### Frontend (React/Vite)
+### Frontend (React / Vite)
 
 ```bash
 cd frontend
@@ -42,42 +42,43 @@ npx wrangler deploy
 
 ## Architecture
 
-This is a full-stack second-hand goods marketplace with clean architecture across three separate sub-projects.
+Full-stack second-hand marketplace using clean architecture across three sub-projects.
 
 ### Backend (`src/`)
 
-Four .NET 10 projects following clean architecture:
+Four .NET 10 projects:
 
 - **Domain** — Entities (`Product`, `ProductImage`, `Category`, `Customer`, `Inquiry`, `InquiryIpCooldown`), enums, `AuditableEntity` base, `SlugValidator`
 - **Application** — Use cases via MediatR (CQRS-inspired), DTOs in `Contracts/`, abstractions (interfaces) for persistence, security, storage, messaging, image processing
-- **Infrastructure** — EF Core + PostgreSQL implementations: repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, admin seeding)
-- **WebApi** — ASP.NET Core host, controller-based routing, DI wiring in `Program.cs`
+- **Infrastructure** — EF Core + PostgreSQL: repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, admin seeding)
+- **WebApi** — ASP.NET Core host, controller-based routing, DI in `Program.cs`
 
-**Admin routes use `/api/lord/*` prefix** (not `/api/admin`) as a security-by-obscurity measure.
+**Admin API prefix:** `/api/lord/*` (not `/api/admin`) as a security-by-obscurity measure.
 
-Rate-limited endpoints:
+**Rate limits:**
+
 - `/api/lord/auth/login` — 5 requests/min per IP
 - `/api/products/search` — 30 requests/min per IP (sliding window)
 
-Authentication uses JWT stored in an HttpOnly cookie (`shs.admin.token`).
+**Auth:** JWT in HttpOnly cookie `shs.admin.token`.
 
 ### Frontend (`frontend/src/`)
 
-React 19 SPA with a feature-sliced structure:
+React 19 SPA, feature-sliced layout:
 
-- `app/` — Entry point, `AppRouter.tsx` (React Router 7), `AppProviders.tsx` (React Query + MUI theme), layouts (`MainLayout`, `AdminLayout`), `ProtectedAdminRoute`
-- `pages/` — Page-level components (public catalog pages + admin management pages)
-- `features/` — Feature modules (`admin`, `catalog`, `home`, `inquiry`) containing React Query hooks and mutations
-- `entities/` — TypeScript domain model types
-- `shared/api/httpClient.ts` — Axios instance with `withCredentials: true`; auto-redirects to `/lord/login` on 401 from admin endpoints
+- `app/` — Entry, `AppRouter.tsx` (React Router 7), `AppProviders.tsx` (React Query + MUI), layouts (`MainLayout`, `AdminLayout`), `ProtectedAdminRoute`
+- `pages/` — Public catalog and admin pages
+- `features/` — Modules (`admin`, `catalog`, `home`, `inquiry`): React Query hooks and mutations
+- `entities/` — TypeScript domain types
+- `shared/api/httpClient.ts` — Axios with `withCredentials: true`; 401 on admin routes redirects to `/lord/login`
 
 ### Worker (`worker/`)
 
-Cloudflare Worker serving product images from R2 bucket (`patshed`) with caching headers. Handles GET/HEAD requests only.
+Cloudflare Worker serving product images from R2 bucket `patshed` with cache headers. GET/HEAD only.
 
 ## Configuration
 
-### Frontend env vars (`frontend/.env.local`)
+### Frontend (`frontend/.env.local`)
 
 ```
 VITE_API_BASE_URL=https://localhost:7266
@@ -87,82 +88,118 @@ VITE_TURNSTILE_SITE_KEY=<cloudflare turnstile site key>
 
 ### Backend (`appsettings.Development.json`)
 
-Key sections: `ConnectionStrings`, `Kestrel` (HTTPS port 7266), `Cors:AllowedOrigins`, `Jwt` (key ≥32 chars), `AdminSeed`, `Email:Smtp`, `R2` (Cloudflare account + keys), `RemoveBg`, `CloudflareTurnstile`.
+Notable keys: `ConnectionStrings`, `Kestrel` (HTTPS 7266), `Cors:AllowedOrigins`, `Jwt` (key ≥ 32 chars), `AdminSeed`, `Email:Smtp`, `R2`, `RemoveBg`, `CloudflareTurnstile`.
 
-CORS is configured to allow credentials from `https://localhost:5173` in development.
+CORS allows credentials from `https://localhost:5173` in development.
 
-## External Integrations
+## External integrations
 
-- **Cloudflare R2** — S3-compatible image storage (`R2ObjectStorageService`)
-- **Cloudflare Turnstile** — CAPTCHA on the public inquiry form (`TurnstileValidator`)
-- **remove.bg API** — Background removal preview in admin image upload (`RemoveBgService`)
-- **SMTP (Gmail)** — Inquiry email notifications, configurable/optional (`SmtpEmailSender` / `NoOpEmailSender`)
+- **Cloudflare R2** — S3-compatible storage (`R2ObjectStorageService`)
+- **Cloudflare Turnstile** — CAPTCHA on public inquiry (`TurnstileValidator`)
+- **remove.bg** — Background removal in admin upload (`RemoveBgService`)
+- **SMTP (e.g. Gmail)** — Inquiry email; optional (`SmtpEmailSender` / `NoOpEmailSender`)
 
 ## Database
 
-PostgreSQL in development (default connection: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres;`). Migrations are in `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. The `AdminSeedService` creates the initial admin user from `AdminSeed` config on first run. Concurrency tokens use PostgreSQL `xmin` system column via `uint RowVersion` properties.
+PostgreSQL in development (example: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres`). Migrations: `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. `AdminSeedService` creates the initial admin from `AdminSeed` on first run. Concurrency: PostgreSQL `xmin` via `uint RowVersion`.
 
 ## Local HTTPS
 
-The frontend uses `vite-plugin-mkcert` for local HTTPS on port 5173. The backend Kestrel listens on HTTPS port 7266. Both must use HTTPS because cookies use `SameSite=None; Secure`.
+Frontend: `vite-plugin-mkcert` on port 5173. Backend: Kestrel HTTPS 7266. Both need HTTPS for cookies (`SameSite=None; Secure`).
 
+---
 
-# Code Generation Rules
+## Git commit conventions (mandatory)
 
-## 1. Git Commit Requirement (MANDATORY)
+After code changes, produce a commit message and stage/commit in Git.
 
-Whenever you modify code, you MUST also generate a Git commit message and stage/commit/ changes to Git.
+### Message format
 
-The commit message must follow this format:
-
+```
 <type>(<scope>): <short summary>
+```
 
-- type must be one of:
-  - feat (new feature)
-  - fix (bug fix)
-  - refactor (code improvement, no behavior change)
-  - perf (performance improvement)
-  - docs (documentation)
-  - style (formatting only)
-  - test (tests)
-  - chore (config, build, tooling)
+- **type:** `feat` | `fix` | `refactor` | `perf` | `docs` | `style` | `test` | `chore`
+- **scope:** `product` | `sale` | `customer` | `api` | `frontend` | `db` | `auth` (or the closest fit)
+- **summary:** present tense, ≤ 72 characters, describes the change
 
-- scope must reflect the module:
-  - product
-  - sale
-  - customer
-  - api
-  - frontend
-  - db
-  - auth
+### Commit body
 
-- summary must:
-  - be concise (<= 72 chars)
-  - use present tense (e.g. "add", not "added")
-  - describe what changed
+For non-trivial changes, add a body covering: why, what changed, and important side effects.
 
-## 2. Commit Body (REQUIRED for non-trivial changes)
+### Multiple logical changes
 
-For medium/large changes, include:
+Split into separate commits when changes are logically distinct.
 
-- Why the change was made
-- What was changed
-- Any important side effects
+### Avoid vague summaries
 
-## 4. Example
+Do not use messages like: "update code", "fix stuff", "changes".
 
+### Example
+
+```
 feat(sale): add product sale history tracking
 
 - introduce ProductSale status field
 - support cancelling sale instead of overwriting
 - enforce single active sale per product
+```
 
-## 5. If multiple logical changes
+---
 
-Split into multiple commits.
+## Usage safety and session handoff
 
-## 6. Never output vague messages like:
+When remaining daily usage is at or below **10%**, stop the current implementation at the next safe point.
 
-- "update code"
-- "fix stuff"
-- "changes"
+Before stopping:
+
+1. Summarize progress clearly.
+2. Record everything needed to resume in a new session.
+3. List completed work, remaining work, blockers, assumptions, and next steps.
+4. Save that to a continuation file in the repo.
+5. Tell the user the file path and name.
+
+### Safe stopping
+
+- Do not start large refactors, cross-file rewrites, or risky partial edits when usage is low.
+- Prefer stopping at a compilable, consistent checkpoint.
+- If mid-task, finish the smallest safe unit, then stop.
+
+### Continuation file location
+
+Directory: `docs/session-handoff/`
+
+File name:
+
+`handoff-YYYY-MM-DD-HHMM-<short-task-name>.md`
+
+Example: `handoff-2026-04-13-1430-product-search-api.md`
+
+### Handoff template
+
+```md
+# Session Handoff
+
+## Task
+<short description of the task>
+
+## Current Status
+<what has already been completed>
+
+## Files Changed
+- <file path>
+- <file path>
+
+## Key Context
+<important architecture, assumptions, constraints, business rules, environment details>
+
+## Remaining Work
+- <remaining item>
+- <remaining item>
+
+## Blockers / Risks
+- <risk or blocker>
+
+## Suggested Next Prompt
+<recommended prompt to paste next time for fast continuation>
+```

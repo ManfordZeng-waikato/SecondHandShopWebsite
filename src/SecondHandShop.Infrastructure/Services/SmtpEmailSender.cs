@@ -31,6 +31,29 @@ public class SmtpEmailSender(
         await smtpClient.SendMailAsync(mailMessage);
     }
 
+    public async Task SendAdminLoginNotificationAsync(
+        AdminLoginNotificationMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureConfigured();
+
+        using var mailMessage = BuildAdminLoginNotificationMailMessage(message);
+        using var smtpClient = new SmtpClient(options.Host, options.Port)
+        {
+            EnableSsl = options.UseSsl,
+            Credentials = new NetworkCredential(options.Username, options.Password)
+        };
+
+        logger.LogInformation(
+            "Sending admin login notification email. AdminUserId={AdminUserId}, UserName={UserName}, To={To}",
+            message.AdminUserId,
+            message.UserName,
+            options.AdminInboxEmail);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await smtpClient.SendMailAsync(mailMessage);
+    }
+
     private MailMessage BuildMailMessage(InquiryEmailMessage message)
     {
         var productUrl = BuildProductUrl(message.ProductSlug);
@@ -50,6 +73,37 @@ public class SmtpEmailSender(
 
             Message:
             {message.Message}
+            """;
+
+        var mailMessage = new MailMessage
+        {
+            From = new MailAddress(options.FromEmail, options.FromName),
+            Subject = subject,
+            Body = textBody,
+            IsBodyHtml = false
+        };
+
+        mailMessage.To.Add(options.AdminInboxEmail);
+        return mailMessage;
+    }
+
+    private MailMessage BuildAdminLoginNotificationMailMessage(AdminLoginNotificationMessage message)
+    {
+        var subject = $"[Admin Login] {message.UserName}";
+        var textBody = $"""
+            An administrator signed in successfully.
+
+            Admin:
+            - Display name: {message.DisplayName}
+            - Username: {message.UserName}
+            - Email: {message.Email}
+            - User ID: {message.AdminUserId}
+
+            Session:
+            - Time (UTC): {message.OccurredAtUtc:yyyy-MM-dd HH:mm:ss} UTC
+            - Source IP: {message.SourceIpAddress ?? "(not available)"}
+
+            If this login was not expected, rotate the password immediately and revoke active sessions.
             """;
 
         var mailMessage = new MailMessage

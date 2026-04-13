@@ -8,8 +8,10 @@ public class AdminUserRepository(SecondHandShopDbContext dbContext) : IAdminUser
 {
     public async Task<AdminUser?> GetByUserNameAsync(string userName, CancellationToken cancellationToken = default)
     {
+        var normalizedUserName = userName.Trim();
+
         return await dbContext.AdminUsers
-            .FirstOrDefaultAsync(x => x.UserName == userName, cancellationToken);
+            .FirstOrDefaultAsync(x => x.UserName == normalizedUserName, cancellationToken);
     }
 
     public async Task<AdminUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

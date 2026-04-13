@@ -15,4 +15,18 @@ public class NoOpEmailSender(ILogger<NoOpEmailSender> logger) : IEmailSender
 
         return Task.CompletedTask;
     }
+
+    public Task SendAdminLoginNotificationAsync(
+        AdminLoginNotificationMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation(
+            "Admin login notification suppressed by placeholder sender. AdminUserId={AdminUserId}, UserName={UserName}, SourceIpAddress={SourceIpAddress}, OccurredAtUtc={OccurredAtUtc}",
+            message.AdminUserId,
+            message.UserName,
+            message.SourceIpAddress ?? "(unknown)",
+            message.OccurredAtUtc);
+
+        return Task.CompletedTask;
+    }
 }

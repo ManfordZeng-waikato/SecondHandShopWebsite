@@ -48,7 +48,8 @@ public class JwtTokenService : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
             new Claim(ClaimTypes.Role, user.Role),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(AdminJwtClaimTypes.TokenVersion, user.TokenVersion.ToString())
         };
 
         // Restricted session: "AdminFullAccess" rejects this claim. DB remains source of truth; after forced password

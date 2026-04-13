@@ -15,6 +15,7 @@ using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Application.UseCases.Admin.RefreshSession;
 using SecondHandShop.Infrastructure;
 using SecondHandShop.Infrastructure.Persistence;
+using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Infrastructure.Services;
 using SecondHandShop.WebApi.Authentication;
 using SecondHandShop.WebApi.Controllers;
@@ -84,8 +85,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
             OnTokenValidated = async context =>
             {
-                if (context.SecurityToken is not JwtSecurityToken jwt)
+                var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                if (!Guid.TryParse(sub, out var adminId))
                 {
+                    await RejectAdminSessionAsync(context, "Invalid admin subject.");
+                    return;
+                }
+
+                var tokenVersionValue = context.Principal?.FindFirst(AdminJwtClaimTypes.TokenVersion)?.Value;
+                if (!int.TryParse(tokenVersionValue, out var tokenVersion))
+                {
+                    await RejectAdminSessionAsync(context, "Missing admin token version.");
+                    return;
+                }
+
+                var adminUserRepository = context.HttpContext.RequestServices.GetRequiredService<IAdminUserRepository>();
+                var adminUser = await adminUserRepository.GetByIdAsync(adminId, context.HttpContext.RequestAborted);
+                if (adminUser is null || !adminUser.IsActive || adminUser.TokenVersion != tokenVersion)
+                {
+                    await RejectAdminSessionAsync(context, "Admin session was revoked.");
                     return;
                 }
 
@@ -94,15 +113,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var fraction = Math.Clamp(config.GetValue("Jwt:SlidingRenewalFraction", 0.5), 0.05, 0.95);
                 var total = TimeSpan.FromMinutes(accessMinutes);
                 var threshold = TimeSpan.FromTicks((long)(total.Ticks * fraction));
-                var remaining = jwt.ValidTo - DateTime.UtcNow;
+                var remaining = context.SecurityToken.ValidTo - DateTime.UtcNow;
                 if (remaining <= TimeSpan.Zero || remaining >= threshold)
-                {
-                    return;
-                }
-
-                var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                    ?? context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                if (!Guid.TryParse(sub, out var adminId))
                 {
                     return;
                 }
@@ -297,6 +309,14 @@ app.UseSerilogRequestLogging(options =>
         return LogEventLevel.Information;
     };
 });
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -316,6 +336,14 @@ app.UseAuthorization();
 app.UseOutputCache();
 app.MapControllers();
 app.Run();
+
+static Task RejectAdminSessionAsync(TokenValidatedContext context, string reason)
+{
+    var cookieOpts = context.HttpContext.RequestServices.GetRequiredService<IOptions<AdminAuthCookieOptions>>().Value;
+    AdminAuthCookies.DeleteAuthTokenCookie(context.HttpContext.Response, cookieOpts);
+    context.Fail(reason);
+    return Task.CompletedTask;
+}
 }
 catch (Exception ex)
 {

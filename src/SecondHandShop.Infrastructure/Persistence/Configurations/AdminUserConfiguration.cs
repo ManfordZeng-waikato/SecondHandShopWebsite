@@ -41,6 +41,21 @@ public class AdminUserConfiguration : IEntityTypeConfiguration<AdminUser>
             .HasDefaultValue(false)
             .IsRequired();
 
+        builder.Property(x => x.TokenVersion)
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.Property(x => x.FailedLoginCount)
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.Property(x => x.LockedUntilUtc);
+
+        builder.Property(x => x.LastSuccessfulLoginAtUtc);
+
+        builder.Property(x => x.LastSuccessfulLoginIp)
+            .HasMaxLength(64);
+
         builder.Property(x => x.CreatedAt)
             .HasDefaultValueSql("now()")
             .IsRequired();

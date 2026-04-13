@@ -83,6 +83,10 @@ public static class DependencyInjection
             smtpOptions.Enabled
                 ? provider.GetRequiredService<SmtpEmailSender>()
                 : provider.GetRequiredService<NoOpEmailSender>());
+        services.AddSingleton<AdminLoginNotificationQueue>();
+        services.AddSingleton<IAdminLoginNotificationQueue>(provider =>
+            provider.GetRequiredService<AdminLoginNotificationQueue>());
+        services.AddHostedService<AdminLoginNotificationDispatcherService>();
 
         // Singleton signal bridges the HTTP request pipeline and the background dispatcher.
         services.AddSingleton<IInquiryDispatchSignal, InquiryDispatchSignal>();

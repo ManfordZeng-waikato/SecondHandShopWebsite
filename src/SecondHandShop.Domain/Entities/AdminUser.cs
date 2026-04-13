@@ -19,6 +19,26 @@ public class AdminUser
     public bool MustChangePassword { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>
+    /// Monotonic counter embedded as a JWT claim. Any server-side event that should invalidate
+    /// existing tokens globally (password change, forced logout, credential reset) bumps this
+    /// via <see cref="BumpTokenVersion"/>. The JWT pipeline compares the claim against the DB
+    /// value on every authenticated request and rejects stale tokens immediately.
+    /// </summary>
+    public int TokenVersion { get; private set; }
+
+    public int FailedLoginCount { get; private set; }
+
+    /// <summary>
+    /// Until this instant (UTC) login is blocked regardless of password correctness.
+    /// Null means not locked.
+    /// </summary>
+    public DateTime? LockedUntilUtc { get; private set; }
+
+    public DateTime? LastSuccessfulLoginAtUtc { get; private set; }
+
+    public string? LastSuccessfulLoginIp { get; private set; }
+
     public static AdminUser Create(string displayName, string email)
     {
         if (string.IsNullOrWhiteSpace(displayName))
@@ -67,7 +87,9 @@ public class AdminUser
     }
 
     /// <summary>
-    /// Updates password after verifying the current secret out-of-band; clears forced-change flag for a full-access token on next issue.
+    /// Updates password after verifying the current secret out-of-band; clears forced-change flag
+    /// and bumps TokenVersion so that any previously-issued JWT (including the restricted one used
+    /// to hit this endpoint) is rejected on its next request.
     /// </summary>
     public void CompleteForcedPasswordChange(string newPasswordHash)
     {
@@ -76,10 +98,44 @@ public class AdminUser
 
         PasswordHash = newPasswordHash;
         MustChangePassword = false;
+        TokenVersion++;
     }
 
     public void SetActive(bool isActive)
     {
         IsActive = isActive;
+    }
+
+    public bool IsLockedOut(DateTime utcNow)
+        => LockedUntilUtc is { } until && until > utcNow;
+
+    /// <summary>
+    /// Records a failed login attempt. After <paramref name="maxAttempts"/> consecutive failures
+    /// the account is locked for <paramref name="lockoutDuration"/>. The counter keeps growing
+    /// past the lock threshold so repeated attacks extend the lock on each attempt.
+    /// </summary>
+    public void RegisterFailedLogin(int maxAttempts, TimeSpan lockoutDuration, DateTime utcNow)
+    {
+        FailedLoginCount++;
+        if (FailedLoginCount >= maxAttempts)
+        {
+            LockedUntilUtc = utcNow + lockoutDuration;
+        }
+    }
+
+    public void RegisterSuccessfulLogin(DateTime utcNow, string? sourceIpAddress)
+    {
+        FailedLoginCount = 0;
+        LockedUntilUtc = null;
+        LastSuccessfulLoginAtUtc = utcNow;
+        LastSuccessfulLoginIp = Truncate(sourceIpAddress, 64);
+    }
+
+    private static string? Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        var trimmed = value.Trim();
+        return trimmed.Length > maxLength ? trimmed[..maxLength] : trimmed;
     }
 }

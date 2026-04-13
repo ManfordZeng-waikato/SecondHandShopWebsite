@@ -43,8 +43,23 @@ namespace SecondHandShop.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<int>("FailedLoginCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastSuccessfulLoginAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastSuccessfulLoginIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("MustChangePassword")
                         .ValueGeneratedOnAdd()
@@ -64,6 +79,11 @@ namespace SecondHandShop.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("");
+
+                    b.Property<int>("TokenVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("UserName")
                         .IsRequired()
