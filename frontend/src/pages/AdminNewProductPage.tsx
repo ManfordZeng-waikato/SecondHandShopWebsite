@@ -47,6 +47,8 @@ const initialFormState: NewProductFormState = {
 const maxImagesPerProduct = 5;
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SLUG_DEFAULT_HELPER_TEXT =
+  'This becomes part of the product page URL. It is generated from the title automatically, but you can edit it if needed.';
 
 function toSlug(text: string): string {
   return text
@@ -62,6 +64,67 @@ function toSlug(text: string): string {
 
 function isValidSlug(slug: string): boolean {
   return slug === '' || SLUG_REGEX.test(slug);
+}
+
+function getSlugValidationMessage(slug: string, hasBeenEdited: boolean): { error: boolean; message: string } {
+  if (slug.length === 0) {
+    return hasBeenEdited
+      ? {
+          error: true,
+          message: 'Enter a page URL for this product, for example: vintage-leather-bag.',
+        }
+      : {
+          error: false,
+          message: SLUG_DEFAULT_HELPER_TEXT,
+        };
+  }
+
+  if (/\s/.test(slug)) {
+    return {
+      error: true,
+      message: 'Do not use spaces. Use hyphens between words instead, for example: vintage-leather-bag.',
+    };
+  }
+
+  if (/[A-Z]/.test(slug)) {
+    return {
+      error: true,
+      message: 'Use lowercase letters only. Change any capital letters to lowercase.',
+    };
+  }
+
+  if (slug.startsWith('-') || slug.endsWith('-')) {
+    return {
+      error: true,
+      message: 'Do not start or end the page URL with a hyphen.',
+    };
+  }
+
+  if (slug.includes('--')) {
+    return {
+      error: true,
+      message: 'Use only one hyphen between words.',
+    };
+  }
+
+  if (/[^a-zA-Z0-9-]/.test(slug)) {
+    return {
+      error: true,
+      message: 'Use letters, numbers, and hyphens only. Remove symbols such as /, &, ?, or punctuation.',
+    };
+  }
+
+  if (!SLUG_REGEX.test(slug)) {
+    return {
+      error: true,
+      message: 'Use lowercase letters, numbers, and hyphens only, for example: vintage-leather-bag.',
+    };
+  }
+
+  return {
+    error: false,
+    message: 'Looks good. This page URL is valid.',
+  };
 }
 
 function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -283,6 +346,7 @@ export function AdminNewProductPage() {
   };
 
   const isFormBusy = createProductMutation.isPending || submitting;
+  const slugValidation = getSlugValidationMessage(formState.slug, slugManuallyEdited);
 
   return (
     <Box sx={{ maxWidth: 900 }}>
@@ -312,18 +376,14 @@ export function AdminNewProductPage() {
           }}
         />
         <TextField
-          label="Slug"
+          label="Slug (page URL)"
           value={formState.slug}
           onChange={(event) => {
             setSlugManuallyEdited(true);
             setFormState((prev) => ({ ...prev, slug: event.target.value }));
           }}
-          error={!isValidSlug(formState.slug)}
-          helperText={
-            !isValidSlug(formState.slug)
-              ? 'Slug can only contain lowercase letters, numbers, and hyphens (e.g. "vintage-leather-bag")'
-              : 'Auto-generated from title. Edit to customize.'
-          }
+          error={slugValidation.error}
+          helperText={slugValidation.message}
         />
         <TextField
           label="Description"
