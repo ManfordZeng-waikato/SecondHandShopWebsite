@@ -39,16 +39,23 @@ export function AdminLayout({ children }: PropsWithChildren) {
               Analytics
             </Button>
             <Tooltip title="Open public site in a new tab">
-              <Button
-                color="inherit"
-                component="a"
-                href="/"
-                target="_blank"
-                rel="noopener noreferrer"
-                endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
-              >
-                View site
-              </Button>
+              <Box component="span" sx={{ display: 'inline-flex', verticalAlign: 'middle' }}>
+                <Button
+                  color="inherit"
+                  component="a"
+                  href="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    window.open(`${window.location.origin}/`, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  View site
+                </Button>
+              </Box>
             </Tooltip>
             <Divider
               orientation="vertical"
