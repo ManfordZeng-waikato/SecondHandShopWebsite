@@ -95,7 +95,7 @@ A lightweight Cloudflare Worker that serves product images from an R2 bucket wit
 - **Image upload** — Presigned URLs for direct-to-R2 upload, background removal preview via remove.bg
 - **Customer management** — Status workflow (New → Contacted → Qualified → Archived), contact history, notes, detail view
 - **Sales tracking** — Sale lifecycle (listed vs final price, payment method, links to customer/inquiry where applicable)
-- **Analytics** — Admin overview (see `AdminAnalyticsPage` / `/api/lord/analytics`)
+- **Analytics** (`/lord/analytics`) — Sales and inquiry KPIs, monthly trend, category breakdowns, and “hot unsold” / stale listings; backed by `GET /api/lord/analytics/overview` with a user-selected range (e.g. 7d–all time)
 - **Email notifications** — Configurable SMTP for inquiry alerts (with no-op fallback)
 - **View site** — Toolbar link opens the public storefront in a **new browser tab**
 
@@ -107,7 +107,7 @@ A lightweight Cloudflare Worker that serves product images from an R2 bucket wit
 |-------|-------------|
 | **Backend** | .NET 10, ASP.NET Core, Entity Framework Core 10, MediatR, BCrypt, JWT Bearer |
 | **Database** | PostgreSQL, EF Core Migrations, `xmin` concurrency tokens |
-| **Frontend** | React 19, TypeScript, Vite 7, Material UI 7, TanStack React Query, Axios, React Router 7 |
+| **Frontend** | React 19, TypeScript, Vite 7, Material UI 7, MUI X Charts, TanStack React Query, Axios, React Router 7 |
 | **Image CDN** | Cloudflare Workers, Wrangler 3, R2 (S3-compatible) object storage |
 | **Security** | JWT (HttpOnly cookies), Cloudflare Turnstile, BCrypt password hashing, rate limiting |
 | **Integrations** | Cloudflare R2, Cloudflare Turnstile, remove.bg API, SMTP (Gmail) |

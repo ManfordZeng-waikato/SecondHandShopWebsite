@@ -83,7 +83,7 @@ Other scripts: `npm run build` (tsc + Vite production build), `npm run lint`, `n
 | `/lord/products/new` | Create product |
 | `/lord/customers` | Customers |
 | `/lord/customers/:customerId` | Customer detail |
-| `/lord/analytics` | Analytics overview |
+| `/lord/analytics` | Sales & demand overview (KPIs, charts, category tables) |
 
 The admin shell includes a **View site** control that opens the public storefront in a **new browser tab**.
 
