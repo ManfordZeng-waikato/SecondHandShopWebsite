@@ -15,6 +15,7 @@ import type {
 } from '../../../entities/customer/types';
 import type {
   ProductSaleDto,
+  ProductInquiryOption,
   MarkProductSoldInput,
   RevertProductSaleInput,
   CustomerSaleItem,
@@ -342,6 +343,13 @@ export async function fetchCurrentProductSale(productId: string): Promise<Produc
 /** Full sale history (including cancelled rows), most recent first. */
 export async function fetchProductSaleHistory(productId: string): Promise<ProductSaleDto[]> {
   const response = await httpClient.get<ProductSaleDto[]>(`/api/lord/products/${productId}/sales`);
+  return response.data;
+}
+
+export async function fetchProductInquiries(productId: string): Promise<ProductInquiryOption[]> {
+  const response = await httpClient.get<ProductInquiryOption[]>(
+    `/api/lord/products/${productId}/inquiries`,
+  );
   return response.data;
 }
 

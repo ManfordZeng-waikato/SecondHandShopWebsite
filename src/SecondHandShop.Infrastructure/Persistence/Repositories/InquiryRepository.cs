@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
+using SecondHandShop.Application.Contracts.Sales;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
 
@@ -118,6 +119,31 @@ public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepo
     public async Task<Inquiry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await dbContext.Inquiries.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProductInquiryOptionDto>> ListByProductIdForAdminAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        return await (
+                from inquiry in dbContext.Inquiries.AsNoTracking()
+                where inquiry.ProductId == productId
+                join sale in dbContext.ProductSales.AsNoTracking()
+                    on inquiry.Id equals sale.InquiryId into saleGroup
+                from sale in saleGroup
+                    .OrderByDescending(x => x.SoldAtUtc)
+                    .Take(1)
+                    .DefaultIfEmpty()
+                orderby inquiry.CreatedAt descending, inquiry.Id descending
+                select new ProductInquiryOptionDto(
+                    inquiry.Id,
+                    inquiry.CustomerName,
+                    inquiry.Email,
+                    inquiry.PhoneNumber,
+                    inquiry.Message,
+                    inquiry.CreatedAt,
+                    sale != null ? sale.Id : null))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<PagedResult<CustomerInquiryItemDto>> ListPagedByCustomerIdForAdminAsync(

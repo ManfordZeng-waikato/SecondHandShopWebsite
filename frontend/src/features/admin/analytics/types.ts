@@ -14,6 +14,11 @@ export interface AnalyticsSummary {
   averageSalePrice: number;
   totalInquiries: number;
   inquiryToSaleConversionRate: number;
+  cohortConversionRate: number | null;
+  cohortInquiryCount: number | null;
+  cohortConversionCount: number | null;
+  cohortAttributionWindowDays: number;
+  cohortWindowFullyElapsed: boolean;
   bestSellingCategoryName: string | null;
   bestSellingCategoryId: string | null;
   mostInquiredCategoryName: string | null;

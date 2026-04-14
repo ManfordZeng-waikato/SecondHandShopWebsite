@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Contracts.Sales;
 using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Domain.Enums;
@@ -13,7 +14,10 @@ namespace SecondHandShop.WebApi.Controllers;
 [ApiController]
 [Route("api/lord/products/{productId:guid}")]
 [Authorize(Policy = "AdminFullAccess")]
-public class AdminProductSalesController(IAdminSaleService adminSaleService) : ControllerBase
+public class AdminProductSalesController(
+    IAdminSaleService adminSaleService,
+    IInquiryRepository inquiryRepository,
+    IProductRepository productRepository) : ControllerBase
 {
     /// <summary>
     /// Current (Completed) sale record for a product. Returns 404 if the product is not sold.
@@ -40,6 +44,21 @@ public class AdminProductSalesController(IAdminSaleService adminSaleService) : C
     {
         var history = await adminSaleService.GetSaleHistoryAsync(productId, cancellationToken);
         return Ok(history);
+    }
+
+    [HttpGet("inquiries")]
+    public async Task<ActionResult<IReadOnlyList<ProductInquiryOptionDto>>> ListInquiriesAsync(
+        Guid productId,
+        CancellationToken cancellationToken)
+    {
+        var product = await productRepository.GetByIdAsync(productId, cancellationToken);
+        if (product is null)
+        {
+            return NotFound(new ErrorResponse($"Product '{productId}' was not found."));
+        }
+
+        var inquiries = await inquiryRepository.ListByProductIdForAdminAsync(productId, cancellationToken);
+        return Ok(inquiries);
     }
 
     /// <summary>

@@ -16,10 +16,10 @@ import {
   Typography,
 } from '@mui/material';
 import type { AxiosError } from 'axios';
-import type { MarkProductSoldInput } from '../../../entities/sale/types';
+import type { MarkProductSoldInput, ProductInquiryOption } from '../../../entities/sale/types';
 import { paymentMethodOptions, paymentMethodLabels } from '../../../entities/sale/types';
 import type { CustomerListItem } from '../../../entities/customer/types';
-import { fetchAdminCustomers, markProductSold } from '../api/adminApi';
+import { fetchAdminCustomers, fetchProductInquiries, markProductSold } from '../api/adminApi';
 
 export interface ProductSaleDialogProps {
   open: boolean;
@@ -52,6 +52,31 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
   return typeof msg === 'string' && msg.trim().length > 0 ? msg : fallback;
 }
 
+function formatInquiryOptionLabel(option: ProductInquiryOption): string {
+  const contact = option.customerName || option.email || option.phoneNumber || 'Unknown contact';
+  const createdAt = new Date(option.createdAt).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `${contact} • ${createdAt}`;
+}
+
+function formatInquiryHelper(option: ProductInquiryOption | null): string {
+  if (!option) {
+    return 'Link the sale to a specific inquiry so cohort analytics can attribute the conversion.';
+  }
+
+  const message = option.message.trim();
+  if (message.length <= 120) {
+    return message;
+  }
+
+  return `${message.slice(0, 117)}...`;
+}
+
 /**
  * Dialog for recording a new sale on an Available or OffShelf product. Each submission
  * creates a new ProductSale history row — this dialog never edits an existing sale
@@ -77,11 +102,19 @@ export function ProductSaleDialog({
   const [notes, setNotes] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerListItem | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedInquiry, setSelectedInquiry] = useState<ProductInquiryOption | null>(null);
 
   const customerSearchQuery = useQuery({
     queryKey: ['admin-customers-search', customerSearch],
     queryFn: () => fetchAdminCustomers({ search: customerSearch, pageSize: 10 }),
     enabled: open && customerSearch.length >= 2,
+    staleTime: 30_000,
+  });
+
+  const productInquiriesQuery = useQuery({
+    queryKey: ['product-inquiries', productId],
+    queryFn: () => fetchProductInquiries(productId!),
+    enabled: open && Boolean(productId),
     staleTime: 30_000,
   });
 
@@ -97,6 +130,7 @@ export function ProductSaleDialog({
     setNotes('');
     setSelectedCustomer(null);
     setCustomerSearch('');
+    setSelectedInquiry(null);
   }, [open, productPrice]);
 
   const saveMutation = useMutation({
@@ -108,7 +142,9 @@ export function ProductSaleDialog({
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       await queryClient.invalidateQueries({ queryKey: ['product-sale', productId] });
       await queryClient.invalidateQueries({ queryKey: ['product-sale-history', productId] });
+      await queryClient.invalidateQueries({ queryKey: ['product-inquiries', productId] });
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] });
       onSaved();
     },
   });
@@ -121,6 +157,7 @@ export function ProductSaleDialog({
       finalSoldPrice: price,
       soldAtUtc: localDateTimeToUtcIso(soldAtUtc),
       customerId: selectedCustomer?.id ?? null,
+      inquiryId: selectedInquiry?.inquiryId ?? null,
       buyerName: buyerName.trim() || null,
       buyerPhone: buyerPhone.trim() || null,
       buyerEmail: buyerEmail.trim() || null,
@@ -142,6 +179,7 @@ export function ProductSaleDialog({
 
   const canSubmit = !priceError && soldAtUtc.trim() !== '' && !saveMutation.isPending;
   const hasBuyerContact = buyerEmail.trim() !== '' || buyerPhone.trim() !== '';
+  const hasProductInquiries = (productInquiriesQuery.data?.length ?? 0) > 0;
 
   return (
     <Dialog
@@ -192,7 +230,63 @@ export function ProductSaleDialog({
           </Stack>
 
           <Stack spacing={0.5}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >
+              Inquiry Attribution
+            </Typography>
+            <Typography variant="caption" color="text.disabled">
+              Select the inquiry that led to this sale so cohort conversion analytics can count it.
+            </Typography>
+          </Stack>
+          <Autocomplete
+            options={productInquiriesQuery.data ?? []}
+            getOptionLabel={formatInquiryOptionLabel}
+            value={selectedInquiry}
+            onChange={(_, value) => setSelectedInquiry(value)}
+            loading={productInquiriesQuery.isFetching}
+            noOptionsText={
+              productInquiriesQuery.isLoading
+                ? 'Loading inquiries...'
+                : 'No inquiries found for this product'
+            }
+            isOptionEqualToValue={(option, value) => option.inquiryId === value.inquiryId}
+            getOptionDisabled={(option) => option.linkedSaleId !== null}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Linked Inquiry"
+                placeholder={hasProductInquiries ? 'Select an inquiry' : 'No inquiries available'}
+                helperText={formatInquiryHelper(selectedInquiry)}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props}>
+                <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {formatInquiryOptionLabel(option)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {option.message}
+                  </Typography>
+                  {option.linkedSaleId ? (
+                    <Typography variant="caption" color="warning.main">
+                      Already linked to sale {option.linkedSaleId}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </Box>
+            )}
+          />
+
+          <Stack spacing={0.5}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >
               Buyer Information
             </Typography>
             <Typography variant="caption" color="text.disabled">
@@ -229,13 +323,17 @@ export function ProductSaleDialog({
             </Alert>
           )}
 
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          >
             Link to Existing Customer (Optional)
           </Typography>
           <Autocomplete
             options={customerSearchQuery.data?.items ?? []}
             getOptionLabel={(option) =>
-              [option.name, option.email, option.phone].filter(Boolean).join(' — ')
+              [option.name, option.email, option.phone].filter(Boolean).join(' • ')
             }
             getOptionKey={(option) => option.id}
             value={selectedCustomer}

@@ -1,6 +1,7 @@
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Application.Contracts.Common;
 using SecondHandShop.Application.Contracts.Customers;
+using SecondHandShop.Application.Contracts.Sales;
 
 namespace SecondHandShop.Application.Abstractions.Persistence;
 
@@ -43,6 +44,9 @@ public interface IInquiryRepository
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Inquiry>> ListPendingEmailAsync(DateTime utcNow, CancellationToken cancellationToken = default);
     Task<Inquiry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductInquiryOptionDto>> ListByProductIdForAdminAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default);
     Task<PagedResult<CustomerInquiryItemDto>> ListPagedByCustomerIdForAdminAsync(
         Guid customerId,
         CustomerInquiryQueryParameters parameters,

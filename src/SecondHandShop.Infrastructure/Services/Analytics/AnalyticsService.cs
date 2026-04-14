@@ -16,7 +16,10 @@ namespace SecondHandShop.Infrastructure.Services.Analytics;
 /// the <c>ProductCategories</c> join table, so products that belong to multiple categories
 /// are counted exactly once. This matches the "primary category for analytics" rule.
 /// </summary>
-public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) : IAnalyticsService
+public class AnalyticsService(
+    SecondHandShopDbContext dbContext,
+    IClock clock,
+    AnalyticsOptions analyticsOptions) : IAnalyticsService
 {
     private const int HotUnsoldTopN = 10;
     private const int StaleStockTopN = 10;
@@ -109,6 +112,23 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
             ? 0m
             : Math.Round((decimal)totalSoldItems / totalInquiries, 4);
 
+        var attributionWindowDays = analyticsOptions.AttributionWindowDays;
+        // The overview endpoint always reports a live range ending at "now". Under the cohort
+        // maturity rule (rangeEnd + attributionWindow <= now), that means the current dashboard
+        // window is never fully elapsed yet; recent inquiries can still convert later.
+        var cohortWindowFullyElapsed = false;
+        int? cohortInquiryCount = totalInquiries == 0 ? null : totalInquiries;
+        int? cohortConversionsCount = totalInquiries == 0
+            ? null
+            : await GetCohortConversionsCountAsync(
+                start,
+                nowUtc,
+                attributionWindowDays,
+                cancellationToken);
+        decimal? cohortConversionRate = totalInquiries == 0 || cohortConversionsCount is null
+            ? null
+            : Math.Round((decimal)cohortConversionsCount.Value / totalInquiries, 4);
+
         // Best selling category (by sold count). Join ProductSales -> Products -> Categories.
         var bestSelling = await salesQuery
             .Join(
@@ -151,10 +171,35 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
             AverageSalePrice: Math.Round(averageSalePrice, 2),
             TotalInquiries: totalInquiries,
             InquiryToSaleConversionRate: conversionRate,
+            CohortConversionRate: cohortConversionRate,
+            CohortInquiryCount: cohortInquiryCount,
+            CohortConversionCount: cohortConversionsCount,
+            CohortAttributionWindowDays: attributionWindowDays,
+            CohortWindowFullyElapsed: cohortWindowFullyElapsed,
             BestSellingCategoryName: bestSelling?.Name,
             BestSellingCategoryId: bestSelling?.Id,
             MostInquiredCategoryName: mostInquired?.Name,
             MostInquiredCategoryId: mostInquired?.Id);
+    }
+
+    private async Task<int> GetCohortConversionsCountAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        int attributionWindowDays,
+        CancellationToken cancellationToken)
+    {
+        var cohortQuery =
+            from i in dbContext.Inquiries.AsNoTracking()
+            join s in dbContext.ProductSales.AsNoTracking().Where(s => s.Status == SaleRecordStatus.Completed)
+                on i.Id equals s.InquiryId
+            where (!start.HasValue || (i.CreatedAt >= start.Value && i.CreatedAt <= nowUtc))
+                && s.SoldAtUtc >= i.CreatedAt
+                && s.SoldAtUtc <= i.CreatedAt.AddDays(attributionWindowDays)
+            select i.Id;
+
+        return await cohortQuery
+            .Distinct()
+            .CountAsync(cancellationToken);
     }
 
     private async Task<IReadOnlyList<SalesByCategoryDto>> GetSalesByCategoryAsync(

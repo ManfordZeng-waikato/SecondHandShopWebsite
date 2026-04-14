@@ -30,6 +30,10 @@ public static class DependencyInjection
         var r2Options = R2Options.FromConfiguration(configuration);
         var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);
         var cloudflareTurnstileOptions = CloudflareTurnstileOptions.FromConfiguration(configuration);
+        var analyticsOptions = configuration
+            .GetSection(AnalyticsOptions.SectionName)
+            .Get<AnalyticsOptions>()
+            ?? new AnalyticsOptions();
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseNpgsql(connectionString));
@@ -51,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<IAdminCustomerService, AdminCustomerService>();
         services.AddScoped<IInquiryService, InquiryService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
+        analyticsOptions.Validate();
+        services.AddSingleton(analyticsOptions);
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton(r2Options);

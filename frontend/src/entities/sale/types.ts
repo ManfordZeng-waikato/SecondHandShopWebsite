@@ -61,6 +61,16 @@ export interface ProductSaleDto {
   updatedAt: string;
 }
 
+export interface ProductInquiryOption {
+  inquiryId: string;
+  customerName: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  message: string;
+  createdAt: string;
+  linkedSaleId: string | null;
+}
+
 /** Input for POST /api/lord/products/{id}/mark-sold — creates a new sale record. */
 export interface MarkProductSoldInput {
   finalSoldPrice: number;
