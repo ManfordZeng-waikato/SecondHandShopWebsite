@@ -7,12 +7,15 @@ A production-grade, full-stack **second-hand goods marketplace** built with mode
 ## Highlights
 
 - **Clean Architecture** backend with clear separation of concerns across Domain, Application, Infrastructure, and WebApi layers
-- **React 19 SPA** with feature-sliced structure, Material UI, and server-state management via React Query
+- **React 19 SPA** with feature-sliced structure, Material UI 7, lazy-loaded routes, and TanStack React Query
+- **Hierarchical product categories** on the public catalog (parent / subcategory tabs) with search, sort, and pagination
 - **Serverless image delivery** through Cloudflare Workers + R2 object storage
-- **Cookie-based JWT authentication** with HttpOnly secure cookies for admin sessions
+- **Cookie-based JWT authentication** with HttpOnly secure cookies for admin sessions (plus refresh for long-lived admin work)
 - **Bot protection** via Cloudflare Turnstile on public-facing forms
 - **Rate limiting** on sensitive endpoints (login, search)
 - **Background removal** preview powered by remove.bg API for product image editing
+- **Admin analytics** surface and **“My story”** public page alongside the core storefront
+
 ---
 
 ## Architecture Overview
@@ -29,8 +32,8 @@ A production-grade, full-stack **second-hand goods marketplace** built with mode
 ┌───────────▼─────────────────────────────────────────────────────────┐
 │  Frontend (React 19 + Vite 7)                                       │
 │  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌───────────────────────┐ │
-│  │  Public   │ │  Product  │ │  Inquiry │ │  Admin Dashboard      │ │
-│  │  Catalog  │ │  Detail   │ │  Form    │ │  /lord/* (protected)  │ │
+│  │  Public   │ │  Product  │ │  Inquiry │ │  Admin (Analytics,     │ │
+│  │  Catalog  │ │  Detail   │ │  Form    │ │  CRM) /lord/*         │ │
 │  └──────────┘ └───────────┘ └──────────┘ └───────────────────────┘ │
 └─────────────────────────┬───────────────────────────────────────────┘
                           │ HTTPS (withCredentials)
@@ -56,15 +59,15 @@ A production-grade, full-stack **second-hand goods marketplace** built with mode
 | **Domain** | `SecondHandShop.Domain` | Entities (`Product`, `Category`, `Customer`, `Inquiry`, `ProductSale`, etc.), enums, domain validation, `AuditableEntity` base class |
 | **Application** | `SecondHandShop.Application` | Use cases via MediatR (CQRS-inspired), DTOs/Contracts, abstraction interfaces for persistence, storage, security, messaging |
 | **Infrastructure** | `SecondHandShop.Infrastructure` | EF Core + PostgreSQL, repository implementations, JWT/BCrypt services, R2 storage, SMTP, Turnstile, remove.bg integration |
-| **WebApi** | `SecondHandShop.WebApi` | ASP.NET Core host, 9 controllers, rate limiting, CORS, DI composition in `Program.cs` |
+| **WebApi** | `SecondHandShop.WebApi` | ASP.NET Core host — REST controllers for catalog, inquiries, categories, image helpers, and `/api/lord/*` admin APIs; rate limiting, CORS, Serilog, DI in `Program.cs` |
 
 ### Frontend — Feature-Sliced React SPA
 
 | Directory | Purpose |
 |-----------|---------|
 | `app/` | Entry point, router (React Router 7), providers (React Query + MUI theme), layouts |
-| `pages/` | 6 public pages + 6 admin pages |
-| `features/` | Feature modules — `admin`, `catalog`, `home`, `inquiry` — each with hooks, API calls, and components |
+| `pages/` | Route screens (public storefront, inquiry, **My story**, 404, and admin under `/lord/*`) |
+| `features/` | Feature modules — `admin` (incl. analytics), `catalog`, `home`, `inquiry` — hooks, API calls, and components |
 | `entities/` | TypeScript domain model types |
 | `shared/` | Axios HTTP client, reusable UI components, utilities |
 
@@ -78,20 +81,23 @@ A lightweight Cloudflare Worker that serves product images from an R2 bucket wit
 
 ### Public Storefront
 
-- **Home page** with hero section, featured product carousel, and brand story
-- **Product catalog** with category filtering, full-text search, sorting, and pagination
-- **Product detail** pages with multi-image gallery, condition badges, and pricing
-- **Inquiry form** with Turnstile CAPTCHA, auto-customer creation, and IP-based cooldown
-- **Responsive design** with Material UI components and loading skeletons
+- **Home page** — Hero, featured products, “Our story” section, and navigation to the full story page
+- **My story** (`/my-story`) — Longer brand narrative
+- **Product catalog** (`/products`) — Hierarchical **category** tabs (parent + optional subcategories), full-text search, sort, pagination, fallback messaging when search has no hits
+- **Product detail** — Multi-image gallery, condition badges, pricing, path to inquiry
+- **Inquiry form** — Turnstile CAPTCHA, auto-customer creation, IP-based cooldown
+- **Responsive UI** — Material UI, loading skeletons, code-split route chunks
 
-### Admin Dashboard 
+### Admin Dashboard (`/lord/*`)
 
-- **Secure authentication** — JWT in HttpOnly cookies, forced initial password change
-- **Product management** — Create, update status (Available / Sold / Off Shelf), toggle featured, manage images
-- **Image upload** — Presigned S3 URLs for direct-to-R2 upload, background removal preview via remove.bg
-- **Customer management** — Status workflow (New → Contacted → Qualified → Archived), contact history, notes
-- **Sales tracking** — Record sale price, payment method (Cash / Bank Transfer / Card / Other), link to customer and inquiry
+- **Secure authentication** — JWT in HttpOnly cookies, optional **session refresh** for long admin sessions, forced initial password change when required
+- **Product management** — List/create/edit, status (Available / Sold / Off Shelf), featured flag, **multi-category assignment** (hierarchy-aware)
+- **Image upload** — Presigned URLs for direct-to-R2 upload, background removal preview via remove.bg
+- **Customer management** — Status workflow (New → Contacted → Qualified → Archived), contact history, notes, detail view
+- **Sales tracking** — Sale lifecycle (listed vs final price, payment method, links to customer/inquiry where applicable)
+- **Analytics** — Admin overview (see `AdminAnalyticsPage` / `/api/lord/analytics`)
 - **Email notifications** — Configurable SMTP for inquiry alerts (with no-op fallback)
+- **View site** — Toolbar link opens the public storefront in a **new browser tab**
 
 ---
 
@@ -123,6 +129,7 @@ Category ◄─────┼── Product ──┬── ProductImage
 
 **Key entities:**
 
+- **Category** — Hierarchical (optional parent), used for catalog navigation and many-to-many **product–category** assignments
 - **Product** — Title, slug, description, price, condition (LikeNew / Good / Fair / NeedsRepair), status lifecycle (Available → Sold / OffShelf), featured flag with sort order
 - **ProductImage** — Cloud storage key, display URL, sort order, primary flag (one per product)
 - **Customer** — Auto-created from inquiries, status workflow with admin notes
@@ -138,13 +145,13 @@ SecondHandShopWebsite/
 ├── src/
 │   ├── SecondHandShop.Domain/            # Entities, enums, domain rules
 │   ├── SecondHandShop.Application/       # Use cases, DTOs, abstractions
-│   ├── SecondHandShop.Infrastructure/    # EF Core, repositories, external services
+│   ├── SecondHandShop.Infrastructure/    # EF Core, repositories, external services; migrations in Migrations/
 │   └── SecondHandShop.WebApi/            # Controllers, filters, Program.cs
 ├── frontend/
 │   ├── src/
 │   │   ├── app/                          # Router, providers, layouts, theme
-│   │   ├── pages/                        # 12 page components
-│   │   ├── features/                     # admin, catalog, home, inquiry
+│   │   ├── pages/                        # Route screens (public + admin)
+│   │   ├── features/                     # admin (incl. analytics), catalog, home, inquiry
 │   │   ├── entities/                     # TypeScript domain types
 │   │   └── shared/                       # HTTP client, components, utilities
 │   └── package.json
@@ -178,6 +185,8 @@ dotnet ef database update \
 # Run API server (HTTPS on port 7266)
 dotnet run --project src/SecondHandShop.WebApi
 ```
+
+EF Core migration classes are in **`src/SecondHandShop.Infrastructure/Migrations/`** (not under `Persistence/`).
 
 Set the backend secrets via environment variables or `dotnet user-secrets` rather than committing them into `appsettings.Development.json`.
 
@@ -241,7 +250,7 @@ npx wrangler deploy   # Deploy to Cloudflare
 ## Security
 
 - **Admin paths** use `/lord` prefix instead of `/admin` to reduce automated scanning
-- **JWT tokens** stored in HttpOnly, Secure, SameSite cookies — not accessible via JavaScript
+- **JWT tokens** stored in HttpOnly, Secure, SameSite cookies — not accessible via JavaScript; admin UI can call **`/api/lord/auth/refresh`** to renew the session during long work
 - **Rate limiting** on login (5/min) and search (30/min) endpoints per IP
 - **Turnstile CAPTCHA** on public inquiry form
 - **BCrypt** password hashing with forced initial password change
