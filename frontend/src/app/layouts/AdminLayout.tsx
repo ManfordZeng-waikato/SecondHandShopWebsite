@@ -53,7 +53,7 @@ export function AdminLayout({ children }: PropsWithChildren) {
                     window.open(`${window.location.origin}/`, '_blank', 'noopener,noreferrer');
                   }}
                 >
-                  View site
+                  Preview Site
                 </Button>
               </Box>
             </Tooltip>
