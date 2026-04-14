@@ -124,7 +124,7 @@ export function ProductCategoryDialog({
           component="span"
           sx={{
             display: 'block',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Fraunces', Georgia, serif",
             fontSize: '0.68rem',
             fontWeight: 600,
             letterSpacing: '0.14em',
@@ -139,7 +139,7 @@ export function ProductCategoryDialog({
           component="span"
           sx={{
             display: 'block',
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontFamily: "'Fraunces', Georgia, serif",
             fontSize: { xs: '1.75rem', sm: '2rem' },
             lineHeight: 1.1,
             fontWeight: 700,
@@ -180,7 +180,7 @@ export function ProductCategoryDialog({
               <CircularProgress size={20} sx={{ color: 'text.secondary' }} />
               <Typography
                 sx={{
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: "'Fraunces', Georgia, serif",
                   fontSize: '0.8rem',
                   letterSpacing: '0.02em',
                   color: 'text.secondary',

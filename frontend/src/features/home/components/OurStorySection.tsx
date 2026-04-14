@@ -51,7 +51,7 @@ export function OurStorySection() {
             sx={{
               fontSize: { xs: '1.125rem', md: '1.25rem' },
               lineHeight: 1.75,
-              fontWeight: 450,
+              fontWeight: 350,
               mb: 2,
             }}
           >
@@ -66,7 +66,7 @@ export function OurStorySection() {
             sx={{
               fontSize: { xs: '1.125rem', md: '1.25rem' },
               lineHeight: 1.75,
-              fontWeight: 450,
+              fontWeight: 350,
               mb: 4,
             }}
           >

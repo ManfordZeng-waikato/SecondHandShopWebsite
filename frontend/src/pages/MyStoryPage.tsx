@@ -75,7 +75,7 @@ export function MyStoryPage() {
         <Box
           aria-hidden
           sx={{
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontFamily: "'Fraunces', Georgia, serif",
             fontSize: { xs: '4rem', md: '6rem' },
             lineHeight: 0.65,
             color: 'primary.main',
@@ -122,7 +122,7 @@ export function MyStoryPage() {
           />
           <Typography
             sx={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontFamily: "'Fraunces', Georgia, serif",
               fontSize: '1.1rem',
               fontStyle: 'italic',
               color: 'text.secondary',

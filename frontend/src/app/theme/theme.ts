@@ -23,24 +23,20 @@ export const theme = createTheme({
     borderRadius: 8,
   },
   typography: {
-    fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamily: "'Fraunces', Georgia, 'Times New Roman', serif",
     h1: {
-      fontFamily: "'Cormorant Garamond', Georgia, serif",
       fontWeight: 700,
       letterSpacing: '-0.02em',
     },
     h2: {
-      fontFamily: "'Cormorant Garamond', Georgia, serif",
       fontWeight: 700,
       letterSpacing: '-0.015em',
     },
     h3: {
-      fontFamily: "'Cormorant Garamond', Georgia, serif",
       fontWeight: 700,
       letterSpacing: '-0.01em',
     },
     h4: {
-      fontFamily: "'Cormorant Garamond', Georgia, serif",
       fontWeight: 700,
       letterSpacing: '-0.01em',
     },
