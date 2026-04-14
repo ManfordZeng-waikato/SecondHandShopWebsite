@@ -12,4 +12,5 @@ public sealed record AnalyticsOverviewDto(
     IReadOnlyList<SalesByCategoryDto> SalesByCategory,
     IReadOnlyList<DemandByCategoryDto> DemandByCategory,
     IReadOnlyList<SalesTrendPointDto> SalesTrend,
-    IReadOnlyList<HotUnsoldProductDto> HotUnsoldProducts);
+    IReadOnlyList<HotUnsoldProductDto> HotUnsoldProducts,
+    IReadOnlyList<HotUnsoldProductDto> StaleStockProducts);

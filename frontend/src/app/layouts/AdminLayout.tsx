@@ -1,10 +1,12 @@
 import type { PropsWithChildren } from 'react';
 import { AppBar, Box, Button, Container, Divider, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
 import LogoutIcon from '@mui/icons-material/Logout';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../../features/admin/auth/adminAuth';
 import { logoutAdmin } from '../../features/admin/api/adminApi';
+import { adminTheme } from '../theme/adminTheme';
 
 export function AdminLayout({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ export function AdminLayout({ children }: PropsWithChildren) {
   };
 
   return (
+    <ThemeProvider theme={adminTheme}>
     <Box minHeight="100vh">
       <AppBar position="static" color="secondary">
         <Toolbar>
@@ -76,5 +79,6 @@ export function AdminLayout({ children }: PropsWithChildren) {
       </AppBar>
       <Container sx={{ py: 4 }}>{children}</Container>
     </Box>
+    </ThemeProvider>
   );
 }

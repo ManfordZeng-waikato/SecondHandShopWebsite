@@ -63,4 +63,5 @@ export interface AnalyticsOverview {
   demandByCategory: DemandByCategory[];
   salesTrend: SalesTrendPoint[];
   hotUnsoldProducts: HotUnsoldProduct[];
+  staleStockProducts: HotUnsoldProduct[];
 }

@@ -19,6 +19,7 @@ namespace SecondHandShop.Infrastructure.Services.Analytics;
 public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) : IAnalyticsService
 {
     private const int HotUnsoldTopN = 10;
+    private const int StaleStockTopN = 10;
     private const int SalesByCategoryTopN = 10;
     private const int DemandByCategoryTopN = 10;
 
@@ -34,6 +35,7 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
         var demandByCategory = await GetDemandByCategoryAsync(start, now, cancellationToken);
         var salesTrend = await GetSalesTrendAsync(start, now, cancellationToken);
         var hotUnsold = await GetHotUnsoldProductsAsync(start, now, cancellationToken);
+        var staleStock = await GetStaleStockProductsAsync(start, now, cancellationToken);
 
         return new AnalyticsOverviewDto(
             Range: range,
@@ -43,7 +45,8 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
             SalesByCategory: salesByCategory,
             DemandByCategory: demandByCategory,
             SalesTrend: salesTrend,
-            HotUnsoldProducts: hotUnsold);
+            HotUnsoldProducts: hotUnsold,
+            StaleStockProducts: staleStock);
     }
 
     /// <summary>
@@ -321,21 +324,25 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
             salesQuery = salesQuery.Where(s => s.SoldAtUtc >= startValue && s.SoldAtUtc <= nowUtc);
         }
 
-        // date_trunc('month', ...) in Postgres via EF.Functions.DateTrunc.
+        // Group by (Year, Month) instead of a constructed DateTime — the component accessors
+        // are always translatable by Npgsql (EXTRACT(year ...), EXTRACT(month ...)) whereas a
+        // `new DateTime(y, m, 1)` inside a LINQ tree can silently fall back to client eval and
+        // pull every sale row into memory.
         var rows = await salesQuery
-            .GroupBy(s => new DateTime(s.SoldAtUtc.Year, s.SoldAtUtc.Month, 1))
+            .GroupBy(s => new { s.SoldAtUtc.Year, s.SoldAtUtc.Month })
             .Select(g => new
             {
-                MonthStartUtc = g.Key,
+                g.Key.Year,
+                g.Key.Month,
                 SoldCount = g.Count(),
                 Revenue = g.Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m
             })
-            .OrderBy(x => x.MonthStartUtc)
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
             .ToListAsync(cancellationToken);
 
         return rows
             .Select(r => new SalesTrendPointDto(
-                DateTime.SpecifyKind(r.MonthStartUtc, DateTimeKind.Utc),
+                new DateTime(r.Year, r.Month, 1, 0, 0, 0, DateTimeKind.Utc),
                 r.SoldCount,
                 Math.Round(r.Revenue, 2)))
             .ToList();
@@ -376,6 +383,65 @@ public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) :
                 p.CreatedAt
             })
             .Take(HotUnsoldTopN)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new HotUnsoldProductDto(
+                ProductId: r.ProductId,
+                Title: r.Title,
+                Slug: r.Slug,
+                CategoryId: r.CategoryId,
+                CategoryName: r.CategoryName,
+                InquiryCount: r.InquiryCount,
+                ListedPrice: r.ListedPrice,
+                DaysListed: Math.Max(0, (int)(nowUtc - r.CreatedAt).TotalDays)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Stale stock: available products ranked by how long they've been listed, oldest first.
+    /// Independent of the date range on the dashboard — a product listed three years ago is
+    /// still stale even if we're viewing "last 7 days". The range only affects the
+    /// <c>InquiryCount</c> column, which is included as context so admins can tell
+    /// "old but still getting interest" from "old and ignored".
+    /// </summary>
+    private async Task<IReadOnlyList<HotUnsoldProductDto>> GetStaleStockProductsAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var inquiriesQuery = dbContext.Inquiries.AsNoTracking();
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            inquiriesQuery = inquiriesQuery.Where(i => i.CreatedAt >= startValue && i.CreatedAt <= nowUtc);
+        }
+
+        // Pre-aggregated inquiry counts per product. Left-joined below so products with zero
+        // in-range inquiries still show up (the whole point of a stale-stock list).
+        var inquiryCounts = inquiriesQuery
+            .GroupBy(i => i.ProductId)
+            .Select(g => new { ProductId = g.Key, InquiryCount = g.Count() });
+
+        var rows = await (
+            from p in dbContext.Products.AsNoTracking()
+            where p.Status == ProductStatus.Available
+            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id
+            join ic in inquiryCounts on p.Id equals ic.ProductId into icj
+            from ic in icj.DefaultIfEmpty()
+            orderby p.CreatedAt // oldest listing first
+            select new
+            {
+                ProductId = p.Id,
+                p.Title,
+                p.Slug,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                InquiryCount = (int?)(ic == null ? 0 : ic.InquiryCount) ?? 0,
+                ListedPrice = p.Price,
+                p.CreatedAt
+            })
+            .Take(StaleStockTopN)
             .ToListAsync(cancellationToken);
 
         return rows

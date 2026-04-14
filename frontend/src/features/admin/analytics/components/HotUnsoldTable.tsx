@@ -16,17 +16,25 @@ import { formatCurrencyPrecise, formatInt } from '../format';
 
 interface Props {
   rows: HotUnsoldProduct[];
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 }
 
-export function HotUnsoldTable({ rows }: Props) {
+export function HotUnsoldTable({
+  rows,
+  title = 'Hot unsold products',
+  description = 'Available products with the most inquiries in the selected range.',
+  emptyMessage = 'No unsold products with inquiries in this range.',
+}: Props) {
   return (
     <Card variant="outlined">
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Hot unsold products
+          {title}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Available products with the most inquiries in the selected range.
+          {description}
         </Typography>
         <TableContainer>
           <Table size="small">
@@ -43,7 +51,7 @@ export function HotUnsoldTable({ rows }: Props) {
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center">
-                    No unsold products with inquiries in this range.
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
