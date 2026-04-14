@@ -97,7 +97,7 @@ export function HomeHeroSection() {
 
             <Typography
               variant="body1"
-              color="text.secondary"
+              color="text.primary"
               sx={{
                 fontSize: { xs: '1rem', md: '1.15rem' },
                 lineHeight: 1.7,
