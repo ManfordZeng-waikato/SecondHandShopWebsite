@@ -25,7 +25,7 @@ export function OurStorySection() {
           <Box
             aria-hidden
             sx={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontFamily: "'Fraunces', Georgia, serif",
               fontSize: { xs: '5rem', md: '7rem' },
               lineHeight: 0.6,
               color: 'primary.main',
@@ -47,8 +47,13 @@ export function OurStorySection() {
 
           <Typography
             variant="body1"
-            color="text.secondary"
-            sx={{ lineHeight: 1.8, mb: 2 }}
+            color="text.primary"
+            sx={{
+              fontSize: { xs: '1.125rem', md: '1.25rem' },
+              lineHeight: 1.75,
+              fontWeight: 450,
+              mb: 2,
+            }}
           >
             Hi, I'm Pat Jackson. What started as a hobby — finding quality
             pre-loved furniture around the Waikato — has grown into a small family
@@ -57,8 +62,13 @@ export function OurStorySection() {
 
           <Typography
             variant="body1"
-            color="text.secondary"
-            sx={{ lineHeight: 1.8, mb: 4 }}
+            color="text.primary"
+            sx={{
+              fontSize: { xs: '1.125rem', md: '1.25rem' },
+              lineHeight: 1.75,
+              fontWeight: 450,
+              mb: 4,
+            }}
           >
             After 25&nbsp;years of teaching, I retired and turned my passion into
             Pat's Shed. Together with my husband and son, we hand-pick every piece
