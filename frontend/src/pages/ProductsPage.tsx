@@ -79,20 +79,34 @@ export function ProductsPage() {
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               alignItems="center"
-              spacing={{ xs: 2.5, md: 4 }}
+              spacing={{ xs: 2.5, md: 3 }}
               sx={{ position: 'relative' }}
             >
+              {/* Image column — majority width on desktop */}
               <Box
-                component="img"
-                src="/LogoHome.svg"
-                alt="Pat's Shed"
                 sx={{
-                  height: { xs: 110, sm: 130, md: 150 },
-                  width: 'auto',
-                  objectFit: 'contain',
-                  flexShrink: 0,
+                  width: '100%',
+                  flex: { md: '3 1 0' },
+                  minWidth: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  px: { xs: 0, md: 1 },
                 }}
-              />
+              >
+                <Box
+                  component="img"
+                  src="/LogoHome.svg"
+                  alt="Pat's Shed"
+                  sx={{
+                    width: { xs: 'min(100%, 340px)', md: '100%' },
+                    maxWidth: '100%',
+                    height: 'auto',
+                    maxHeight: { xs: 220, sm: 260, md: 340 },
+                    objectFit: 'contain',
+                  }}
+                />
+              </Box>
 
               {/* Vertical divider — desktop only */}
               <Box
@@ -101,20 +115,30 @@ export function ProductsPage() {
                   display: { xs: 'none', md: 'block' },
                   width: '1.5px',
                   alignSelf: 'stretch',
+                  flexShrink: 0,
                   bgcolor: 'rgba(0,0,0,0.1)',
-                  my: 1,
+                  my: 0.5,
                 }}
               />
 
-              <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+              {/* Copy — narrow column */}
+              <Box
+                sx={{
+                  width: '100%',
+                  flex: { md: '1 1 0' },
+                  minWidth: 0,
+                  maxWidth: { md: 320 },
+                  textAlign: { xs: 'center', md: 'left' },
+                }}
+              >
                 <Typography
                   component="span"
                   sx={{
                     display: 'inline-block',
-                    mb: 1.5,
-                    letterSpacing: '0.14em',
+                    mb: { xs: 1, md: 0.75 },
+                    letterSpacing: '0.12em',
                     textTransform: 'uppercase',
-                    fontSize: '0.72rem',
+                    fontSize: '0.65rem',
                     fontWeight: 600,
                     color: 'text.secondary',
                     borderBottom: '1.5px solid',
@@ -127,11 +151,24 @@ export function ProductsPage() {
                 <Typography
                   variant="h3"
                   component="h1"
-                  sx={{ fontSize: { xs: '2rem', md: '2.6rem' }, lineHeight: 1.1, mb: 1 }}
+                  sx={{
+                    fontSize: { xs: '1.85rem', md: '1.65rem' },
+                    lineHeight: 1.12,
+                    mb: { xs: 0.75, md: 0.5 },
+                  }}
                 >
                   All Products
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 440, lineHeight: 1.7 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.9rem', md: '0.82rem' },
+                    lineHeight: 1.65,
+                    maxWidth: { xs: 400, md: 'none' },
+                    mx: { xs: 'auto', md: 0 },
+                  }}
+                >
                   Quality pre-loved furniture &amp; antiques, hand-picked from the&nbsp;Waikato
                 </Typography>
 
@@ -139,10 +176,10 @@ export function ProductsPage() {
                 <Box
                   aria-hidden
                   sx={{
-                    width: 44,
+                    width: 36,
                     height: '2px',
                     bgcolor: 'primary.main',
-                    mt: 2,
+                    mt: { xs: 1.75, md: 1.25 },
                     mx: { xs: 'auto', md: 0 },
                   }}
                 />
