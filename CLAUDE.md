@@ -101,7 +101,7 @@ CORS allows credentials from `https://localhost:5173` in development.
 
 ## Database
 
-PostgreSQL in development (example: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres`). Migrations: `src/SecondHandShop.Infrastructure/Persistence/Migrations/`. `AdminSeedService` creates the initial admin from `AdminSeed` on first run. Concurrency: PostgreSQL `xmin` via `uint RowVersion`.
+PostgreSQL in development (example: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres`). Migrations: `src/SecondHandShop.Infrastructure/Migrations/`. `AdminSeedService` creates the initial admin from `AdminSeed` on first run. Concurrency: PostgreSQL `xmin` via `uint RowVersion`.
 
 ## Local HTTPS
 

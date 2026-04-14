@@ -81,6 +81,10 @@ public class ProductSaleConfiguration : IEntityTypeConfiguration<ProductSale>
         builder.HasIndex(x => x.CustomerId);
         builder.HasIndex(x => x.InquiryId);
         builder.HasIndex(x => x.SoldAtUtc);
+        // Composite (Status, SoldAtUtc) lets analytics aggregate only Completed sales in a
+        // date range without visiting cancelled rows — every analytics query filters on both.
+        builder.HasIndex(x => new { x.Status, x.SoldAtUtc })
+            .HasDatabaseName("IX_ProductSales_Status_SoldAtUtc");
 
         builder.HasOne<Product>()
             .WithMany()

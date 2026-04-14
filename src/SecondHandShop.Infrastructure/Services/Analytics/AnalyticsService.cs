@@ -1,0 +1,393 @@
+using Microsoft.EntityFrameworkCore;
+using SecondHandShop.Application.Abstractions.Common;
+using SecondHandShop.Application.Contracts.Analytics;
+using SecondHandShop.Application.UseCases.Analytics;
+using SecondHandShop.Domain.Enums;
+using SecondHandShop.Infrastructure.Persistence;
+
+namespace SecondHandShop.Infrastructure.Services.Analytics;
+
+/// <summary>
+/// Database-backed analytics queries. All aggregations happen in SQL via EF Core GroupBy —
+/// no product/sale/inquiry rows are materialized in memory during these calls, so the
+/// dashboard remains cheap as the tables grow.
+///
+/// Category attribution uses <c>Product.CategoryId</c> (the primary category) rather than
+/// the <c>ProductCategories</c> join table, so products that belong to multiple categories
+/// are counted exactly once. This matches the "primary category for analytics" rule.
+/// </summary>
+public class AnalyticsService(SecondHandShopDbContext dbContext, IClock clock) : IAnalyticsService
+{
+    private const int HotUnsoldTopN = 10;
+    private const int SalesByCategoryTopN = 10;
+    private const int DemandByCategoryTopN = 10;
+
+    public async Task<AnalyticsOverviewDto> GetOverviewAsync(
+        AnalyticsDateRange range,
+        CancellationToken cancellationToken = default)
+    {
+        var now = clock.UtcNow;
+        var start = ResolveRangeStart(range, now);
+
+        var summary = await GetSummaryAsync(start, now, cancellationToken);
+        var salesByCategory = await GetSalesByCategoryAsync(start, now, cancellationToken);
+        var demandByCategory = await GetDemandByCategoryAsync(start, now, cancellationToken);
+        var salesTrend = await GetSalesTrendAsync(start, now, cancellationToken);
+        var hotUnsold = await GetHotUnsoldProductsAsync(start, now, cancellationToken);
+
+        return new AnalyticsOverviewDto(
+            Range: range,
+            RangeStartUtc: start,
+            RangeEndUtc: now,
+            Summary: summary,
+            SalesByCategory: salesByCategory,
+            DemandByCategory: demandByCategory,
+            SalesTrend: salesTrend,
+            HotUnsoldProducts: hotUnsold);
+    }
+
+    /// <summary>
+    /// Null start means "all time" — callers that treat the start inclusively should fall back
+    /// to an unbounded range when this is null.
+    /// </summary>
+    private static DateTime? ResolveRangeStart(AnalyticsDateRange range, DateTime nowUtc)
+    {
+        return range switch
+        {
+            AnalyticsDateRange.Last7Days => nowUtc.AddDays(-7),
+            AnalyticsDateRange.Last30Days => nowUtc.AddDays(-30),
+            AnalyticsDateRange.Last90Days => nowUtc.AddDays(-90),
+            AnalyticsDateRange.Last12Months => nowUtc.AddMonths(-12),
+            AnalyticsDateRange.AllTime => null,
+            _ => nowUtc.AddDays(-30)
+        };
+    }
+
+    private async Task<AnalyticsSummaryDto> GetSummaryAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var salesQuery = dbContext.ProductSales
+            .AsNoTracking()
+            .Where(s => s.Status == SaleRecordStatus.Completed);
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            salesQuery = salesQuery.Where(s => s.SoldAtUtc >= startValue && s.SoldAtUtc <= nowUtc);
+        }
+
+        // Single round-trip: totals + averages for sold items.
+        var salesAgg = await salesQuery
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Revenue = g.Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m,
+                Average = g.Average(s => (decimal?)s.FinalSoldPrice) ?? 0m
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var totalSoldItems = salesAgg?.Count ?? 0;
+        var totalRevenue = salesAgg?.Revenue ?? 0m;
+        var averageSalePrice = salesAgg?.Average ?? 0m;
+
+        // Total inquiries in range.
+        var inquiriesQuery = dbContext.Inquiries.AsNoTracking();
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            inquiriesQuery = inquiriesQuery.Where(i => i.CreatedAt >= startValue && i.CreatedAt <= nowUtc);
+        }
+
+        var totalInquiries = await inquiriesQuery.CountAsync(cancellationToken);
+
+        var conversionRate = totalInquiries == 0
+            ? 0m
+            : Math.Round((decimal)totalSoldItems / totalInquiries, 4);
+
+        // Best selling category (by sold count). Join ProductSales -> Products -> Categories.
+        var bestSelling = await salesQuery
+            .Join(
+                dbContext.Products.AsNoTracking(),
+                s => s.ProductId,
+                p => p.Id,
+                (s, p) => new { p.CategoryId })
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(1)
+            .Join(
+                dbContext.Categories.AsNoTracking(),
+                x => x.CategoryId,
+                c => c.Id,
+                (x, c) => new { c.Id, c.Name })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Most inquired category (by inquiry count).
+        var mostInquired = await inquiriesQuery
+            .Join(
+                dbContext.Products.AsNoTracking(),
+                i => i.ProductId,
+                p => p.Id,
+                (i, p) => new { p.CategoryId })
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(1)
+            .Join(
+                dbContext.Categories.AsNoTracking(),
+                x => x.CategoryId,
+                c => c.Id,
+                (x, c) => new { c.Id, c.Name })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new AnalyticsSummaryDto(
+            TotalSoldItems: totalSoldItems,
+            TotalRevenue: totalRevenue,
+            AverageSalePrice: Math.Round(averageSalePrice, 2),
+            TotalInquiries: totalInquiries,
+            InquiryToSaleConversionRate: conversionRate,
+            BestSellingCategoryName: bestSelling?.Name,
+            BestSellingCategoryId: bestSelling?.Id,
+            MostInquiredCategoryName: mostInquired?.Name,
+            MostInquiredCategoryId: mostInquired?.Id);
+    }
+
+    private async Task<IReadOnlyList<SalesByCategoryDto>> GetSalesByCategoryAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var salesQuery = dbContext.ProductSales
+            .AsNoTracking()
+            .Where(s => s.Status == SaleRecordStatus.Completed);
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            salesQuery = salesQuery.Where(s => s.SoldAtUtc >= startValue && s.SoldAtUtc <= nowUtc);
+        }
+
+        var rows = await salesQuery
+            .Join(
+                dbContext.Products.AsNoTracking(),
+                s => s.ProductId,
+                p => p.Id,
+                (s, p) => new { p.CategoryId, s.FinalSoldPrice })
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new
+            {
+                CategoryId = g.Key,
+                SoldCount = g.Count(),
+                TotalRevenue = g.Sum(x => (decimal?)x.FinalSoldPrice) ?? 0m,
+                AverageSalePrice = g.Average(x => (decimal?)x.FinalSoldPrice) ?? 0m
+            })
+            .OrderByDescending(x => x.TotalRevenue)
+            .Take(SalesByCategoryTopN)
+            .Join(
+                dbContext.Categories.AsNoTracking(),
+                x => x.CategoryId,
+                c => c.Id,
+                (x, c) => new
+                {
+                    CategoryId = c.Id,
+                    CategoryName = c.Name,
+                    x.SoldCount,
+                    x.TotalRevenue,
+                    x.AverageSalePrice
+                })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new SalesByCategoryDto(
+                r.CategoryId,
+                r.CategoryName,
+                r.SoldCount,
+                Math.Round(r.TotalRevenue, 2),
+                Math.Round(r.AverageSalePrice, 2)))
+            .OrderByDescending(r => r.TotalRevenue)
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<DemandByCategoryDto>> GetDemandByCategoryAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        // Inquiry counts per primary category in range.
+        var inquiriesQuery = dbContext.Inquiries.AsNoTracking();
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            inquiriesQuery = inquiriesQuery.Where(i => i.CreatedAt >= startValue && i.CreatedAt <= nowUtc);
+        }
+
+        var inquiryRows = await inquiriesQuery
+            .Join(
+                dbContext.Products.AsNoTracking(),
+                i => i.ProductId,
+                p => p.Id,
+                (i, p) => new { p.CategoryId })
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new { CategoryId = g.Key, InquiryCount = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        // Sold counts per primary category in the same range.
+        var salesQuery = dbContext.ProductSales
+            .AsNoTracking()
+            .Where(s => s.Status == SaleRecordStatus.Completed);
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            salesQuery = salesQuery.Where(s => s.SoldAtUtc >= startValue && s.SoldAtUtc <= nowUtc);
+        }
+
+        var soldRows = await salesQuery
+            .Join(
+                dbContext.Products.AsNoTracking(),
+                s => s.ProductId,
+                p => p.Id,
+                (s, p) => new { p.CategoryId })
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new { CategoryId = g.Key, SoldCount = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var soldByCategory = soldRows.ToDictionary(x => x.CategoryId, x => x.SoldCount);
+
+        // Collect all category ids we touched so we can look up names in one shot.
+        var categoryIds = inquiryRows
+            .Select(r => r.CategoryId)
+            .Concat(soldRows.Select(r => r.CategoryId))
+            .Distinct()
+            .ToList();
+
+        var categoryNames = await dbContext.Categories
+            .AsNoTracking()
+            .Where(c => categoryIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.Name })
+            .ToListAsync(cancellationToken);
+        var categoryNameById = categoryNames.ToDictionary(x => x.Id, x => x.Name);
+
+        var result = new List<DemandByCategoryDto>(inquiryRows.Count);
+        foreach (var row in inquiryRows)
+        {
+            var soldCount = soldByCategory.GetValueOrDefault(row.CategoryId, 0);
+            var inquiryCount = row.InquiryCount;
+            var conversionRate = inquiryCount == 0
+                ? 0m
+                : Math.Round((decimal)soldCount / inquiryCount, 4);
+            var heatScore = CalculateHeatScore(inquiryCount, soldCount, conversionRate);
+
+            result.Add(new DemandByCategoryDto(
+                CategoryId: row.CategoryId,
+                CategoryName: categoryNameById.GetValueOrDefault(row.CategoryId) ?? "(unknown)",
+                InquiryCount: inquiryCount,
+                SoldCount: soldCount,
+                ConversionRate: conversionRate,
+                HeatScore: heatScore));
+        }
+
+        return result
+            .OrderByDescending(r => r.HeatScore)
+            .ThenByDescending(r => r.InquiryCount)
+            .Take(DemandByCategoryTopN)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Heat score blends raw demand (inquiries), realised demand (sold), and efficiency
+    /// (conversion rate) into a single rankable number. Constants are deliberate:
+    /// inquiries pull the score up linearly, sold items are worth twice an inquiry because
+    /// a completed sale is a stronger demand signal than an open question, and the
+    /// conversion-rate bonus (×10) only meaningfully fires once there are real sales.
+    /// </summary>
+    private static decimal CalculateHeatScore(int inquiryCount, int soldCount, decimal conversionRate)
+    {
+        var raw = inquiryCount * 1.0m + soldCount * 2.0m + conversionRate * 10.0m;
+        return Math.Round(raw, 2);
+    }
+
+    private async Task<IReadOnlyList<SalesTrendPointDto>> GetSalesTrendAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var salesQuery = dbContext.ProductSales
+            .AsNoTracking()
+            .Where(s => s.Status == SaleRecordStatus.Completed);
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            salesQuery = salesQuery.Where(s => s.SoldAtUtc >= startValue && s.SoldAtUtc <= nowUtc);
+        }
+
+        // date_trunc('month', ...) in Postgres via EF.Functions.DateTrunc.
+        var rows = await salesQuery
+            .GroupBy(s => new DateTime(s.SoldAtUtc.Year, s.SoldAtUtc.Month, 1))
+            .Select(g => new
+            {
+                MonthStartUtc = g.Key,
+                SoldCount = g.Count(),
+                Revenue = g.Sum(s => (decimal?)s.FinalSoldPrice) ?? 0m
+            })
+            .OrderBy(x => x.MonthStartUtc)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new SalesTrendPointDto(
+                DateTime.SpecifyKind(r.MonthStartUtc, DateTimeKind.Utc),
+                r.SoldCount,
+                Math.Round(r.Revenue, 2)))
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<HotUnsoldProductDto>> GetHotUnsoldProductsAsync(
+        DateTime? start,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        // Inquiries in range, grouped by product.
+        var inquiriesQuery = dbContext.Inquiries.AsNoTracking();
+        if (start.HasValue)
+        {
+            var startValue = start.Value;
+            inquiriesQuery = inquiriesQuery.Where(i => i.CreatedAt >= startValue && i.CreatedAt <= nowUtc);
+        }
+
+        var inquiryCounts = inquiriesQuery
+            .GroupBy(i => i.ProductId)
+            .Select(g => new { ProductId = g.Key, InquiryCount = g.Count() });
+
+        var rows = await (
+            from p in dbContext.Products.AsNoTracking()
+            where p.Status == ProductStatus.Available
+            join ic in inquiryCounts on p.Id equals ic.ProductId
+            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id
+            orderby ic.InquiryCount descending, p.CreatedAt
+            select new
+            {
+                ProductId = p.Id,
+                p.Title,
+                p.Slug,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                ic.InquiryCount,
+                ListedPrice = p.Price,
+                p.CreatedAt
+            })
+            .Take(HotUnsoldTopN)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new HotUnsoldProductDto(
+                ProductId: r.ProductId,
+                Title: r.Title,
+                Slug: r.Slug,
+                CategoryId: r.CategoryId,
+                CategoryName: r.CategoryName,
+                InquiryCount: r.InquiryCount,
+                ListedPrice: r.ListedPrice,
+                DaysListed: Math.Max(0, (int)(nowUtc - r.CreatedAt).TotalDays)))
+            .ToList();
+    }
+}

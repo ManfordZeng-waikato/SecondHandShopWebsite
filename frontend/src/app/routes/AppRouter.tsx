@@ -46,6 +46,9 @@ const AdminProductsPage = lazy(() =>
 const AdminNewProductPage = lazy(() =>
   import('../../pages/AdminNewProductPage').then((m) => ({ default: m.AdminNewProductPage })),
 );
+const AdminAnalyticsPage = lazy(() =>
+  import('../../pages/AdminAnalyticsPage').then((m) => ({ default: m.AdminAnalyticsPage })),
+);
 
 function PageFallback() {
   return (
@@ -149,6 +152,14 @@ export function AppRouter() {
                 element={
                   <AdminLayout>
                     <AdminNewProductPage />
+                  </AdminLayout>
+                }
+              />
+              <Route
+                path="/lord/analytics"
+                element={
+                  <AdminLayout>
+                    <AdminAnalyticsPage />
                   </AdminLayout>
                 }
               />

@@ -59,6 +59,10 @@ public class InquiryConfiguration : IEntityTypeConfiguration<Inquiry>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => new { x.ProductId, x.CreatedAt });
+        // Standalone CreatedAt index supports the admin analytics range-scan across the whole
+        // inquiry table (no product filter), which the composite (ProductId, CreatedAt) index
+        // cannot serve because its leading column is ProductId.
+        builder.HasIndex(x => x.CreatedAt);
         builder.HasIndex(x => new { x.ProductId, x.RequestIpAddress, x.CreatedAt });
         builder.HasIndex(x => new { x.ProductId, x.Email, x.CreatedAt });
         builder.HasIndex(x => new { x.MessageHash, x.CreatedAt });

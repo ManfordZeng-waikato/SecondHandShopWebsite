@@ -32,6 +32,9 @@ export function AdminLayout({ children }: PropsWithChildren) {
             <Button color="inherit" component={RouterLink} to="/lord/customers">
               Customers
             </Button>
+            <Button color="inherit" component={RouterLink} to="/lord/analytics">
+              Analytics
+            </Button>
             <Tooltip title="Open public site in a new tab">
               <Button
                 color="inherit"
