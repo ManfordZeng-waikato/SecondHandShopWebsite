@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using SecondHandShop.Application.Contracts.Admin;
 using SecondHandShop.Application.UseCases.Admin.ChangeInitialPassword;
 using SecondHandShop.Application.UseCases.Admin.Login;
+using SecondHandShop.WebApi.Common;
 using SecondHandShop.Application.UseCases.Admin.Me;
 using SecondHandShop.Application.UseCases.Admin.RefreshSession;
 using SecondHandShop.WebApi.Authentication;
@@ -31,7 +32,7 @@ public class AdminAuthController(
         var command = new LoginAdminCommand(
             request.UserName,
             request.Password,
-            HttpContext.Connection.RemoteIpAddress?.ToString());
+            IpHelper.GetClientIp(HttpContext));
         var response = await mediator.Send(command, cancellationToken);
 
         var cookieOpts = authCookieOptions.Value;

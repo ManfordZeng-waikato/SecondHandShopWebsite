@@ -18,6 +18,7 @@ using SecondHandShop.Infrastructure.Persistence;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Infrastructure.Services;
 using SecondHandShop.WebApi.Authentication;
+using SecondHandShop.WebApi.Common;
 using SecondHandShop.WebApi.Controllers;
 using SecondHandShop.WebApi.Filters;
 using SecondHandShop.WebApi.Middleware;
@@ -157,7 +158,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("LoginRateLimit", context =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: IpHelper.GetClientIp(context),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
@@ -167,7 +168,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("SearchRateLimit", context =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: IpHelper.GetClientIp(context),
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 30,
@@ -284,6 +285,7 @@ if (seedCatalogOnStartup)
     await CatalogSeedService.SeedDefaultCategoriesIfEmptyAsync(app.Services);
 }
 
+app.UseMiddleware<CloudflareOnlyMiddleware>();
 app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging(options =>

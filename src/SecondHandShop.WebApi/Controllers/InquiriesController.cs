@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SecondHandShop.Application.Contracts.Inquiries;
 using SecondHandShop.Application.UseCases.Inquiries;
 using SecondHandShop.Domain.Common;
+using SecondHandShop.WebApi.Common;
 using SecondHandShop.WebApi.Contracts;
 
 namespace SecondHandShop.WebApi.Controllers;
@@ -14,7 +15,7 @@ public class InquiriesController(IInquiryService inquiryService) : ControllerBas
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] CreateInquiryRequest request, CancellationToken cancellationToken)
     {
-        var requestIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var requestIpAddress = IpHelper.GetClientIp(HttpContext);
         var command = new CreateInquiryCommand(
             request.ProductId,
             request.CustomerName,

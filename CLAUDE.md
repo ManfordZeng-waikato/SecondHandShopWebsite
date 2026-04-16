@@ -48,33 +48,52 @@ Full-stack second-hand marketplace using clean architecture across three sub-pro
 
 Four .NET 10 projects:
 
-- **Domain** — Entities (`Product`, `ProductImage`, `Category`, `Customer`, `Inquiry`, `InquiryIpCooldown`), enums, `AuditableEntity` base, `SlugValidator`
-- **Application** — Use cases via MediatR (CQRS-inspired), DTOs in `Contracts/`, abstractions (interfaces) for persistence, security, storage, messaging, image processing
-- **Infrastructure** — EF Core + PostgreSQL: repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, admin seeding)
+- **Domain** — Entities (`Product`, `ProductImage`, `ProductSale`, `ProductCategory`, `Category`, `Customer`, `AdminUser`, `Inquiry`, `InquiryIpCooldown`), enums (`ProductStatus`, `ProductCondition`, `SaleRecordStatus`, `SaleCancellationReason`, `CustomerStatus`, `CustomerSource`, `PaymentMethod`, `EmailDeliveryStatus`), `AuditableEntity` base, validators (`SlugValidator`, `EmailAddressSyntaxValidator`), `DomainRuleViolationException`
+- **Application** — Use cases via MediatR (CQRS-inspired) in `UseCases/` (Admin, Analytics, Catalog, Categories, Customers, Inquiries, Sales), DTOs in `Contracts/`, abstractions for persistence, security, storage, messaging, image processing
+- **Infrastructure** — EF Core + PostgreSQL: 7 repositories, `SecondHandShopDbContext`, services (JWT, BCrypt, R2 storage, SMTP, Turnstile, remove.bg, analytics, admin seeding, catalog seeding, category cache, admin login notifications, inquiry email dispatch)
 - **WebApi** — ASP.NET Core host, controller-based routing, DI in `Program.cs`
+
+**Controllers:**
+
+| Controller | Route prefix |
+|---|---|
+| ProductsController | `api/products` (public) |
+| CategoriesController | `api/categories` (public) |
+| InquiriesController | `api/inquiries` (public) |
+| AdminAuthController | `api/lord/auth` |
+| AdminProductsController | `api/lord/products` |
+| AdminProductSalesController | `api/lord/products/{productId}` |
+| AdminCustomersController | `api/lord/customers` |
+| AdminAnalyticsController | `api/lord/analytics` |
+| AdminPingController | `api/lord/ping` |
+| ImageProcessingController | `api/lord/images` |
 
 **Admin API prefix:** `/api/lord/*` (not `/api/admin`) as a security-by-obscurity measure.
 
 **Rate limits:**
 
-- `/api/lord/auth/login` — 5 requests/min per IP
-- `/api/products/search` — 30 requests/min per IP (sliding window)
+- `/api/lord/auth/login` — 5 requests/min per IP (fixed window)
+- `/api/products/search` — 30 requests/min per IP (sliding window, 3 segments)
 
-**Auth:** JWT in HttpOnly cookie `shs.admin.token`.
+**Auth:** JWT in HttpOnly cookie `shs.admin.token`. Sliding token renewal (20-min access tokens). Two authorization policies: `AdminSession` (any valid admin JWT) and `AdminFullAccess` (excludes password-change-required tokens).
+
+**Middleware:** ForwardedHeaders, CorrelationId, Serilog request logging, security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy).
+
+**Output caching:** `CategoriesList` and `CategoriesTree` — 5-minute expiry.
 
 ### Frontend (`frontend/src/`)
 
-React 19 SPA, feature-sliced layout:
+React 19 SPA (MUI 7, TanStack React Query 5, React Router 7, Axios, Vite 7):
 
-- `app/` — Entry, `AppRouter.tsx` (React Router 7), `AppProviders.tsx` (React Query + MUI), layouts (`MainLayout`, `AdminLayout`), `ProtectedAdminRoute`
-- `pages/` — Public catalog and admin pages
-- `features/` — Modules (`admin`, `catalog`, `home`, `inquiry`): React Query hooks and mutations
-- `entities/` — TypeScript domain types
-- `shared/api/httpClient.ts` — Axios with `withCredentials: true`; 401 on admin routes redirects to `/lord/login`
+- `app/` — `App.tsx`, routes (`AppRouter.tsx`, `ProtectedAdminRoute`, `ProtectedPasswordChangeRoute`), providers (`AppProviders.tsx`), layouts (`MainLayout`, `AdminLayout`), theme, components (`Navbar`)
+- `pages/` — Public: `HomePage`, `ProductsPage`, `ProductDetailPage`, `InquiryPage`, `MyStoryPage`, `NotFoundPage`; Admin: `AdminLoginPage`, `AdminProductsPage`, `AdminNewProductPage`, `AdminCustomersPage`, `AdminCustomerDetailPage`, `AdminAnalyticsPage`, `AdminChangePasswordPage`
+- `features/` — Modules: `admin` (analytics, api, auth, components), `catalog` (api, hooks, components), `home` (api, components), `inquiry` (api, components)
+- `entities/` — TypeScript domain types: `product`, `sale`, `category`, `customer`, `inquiry`
+- `shared/` — `api/httpClient.ts` (Axios with `withCredentials: true`; 401 on admin routes redirects to `/lord/login`), `components/` (`StatusChip`), `utils/` (`imageUrl`), `config/` (`env`)
 
 ### Worker (`worker/`)
 
-Cloudflare Worker serving product images from R2 bucket `patshed` with cache headers. GET/HEAD only.
+Cloudflare Worker serving product images from R2 bucket `patshed` with cache headers (1-day client, 7-day edge). GET/HEAD/OPTIONS only, CORS enabled.
 
 ## Configuration
 
@@ -101,7 +120,7 @@ CORS allows credentials from `https://localhost:5173` in development.
 
 ## Database
 
-PostgreSQL in development (example: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres`). Migrations: `src/SecondHandShop.Infrastructure/Migrations/`. `AdminSeedService` creates the initial admin from `AdminSeed` on first run. Concurrency: PostgreSQL `xmin` via `uint RowVersion`.
+PostgreSQL in development (example: `Host=localhost;Database=SecondHandShopDb;Username=postgres;Password=postgres`). Migrations: `src/SecondHandShop.Infrastructure/Migrations/`. Auto-migration and auto-seeding on startup (configurable). `AdminSeedService` creates the initial admin from `AdminSeed`. `CatalogSeedService` seeds default categories. Concurrency: PostgreSQL `xmin` via `uint RowVersion`.
 
 ## Local HTTPS
 
