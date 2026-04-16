@@ -5,4 +5,9 @@
     <Project Path="src/SecondHandShop.Infrastructure/SecondHandShop.Infrastructure.csproj" />
     <Project Path="src/SecondHandShop.WebApi/SecondHandShop.WebApi.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SecondHandShop.Domain.UnitTests/SecondHandShop.Domain.UnitTests.csproj" />
+    <Project Path="tests/SecondHandShop.Application.UnitTests/SecondHandShop.Application.UnitTests.csproj" />
+    <Project Path="tests/SecondHandShop.WebApi.IntegrationTests/SecondHandShop.WebApi.IntegrationTests.csproj" />
+  </Folder>
 </Solution>
