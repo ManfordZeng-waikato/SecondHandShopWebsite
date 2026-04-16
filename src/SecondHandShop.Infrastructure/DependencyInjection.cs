@@ -37,6 +37,9 @@ public static class DependencyInjection
 
         services.AddDbContext<SecondHandShopDbContext>(options =>
             options.UseNpgsql(connectionString));
+        services.AddDbContextFactory<SecondHandShopDbContext>(
+            options => options.UseNpgsql(connectionString),
+            ServiceLifetime.Scoped);
 
         services.AddMemoryCache();
         services.AddScoped<ICategoryHierarchyCache, CategoryHierarchyCache>();
