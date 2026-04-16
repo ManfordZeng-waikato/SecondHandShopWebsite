@@ -100,17 +100,29 @@ function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
   return fallbackMessage;
 }
 
-const filterChipSx = (isActive: boolean) => ({
-  fontWeight: isActive ? 700 : 500,
+const activeFilterChipSx = {
+  fontWeight: 700,
   fontSize: '0.8rem',
-  bgcolor: isActive ? 'primary.main' : 'transparent',
-  color: isActive ? 'primary.contrastText' : 'text.secondary',
-  borderColor: isActive ? 'primary.main' : 'divider',
+  bgcolor: 'primary.main',
+  color: 'primary.contrastText',
+  borderColor: 'primary.main',
   '&:hover': {
-    bgcolor: isActive ? 'primary.dark' : 'action.hover',
+    bgcolor: 'primary.dark',
   },
   transition: 'all 0.15s ease',
-}) as const;
+} as const;
+
+const inactiveFilterChipSx = {
+  fontWeight: 500,
+  fontSize: '0.8rem',
+  bgcolor: 'transparent',
+  color: 'text.secondary',
+  borderColor: 'divider',
+  '&:hover': {
+    bgcolor: 'action.hover',
+  },
+  transition: 'all 0.15s ease',
+} as const;
 
 const productCardSx = {
   p: 0,
@@ -424,7 +436,7 @@ export function AdminProductsPage() {
               size="small"
               variant={statusFilter === 'all' ? 'filled' : 'outlined'}
               onClick={() => { setStatusFilter('all'); setPage(1); }}
-              sx={filterChipSx(statusFilter === 'all')}
+              sx={statusFilter === 'all' ? activeFilterChipSx : inactiveFilterChipSx}
             />
             {statusOptions.map((status) => (
               <Chip
@@ -433,7 +445,7 @@ export function AdminProductsPage() {
                 size="small"
                 variant={statusFilter === status ? 'filled' : 'outlined'}
                 onClick={() => { setStatusFilter(statusFilter === status ? 'all' : status); setPage(1); }}
-                sx={filterChipSx(statusFilter === status)}
+                sx={statusFilter === status ? activeFilterChipSx : inactiveFilterChipSx}
               />
             ))}
           </Box>
@@ -470,7 +482,7 @@ export function AdminProductsPage() {
               size="small"
               variant={!selectedCategoryId ? 'filled' : 'outlined'}
               onClick={() => { setSelectedCategoryId(undefined); setPage(1); }}
-              sx={filterChipSx(!selectedCategoryId)}
+              sx={!selectedCategoryId ? activeFilterChipSx : inactiveFilterChipSx}
             />
             {categoryTree.map((root) => {
               const isActiveRoot = activeCategoryRoot?.id === root.id;
@@ -488,7 +500,7 @@ export function AdminProductsPage() {
                     }
                     setPage(1);
                   }}
-                  sx={filterChipSx(isActiveRoot)}
+                  sx={isActiveRoot ? activeFilterChipSx : inactiveFilterChipSx}
                 />
               );
             })}
@@ -534,7 +546,7 @@ export function AdminProductsPage() {
                 size="small"
                 variant={selectedCategoryId === activeCategoryRoot.id ? 'filled' : 'outlined'}
                 onClick={() => { setSelectedCategoryId(activeCategoryRoot.id); setPage(1); }}
-                sx={filterChipSx(selectedCategoryId === activeCategoryRoot.id)}
+                sx={selectedCategoryId === activeCategoryRoot.id ? activeFilterChipSx : inactiveFilterChipSx}
               />
               {activeCategoryRoot.children.map((child) => {
                 const isActive = selectedCategoryId === child.id;
@@ -548,7 +560,7 @@ export function AdminProductsPage() {
                       setSelectedCategoryId(isActive ? activeCategoryRoot.id : child.id);
                       setPage(1);
                     }}
-                    sx={filterChipSx(isActive)}
+                    sx={isActive ? activeFilterChipSx : inactiveFilterChipSx}
                   />
                 );
               })}
@@ -578,7 +590,7 @@ export function AdminProductsPage() {
                 size="small"
                 variant={featuredFilter === value ? 'filled' : 'outlined'}
                 onClick={() => { setFeaturedFilter(value); setPage(1); }}
-                sx={filterChipSx(featuredFilter === value)}
+                sx={featuredFilter === value ? activeFilterChipSx : inactiveFilterChipSx}
               />
             ))}
           </Box>

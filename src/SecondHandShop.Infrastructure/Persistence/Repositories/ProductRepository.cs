@@ -52,16 +52,21 @@ public class ProductRepository(
         ProductQueryParameters parameters,
         CancellationToken cancellationToken = default)
     {
-        var query = dbContext.Products
-            .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Available || p.Status == ProductStatus.Sold)
-            .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
+        var query =
+            from p in dbContext.Products.AsNoTracking()
+            join c in dbContext.Categories.AsNoTracking().Where(c => c.IsActive) on p.CategoryId equals c.Id
+            where p.Status == ProductStatus.Available || p.Status == ProductStatus.Sold
+            select new
+            {
+                Product = p,
+                CategoryName = c.Name
+            };
 
         var safeSearch = parameters.SafeSearch;
         if (safeSearch is not null)
         {
             var pattern = $"%{EscapeLikePattern(safeSearch)}%";
-            query = query.Where(p => EF.Functions.ILike(p.Title, pattern, "\\"));
+            query = query.Where(x => EF.Functions.ILike(x.Product.Title, pattern, "\\"));
         }
 
         var safeCategory = parameters.SafeCategory;
@@ -78,9 +83,9 @@ public class ProductRepository(
             else
             {
                 var descendantCategoryIds = snapshot.GetDescendantIds(selectedCategory.Id);
-                query = query.Where(p =>
+                query = query.Where(x =>
                     dbContext.ProductCategories.Any(pc =>
-                        pc.ProductId == p.Id &&
+                        pc.ProductId == x.Product.Id &&
                         descendantCategoryIds.Contains(pc.CategoryId)));
             }
         }
@@ -88,23 +93,23 @@ public class ProductRepository(
         var safeCategoryIds = parameters.SafeCategoryIds;
         if (safeCategoryIds.Count > 0)
         {
-            query = query.Where(p =>
+            query = query.Where(x =>
                 dbContext.ProductCategories.Any(pc =>
-                    pc.ProductId == p.Id &&
+                    pc.ProductId == x.Product.Id &&
                     safeCategoryIds.Contains(pc.CategoryId)));
         }
 
         if (parameters.MinPrice.HasValue)
-            query = query.Where(p => p.Price >= parameters.MinPrice.Value);
+            query = query.Where(x => x.Product.Price >= parameters.MinPrice.Value);
 
         if (parameters.MaxPrice.HasValue)
-            query = query.Where(p => p.Price <= parameters.MaxPrice.Value);
+            query = query.Where(x => x.Product.Price <= parameters.MaxPrice.Value);
 
         if (!string.IsNullOrWhiteSpace(parameters.Status)
             && Enum.TryParse<ProductStatus>(parameters.Status, ignoreCase: true, out var statusEnum)
             && statusEnum is ProductStatus.Available or ProductStatus.Sold)
         {
-            query = query.Where(p => p.Status == statusEnum);
+            query = query.Where(x => x.Product.Status == statusEnum);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -112,32 +117,29 @@ public class ProductRepository(
         var page = parameters.SafePage;
         var pageSize = parameters.SafePageSize;
 
-        IOrderedQueryable<Product> orderedQuery = parameters.Sort switch
+        var orderedQuery = parameters.Sort switch
         {
-            "price_asc" => query.OrderBy(p => p.Price).ThenByDescending(p => p.CreatedAt),
-            "price_desc" => query.OrderByDescending(p => p.Price).ThenByDescending(p => p.CreatedAt),
-            _ => query.OrderByDescending(p => p.CreatedAt),
+            "price_asc" => query.OrderBy(x => x.Product.Price).ThenByDescending(x => x.Product.CreatedAt),
+            "price_desc" => query.OrderByDescending(x => x.Product.Price).ThenByDescending(x => x.Product.CreatedAt),
+            _ => query.OrderByDescending(x => x.Product.CreatedAt),
         };
 
         var pageSlice = orderedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize);
 
-        var projected = await (
-            from p in pageSlice
-            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id into cg
-            from category in cg.DefaultIfEmpty()
-            select new
+        var projected = await pageSlice
+            .Select(x => new
             {
-                p.Id,
-                p.Title,
-                p.Slug,
-                p.Price,
-                p.Status,
-                p.Condition,
-                p.CreatedAt,
-                p.CoverImageKey,
-                CategoryName = category != null ? category.Name : null,
+                x.Product.Id,
+                x.Product.Title,
+                x.Product.Slug,
+                x.Product.Price,
+                x.Product.Status,
+                x.Product.Condition,
+                x.Product.CreatedAt,
+                x.Product.CoverImageKey,
+                x.CategoryName
             })
             .ToListAsync(cancellationToken);
 
@@ -163,34 +165,36 @@ public class ProductRepository(
     {
         var safeLimit = Math.Clamp(limit, 1, 24);
 
-        var query = dbContext.Products
-            .AsNoTracking()
-            .Where(p => p.IsFeatured)
-            .Where(p => p.Status == ProductStatus.Available)
-            .Where(p => dbContext.Categories.Any(c => c.Id == p.CategoryId && c.IsActive));
-
-        var limitedQuery = query
-            .OrderBy(p => p.FeaturedSortOrder.HasValue ? 0 : 1)
-            .ThenBy(p => p.FeaturedSortOrder)
-            .ThenByDescending(p => p.CreatedAt)
-            .ThenBy(p => p.Id)
-            .Take(safeLimit);
-
-        var projected = await (
-            from p in limitedQuery
-            join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id into cg
-            from category in cg.DefaultIfEmpty()
+        var query =
+            from p in dbContext.Products.AsNoTracking()
+            join c in dbContext.Categories.AsNoTracking().Where(c => c.IsActive) on p.CategoryId equals c.Id
+            where p.IsFeatured
+            where p.Status == ProductStatus.Available
             select new
             {
-                p.Id,
-                p.Title,
-                p.Slug,
-                p.Price,
-                p.Status,
-                p.Condition,
-                p.CreatedAt,
-                p.CoverImageKey,
-                CategoryName = category != null ? category.Name : null,
+                Product = p,
+                CategoryName = c.Name
+            };
+
+        var limitedQuery = query
+            .OrderBy(x => x.Product.FeaturedSortOrder.HasValue ? 0 : 1)
+            .ThenBy(x => x.Product.FeaturedSortOrder)
+            .ThenByDescending(x => x.Product.CreatedAt)
+            .ThenBy(x => x.Product.Id)
+            .Take(safeLimit);
+
+        var projected = await limitedQuery
+            .Select(x => new
+            {
+                x.Product.Id,
+                x.Product.Title,
+                x.Product.Slug,
+                x.Product.Price,
+                x.Product.Status,
+                x.Product.Condition,
+                x.Product.CreatedAt,
+                x.Product.CoverImageKey,
+                x.CategoryName
             })
             .ToListAsync(cancellationToken);
 

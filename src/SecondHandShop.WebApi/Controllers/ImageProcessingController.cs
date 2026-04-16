@@ -41,12 +41,17 @@ public class ImageProcessingController(
 
         try
         {
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream, cancellationToken);
-            stream.Position = 0;
+            await using var stream = file.OpenReadStream();
 
             var header = new byte[SignatureReadLength];
             var read = await stream.ReadAsync(header.AsMemory(0, SignatureReadLength), cancellationToken);
+
+            if (!stream.CanSeek)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ErrorResponse("Uploaded file stream is not seekable."));
+            }
+
             stream.Position = 0;
 
             if (!AdminPreviewImageValidation.TryDetectImageFormat(header.AsSpan(0, read), out var verifiedContentType, out var signatureExtension)

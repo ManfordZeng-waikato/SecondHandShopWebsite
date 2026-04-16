@@ -12,6 +12,8 @@ namespace SecondHandShop.Infrastructure.Persistence.Repositories;
 
 public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepository
 {
+    private const int PendingEmailBatchSize = 100;
+
     public async Task AcquireAntiSpamConcurrencyLocksAsync(
         string requestIpAddress,
         Guid productId,
@@ -113,6 +115,8 @@ public class InquiryRepository(SecondHandShopDbContext dbContext) : IInquiryRepo
             .Where(x => x.EmailDeliveryStatus == EmailDeliveryStatus.Pending)
             .Where(x => x.NextRetryAt == null || x.NextRetryAt <= utcNow)
             .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .Take(PendingEmailBatchSize)
             .ToListAsync(cancellationToken);
     }
 
