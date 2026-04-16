@@ -17,6 +17,8 @@ public class AdminSaleService(
     IUnitOfWork unitOfWork,
     IClock clock) : IAdminSaleService
 {
+    private static readonly DateTime SoldAtUtcLowerBoundUtc = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly TimeSpan SoldAtUtcMaxFutureSkew = TimeSpan.FromDays(1);
     public async Task<ProductSaleDto?> GetCurrentSaleAsync(
         Guid productId,
         CancellationToken cancellationToken = default)
@@ -47,6 +49,10 @@ public class AdminSaleService(
         {
             throw new ValidationException("Final sold price cannot be negative.");
         }
+
+        var utcNow = clock.UtcNow;
+        var soldAtUtc = NormalizeSoldAtToUtc(request.SoldAtUtc);
+        ValidateSoldAtUtc(soldAtUtc, utcNow);
 
         var product = await productRepository.GetByIdAsync(request.ProductId, cancellationToken)
             ?? throw new KeyNotFoundException($"Product '{request.ProductId}' not found.");
@@ -88,12 +94,10 @@ public class AdminSaleService(
             }
         }
 
-        var utcNow = clock.UtcNow;
-
         // Domain aggregate atomically creates the ProductSale and updates Product state.
         var sale = product.MarkAsSold(
             finalSoldPrice: request.FinalSoldPrice,
-            soldAtUtc: request.SoldAtUtc,
+            soldAtUtc: soldAtUtc,
             adminUserId: request.AdminUserId,
             utcNow: utcNow,
             customerId: customerId,
@@ -140,6 +144,31 @@ public class AdminSaleService(
         Guid customerId, CancellationToken cancellationToken = default)
     {
         return await productSaleRepository.ListByCustomerIdAsync(customerId, cancellationToken);
+    }
+
+    private static DateTime NormalizeSoldAtToUtc(DateTime soldAtUtc)
+    {
+        return soldAtUtc.Kind switch
+        {
+            DateTimeKind.Utc => soldAtUtc,
+            DateTimeKind.Local => soldAtUtc.ToUniversalTime(),
+            DateTimeKind.Unspecified => DateTime.SpecifyKind(soldAtUtc, DateTimeKind.Utc),
+            _ => DateTime.SpecifyKind(soldAtUtc, DateTimeKind.Utc),
+        };
+    }
+
+    private static void ValidateSoldAtUtc(DateTime soldAtUtc, DateTime utcNow)
+    {
+        if (soldAtUtc < SoldAtUtcLowerBoundUtc)
+        {
+            throw new ValidationException(
+                $"Sold time must be on or after {SoldAtUtcLowerBoundUtc:yyyy-MM-dd} (UTC).");
+        }
+
+        if (soldAtUtc > utcNow.Add(SoldAtUtcMaxFutureSkew))
+        {
+            throw new ValidationException("Sold time cannot be more than one day in the future (UTC).");
+        }
     }
 
     private static bool HasBuyerContact(MarkProductSoldRequest request)
