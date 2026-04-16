@@ -69,10 +69,13 @@ public class ImageProcessingController(
 
             var multipartFileName = baseName + signatureExtension;
 
-            var resultBytes = await backgroundRemovalService.RemoveBackgroundAsync(
+            await using var result = await backgroundRemovalService.RemoveBackgroundAsync(
                 stream, multipartFileName, verifiedContentType, cancellationToken);
 
-            return File(resultBytes, "image/png", $"preview-nobg-{baseName}.png");
+            Response.ContentType = result.ContentType;
+            Response.Headers.ContentDisposition = $"attachment; filename=\"preview-nobg-{baseName}.png\"";
+            await result.Content.CopyToAsync(Response.Body, cancellationToken);
+            return new EmptyResult();
         }
         catch (InvalidOperationException ex)
         {

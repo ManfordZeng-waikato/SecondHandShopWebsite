@@ -1,24 +1,20 @@
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MimeKit;
 using Microsoft.Extensions.Logging;
 using SecondHandShop.Application.Abstractions.Messaging;
 
 namespace SecondHandShop.Infrastructure.Services;
 
-public class SmtpEmailSender(
+public sealed class SmtpEmailSender(
     SmtpEmailOptions options,
+    SmtpConnectionLease connectionLease,
     ILogger<SmtpEmailSender> logger) : IEmailSender
 {
     public async Task SendInquiryAsync(InquiryEmailMessage message, CancellationToken cancellationToken = default)
     {
         EnsureConfigured();
 
-        using var mailMessage = BuildMailMessage(message);
-        using var smtpClient = new SmtpClient(options.Host, options.Port)
-        {
-            EnableSsl = options.UseSsl,
-            Credentials = new NetworkCredential(options.Username, options.Password)
-        };
+        var mailMessage = BuildInquiryMessage(message);
 
         logger.LogInformation(
             "Sending inquiry email. ProductId={ProductId}, InquiryId={InquiryId}, To={To}",
@@ -26,9 +22,7 @@ public class SmtpEmailSender(
             message.InquiryId,
             options.AdminInboxEmail);
 
-        // SmtpClient has no cancellation-aware API, so cancellation is checked explicitly before sending.
-        cancellationToken.ThrowIfCancellationRequested();
-        await smtpClient.SendMailAsync(mailMessage);
+        await connectionLease.SendAsync(mailMessage, cancellationToken);
     }
 
     public async Task SendAdminLoginNotificationAsync(
@@ -37,12 +31,7 @@ public class SmtpEmailSender(
     {
         EnsureConfigured();
 
-        using var mailMessage = BuildAdminLoginNotificationMailMessage(message);
-        using var smtpClient = new SmtpClient(options.Host, options.Port)
-        {
-            EnableSsl = options.UseSsl,
-            Credentials = new NetworkCredential(options.Username, options.Password)
-        };
+        var mailMessage = BuildAdminLoginNotificationMessage(message);
 
         logger.LogInformation(
             "Sending admin login notification email. AdminUserId={AdminUserId}, UserName={UserName}, To={To}",
@@ -50,11 +39,10 @@ public class SmtpEmailSender(
             message.UserName,
             options.AdminInboxEmail);
 
-        cancellationToken.ThrowIfCancellationRequested();
-        await smtpClient.SendMailAsync(mailMessage);
+        await connectionLease.SendAsync(mailMessage, cancellationToken);
     }
 
-    private MailMessage BuildMailMessage(InquiryEmailMessage message)
+    private MimeMessage BuildInquiryMessage(InquiryEmailMessage message)
     {
         var productUrl = BuildProductUrl(message.ProductSlug);
         var subject = $"[Inquiry] {message.ProductTitle}";
@@ -75,19 +63,10 @@ public class SmtpEmailSender(
             {message.Message}
             """;
 
-        var mailMessage = new MailMessage
-        {
-            From = new MailAddress(options.FromEmail, options.FromName),
-            Subject = subject,
-            Body = textBody,
-            IsBodyHtml = false
-        };
-
-        mailMessage.To.Add(options.AdminInboxEmail);
-        return mailMessage;
+        return CreateTextMessage(subject, textBody);
     }
 
-    private MailMessage BuildAdminLoginNotificationMailMessage(AdminLoginNotificationMessage message)
+    private MimeMessage BuildAdminLoginNotificationMessage(AdminLoginNotificationMessage message)
     {
         var localOccurredAt = ConvertUtcToNewZealandTime(message.OccurredAtUtc);
         var subject = $"[Admin Login] {message.UserName}";
@@ -107,15 +86,20 @@ public class SmtpEmailSender(
             If this login was not expected, rotate the password immediately and revoke active sessions.
             """;
 
-        var mailMessage = new MailMessage
+        return CreateTextMessage(subject, textBody);
+    }
+
+    private MimeMessage CreateTextMessage(string subject, string textBody)
+    {
+        var mailMessage = new MimeMessage();
+        mailMessage.From.Add(new MailboxAddress(options.FromName, options.FromEmail));
+        mailMessage.To.Add(MailboxAddress.Parse(options.AdminInboxEmail));
+        mailMessage.Subject = subject;
+        mailMessage.Body = new TextPart("plain")
         {
-            From = new MailAddress(options.FromEmail, options.FromName),
-            Subject = subject,
-            Body = textBody,
-            IsBodyHtml = false
+            Text = textBody
         };
 
-        mailMessage.To.Add(options.AdminInboxEmail);
         return mailMessage;
     }
 
@@ -145,10 +129,10 @@ public class SmtpEmailSender(
             return "(not available)";
 
         var trimmed = sourceIpAddress.Trim();
-        if (!IPAddress.TryParse(trimmed, out var ipAddress))
+        if (!System.Net.IPAddress.TryParse(trimmed, out var ipAddress))
             return trimmed;
 
-        if (IPAddress.IsLoopback(ipAddress))
+        if (System.Net.IPAddress.IsLoopback(ipAddress))
             return $"{trimmed} (localhost / local development)";
 
         if (IsPrivateAddress(ipAddress))
@@ -157,7 +141,7 @@ public class SmtpEmailSender(
         return trimmed;
     }
 
-    private static bool IsPrivateAddress(IPAddress ipAddress)
+    private static bool IsPrivateAddress(System.Net.IPAddress ipAddress)
     {
         if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {

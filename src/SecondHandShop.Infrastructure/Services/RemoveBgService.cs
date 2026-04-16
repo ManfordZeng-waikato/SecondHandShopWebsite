@@ -11,7 +11,7 @@ public sealed class RemoveBgService(
 {
     private const string RemoveBgEndpoint = "https://api.remove.bg/v1.0/removebg";
 
-    public async Task<byte[]> RemoveBackgroundAsync(
+    public async Task<BackgroundRemovalResult> RemoveBackgroundAsync(
         Stream imageStream,
         string fileName,
         string contentType,
@@ -50,7 +50,7 @@ public sealed class RemoveBgService(
             "Background removal failed after all retry attempts.", lastException);
     }
 
-    private async Task<byte[]> CallRemoveBgApiAsync(
+    private async Task<BackgroundRemovalResult> CallRemoveBgApiAsync(
         Stream imageStream,
         string fileName,
         string contentType,
@@ -68,35 +68,92 @@ public sealed class RemoveBgService(
         };
         request.Headers.Add("X-Api-Key", options.ApiKey);
 
-        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            logger.LogError("remove.bg returned {StatusCode}: {Body}", (int)response.StatusCode, errorBody);
-
-            throw response.StatusCode switch
+            try
             {
-                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-                    => new InvalidOperationException("Background removal service authentication failed. Check RemoveBg:ApiKey."),
-                HttpStatusCode.PaymentRequired
-                    => new InvalidOperationException("Background removal credit limit reached."),
-                HttpStatusCode.UnprocessableEntity
-                    => new InvalidOperationException("The image could not be processed. Please try a different image."),
-                HttpStatusCode.TooManyRequests
-                    => new HttpRequestException("Rate limited by background removal service.", null, HttpStatusCode.TooManyRequests),
-                >= HttpStatusCode.InternalServerError
-                    => new HttpRequestException($"Background removal service error ({(int)response.StatusCode}).", null, response.StatusCode),
-                _ => new InvalidOperationException($"Background removal failed ({(int)response.StatusCode}): {errorBody}")
-            };
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogError("remove.bg returned {StatusCode}: {Body}", (int)response.StatusCode, errorBody);
+
+                throw response.StatusCode switch
+                {
+                    HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                        => new InvalidOperationException("Background removal service authentication failed. Check RemoveBg:ApiKey."),
+                    HttpStatusCode.PaymentRequired
+                        => new InvalidOperationException("Background removal credit limit reached."),
+                    HttpStatusCode.UnprocessableEntity
+                        => new InvalidOperationException("The image could not be processed. Please try a different image."),
+                    HttpStatusCode.TooManyRequests
+                        => new HttpRequestException("Rate limited by background removal service.", null, HttpStatusCode.TooManyRequests),
+                    >= HttpStatusCode.InternalServerError
+                        => new HttpRequestException($"Background removal service error ({(int)response.StatusCode}).", null, response.StatusCode),
+                    _ => new InvalidOperationException($"Background removal failed ({(int)response.StatusCode}): {errorBody}")
+                };
+            }
+            finally
+            {
+                response.Dispose();
+            }
         }
 
-        return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return new BackgroundRemovalResult(new ResponseContentStream(response, responseStream), "image/png");
     }
 
     private static bool IsTransient(HttpRequestException ex)
     {
         return ex.StatusCode is HttpStatusCode.TooManyRequests
             or >= HttpStatusCode.InternalServerError;
+    }
+
+    private sealed class ResponseContentStream(HttpResponseMessage response, Stream innerStream) : Stream
+    {
+        public override bool CanRead => innerStream.CanRead;
+        public override bool CanSeek => innerStream.CanSeek;
+        public override bool CanWrite => innerStream.CanWrite;
+        public override long Length => innerStream.Length;
+
+        public override long Position
+        {
+            get => innerStream.Position;
+            set => innerStream.Position = value;
+        }
+
+        public override void Flush() => innerStream.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => innerStream.FlushAsync(cancellationToken);
+        public override int Read(byte[] buffer, int offset, int count) => innerStream.Read(buffer, offset, count);
+        public override int Read(Span<byte> buffer) => innerStream.Read(buffer);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => innerStream.ReadAsync(buffer, cancellationToken);
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => innerStream.ReadAsync(buffer, offset, count, cancellationToken);
+        public override long Seek(long offset, SeekOrigin origin) => innerStream.Seek(offset, origin);
+        public override void SetLength(long value) => innerStream.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => innerStream.Write(buffer, offset, count);
+        public override void Write(ReadOnlySpan<byte> buffer) => innerStream.Write(buffer);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            => innerStream.WriteAsync(buffer, cancellationToken);
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => innerStream.WriteAsync(buffer, offset, count, cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                innerStream.Dispose();
+                response.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await innerStream.DisposeAsync();
+            response.Dispose();
+            await base.DisposeAsync();
+        }
     }
 }

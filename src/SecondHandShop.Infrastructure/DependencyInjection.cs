@@ -86,9 +86,10 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(10);
         });
-        services.AddScoped<NoOpEmailSender>();
-        services.AddScoped<SmtpEmailSender>();
-        services.AddScoped<IEmailSender>(provider =>
+        services.AddSingleton<SmtpConnectionLease>();
+        services.AddSingleton<NoOpEmailSender>();
+        services.AddSingleton<SmtpEmailSender>();
+        services.AddSingleton<IEmailSender>(provider =>
             smtpOptions.Enabled
                 ? provider.GetRequiredService<SmtpEmailSender>()
                 : provider.GetRequiredService<NoOpEmailSender>());

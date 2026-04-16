@@ -11,6 +11,7 @@ internal sealed class CategoryHierarchyCache(
 {
     private const string CacheKey = "category-hierarchy-v1";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly SemaphoreSlim PopulateLock = new(1, 1);
 
     public async Task<CategoryHierarchySnapshot> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -19,15 +20,29 @@ internal sealed class CategoryHierarchyCache(
             return cached;
         }
 
-        var nodes = await dbContext.Categories
-            .AsNoTracking()
-            .Where(c => c.IsActive)
-            .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
-            .ToListAsync(cancellationToken);
+        await PopulateLock.WaitAsync(cancellationToken);
 
-        var snapshot = Build(nodes);
-        memoryCache.Set(CacheKey, snapshot, CacheDuration);
-        return snapshot;
+        try
+        {
+            if (memoryCache.TryGetValue<CategoryHierarchySnapshot>(CacheKey, out cached) && cached is not null)
+            {
+                return cached;
+            }
+
+            var nodes = await dbContext.Categories
+                .AsNoTracking()
+                .Where(c => c.IsActive)
+                .Select(c => new CategoryHierarchyNode(c.Id, c.Slug, c.ParentId))
+                .ToListAsync(cancellationToken);
+
+            var snapshot = Build(nodes);
+            memoryCache.Set(CacheKey, snapshot, CacheDuration);
+            return snapshot;
+        }
+        finally
+        {
+            PopulateLock.Release();
+        }
     }
 
     public void Invalidate() => memoryCache.Remove(CacheKey);
