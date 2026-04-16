@@ -214,9 +214,8 @@ export function AdminProductsPage() {
     }
 
     void queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    void productsQuery.refetch();
     navigate(location.pathname, { replace: true });
-  }, [location.pathname, location.state, navigate, productsQuery, queryClient]);
+  }, [location.pathname, location.state, navigate, queryClient]);
 
   const statusMutation = useMutation({
     mutationFn: ({ productId, status }: { productId: string; status: ProductStatus }) =>
