@@ -21,4 +21,11 @@ public interface IProductRepository
         AdminProductQueryParameters parameters,
         CancellationToken cancellationToken = default);
     Task AddAsync(Product product, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns lightweight projections (Id, Title, Slug) for the given product IDs.
+    /// Used by background services that only need display fields, not full entities.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, ProductEmailInfoDto>> GetEmailInfoByIdsAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 }

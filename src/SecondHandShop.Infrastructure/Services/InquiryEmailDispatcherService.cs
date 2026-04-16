@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Persistence;
+using SecondHandShop.Application.Contracts.Catalog;
 using SecondHandShop.Domain.Entities;
 
 namespace SecondHandShop.Infrastructure.Services;
@@ -67,10 +68,14 @@ public sealed class InquiryEmailDispatcherService(
 
         logger.LogInformation("Processing {Count} pending inquiry email(s).", pending.Count);
 
+        // Batch-fetch all referenced products in a single query to avoid N+1.
+        var productIds = pending.Select(i => i.ProductId).Distinct().ToList();
+        var productLookup = await productRepository.GetEmailInfoByIdsAsync(productIds, cancellationToken);
+
         foreach (var inquiry in pending)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await DispatchOneAsync(inquiry, productRepository, emailSender, clock);
+            await DispatchOneAsync(inquiry, productLookup, emailSender, clock);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -78,12 +83,11 @@ public sealed class InquiryEmailDispatcherService(
 
     private async Task DispatchOneAsync(
         Inquiry inquiry,
-        IProductRepository productRepository,
+        IReadOnlyDictionary<Guid, ProductEmailInfoDto> productLookup,
         IEmailSender emailSender,
         IClock clock)
     {
-        var product = await productRepository.GetByIdAsync(inquiry.ProductId, CancellationToken.None);
-        if (product is null)
+        if (!productLookup.TryGetValue(inquiry.ProductId, out var product))
         {
             // Product was removed after the inquiry was created — nothing we can deliver.
             logger.LogWarning(

@@ -320,6 +320,19 @@ public class ProductRepository(
         await dbContext.Products.AddAsync(product, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, ProductEmailInfoDto>> GetEmailInfoByIdsAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return new Dictionary<Guid, ProductEmailInfoDto>();
+
+        return await dbContext.Products
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .Select(p => new ProductEmailInfoDto(p.Id, p.Title, p.Slug))
+            .ToDictionaryAsync(p => p.Id, cancellationToken);
+    }
+
     private static string EscapeLikePattern(string value)
         => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 }
