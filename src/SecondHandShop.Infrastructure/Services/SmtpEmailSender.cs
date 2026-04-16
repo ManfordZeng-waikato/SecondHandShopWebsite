@@ -10,6 +10,8 @@ public sealed class SmtpEmailSender(
     SmtpConnectionLease connectionLease,
     ILogger<SmtpEmailSender> logger) : IEmailSender
 {
+    private static readonly TimeZoneInfo NzTimeZone = ResolveNewZealandTimeZone();
+
     public async Task SendInquiryAsync(InquiryEmailMessage message, CancellationToken cancellationToken = default)
     {
         EnsureConfigured();
@@ -116,8 +118,7 @@ public sealed class SmtpEmailSender(
     private static DateTimeOffset ConvertUtcToNewZealandTime(DateTime utcTime)
     {
         var utc = DateTime.SpecifyKind(utcTime, DateTimeKind.Utc);
-        var zone = ResolveNewZealandTimeZone();
-        return TimeZoneInfo.ConvertTime(new DateTimeOffset(utc), zone);
+        return TimeZoneInfo.ConvertTime(new DateTimeOffset(utc), NzTimeZone);
     }
 
     private static string GetNewZealandTimeZoneAbbreviation(DateTimeOffset localTime)

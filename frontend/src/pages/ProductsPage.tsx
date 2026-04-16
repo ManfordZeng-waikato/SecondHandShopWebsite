@@ -32,7 +32,17 @@ export function ProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ['products-paged', params],
+    queryKey: [
+      'products-paged',
+      params.page,
+      params.pageSize,
+      params.category,
+      params.search,
+      params.minPrice,
+      params.maxPrice,
+      params.status,
+      params.sort,
+    ],
     queryFn: ({ signal }) => fetchProductsPaged(params, signal),
     placeholderData: keepPreviousData,
   });

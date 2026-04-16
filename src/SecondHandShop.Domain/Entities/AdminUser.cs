@@ -98,12 +98,22 @@ public class AdminUser
 
         PasswordHash = newPasswordHash;
         MustChangePassword = false;
-        TokenVersion++;
+        BumpTokenVersion();
     }
 
     public void SetActive(bool isActive)
     {
+        if (!isActive && IsActive)
+        {
+            BumpTokenVersion();
+        }
+
         IsActive = isActive;
+    }
+
+    public void BumpTokenVersion()
+    {
+        TokenVersion++;
     }
 
     public bool IsLockedOut(DateTime utcNow)
