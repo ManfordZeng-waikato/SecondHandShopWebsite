@@ -15,8 +15,9 @@ export default async function globalSetup(_config: FullConfig) {
   });
 
   try {
-    const response = await context.get('/api/products/search?pageSize=1');
+    const response = await context.get('/api/products/search?pageSize=1&status=Available');
     if (response.ok()) {
+      process.env.PLAYWRIGHT_API_AVAILABLE = 'true';
       const body = await response.json();
       const firstProduct = body.items?.[0];
       if (firstProduct?.id) {

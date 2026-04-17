@@ -6,6 +6,16 @@ import { config } from 'dotenv';
 config({ path: '.env.e2e', override: false });
 
 const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS === 'true';
+const useManagedBackendServer = process.env.PLAYWRIGHT_MANAGED_BACKEND === 'true';
+const frontendDevCommand =
+  process.platform === 'win32'
+    ? 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -Command "npm.cmd run dev"'
+    : 'npm run dev';
+
+const backendDevCommand =
+  process.platform === 'win32'
+    ? 'dotnet run --launch-profile https --project src\\SecondHandShop.WebApi\\SecondHandShop.WebApi.csproj'
+    : 'dotnet run --launch-profile https --project src/SecondHandShop.WebApi/SecondHandShop.WebApi.csproj';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -18,21 +28,25 @@ export default defineConfig({
   webServer: useManagedServers
     ? [
         {
-          command: 'npm run dev',
+          command: frontendDevCommand,
           url: 'https://localhost:5173',
           cwd: '.',
           ignoreHTTPSErrors: true,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
-        {
-          command: 'dotnet run --launch-profile https --project src\\SecondHandShop.WebApi\\SecondHandShop.WebApi.csproj',
-          url: 'https://localhost:7266',
-          cwd: '..',
-          ignoreHTTPSErrors: true,
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
-        },
+        ...(useManagedBackendServer
+          ? [
+              {
+                command: backendDevCommand,
+                url: 'https://localhost:7266',
+                cwd: '..',
+                ignoreHTTPSErrors: true,
+                reuseExistingServer: !process.env.CI,
+                timeout: 120_000,
+              },
+            ]
+          : []),
       ]
     : undefined,
   use: {

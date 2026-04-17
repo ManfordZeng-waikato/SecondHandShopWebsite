@@ -73,6 +73,10 @@ pnpm-debug.log*
 .yarn/build-state.yml
 .yarn/install-state.gz
 
+# Playwright artifacts
+frontend/playwright-report/
+frontend/test-results/
+
 # ----------------------------------------
 # IDE / Editor
 # ----------------------------------------
@@ -93,6 +97,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local agent worktrees
+.claude/worktrees/
 
 # ----------------------------------------
 # Logs and temp files
