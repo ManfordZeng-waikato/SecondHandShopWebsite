@@ -101,6 +101,23 @@ public class AdminUser
         BumpTokenVersion();
     }
 
+    /// <summary>
+    /// Environment bootstrap helper for local automation accounts. This deliberately clears
+    /// lockout state and forced password change so E2E runs do not depend on prior manual use.
+    /// </summary>
+    public void ResetCredentialsForBootstrap(string passwordHash, bool mustChangePassword = false)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required.", nameof(passwordHash));
+
+        PasswordHash = passwordHash;
+        MustChangePassword = mustChangePassword;
+        IsActive = true;
+        FailedLoginCount = 0;
+        LockedUntilUtc = null;
+        BumpTokenVersion();
+    }
+
     public void SetActive(bool isActive)
     {
         if (!isActive && IsActive)

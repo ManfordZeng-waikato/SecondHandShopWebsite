@@ -40,4 +40,47 @@ public static class AdminSeedService
 
         logger.LogInformation("Seeded admin user '{UserName}'.", userName);
     }
+
+    public static async Task EnsureE2EAdminUserAsync(IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<SecondHandShopDbContext>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<SecondHandShopDbContext>>();
+
+        var userName = configuration["E2EAdminSeed:UserName"];
+        var password = configuration["E2EAdminSeed:Password"];
+
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+        {
+            logger.LogWarning("E2EAdminSeed:UserName or E2EAdminSeed:Password is not configured. Skipping E2E admin seed.");
+            return;
+        }
+
+        var normalizedUserName = userName.Trim();
+        var hash = passwordHasher.Hash(password);
+        var existing = await dbContext.AdminUsers
+            .FirstOrDefaultAsync(x => x.UserName == normalizedUserName);
+
+        if (existing is null)
+        {
+            var admin = AdminUser.CreateWithCredentials(
+                normalizedUserName,
+                "Playwright E2E Admin",
+                hash,
+                "Admin",
+                mustChangePassword: false);
+            await dbContext.AdminUsers.AddAsync(admin);
+            await dbContext.SaveChangesAsync();
+
+            logger.LogInformation("Created E2E admin user '{UserName}'.", normalizedUserName);
+            return;
+        }
+
+        existing.ResetCredentialsForBootstrap(hash, mustChangePassword: false);
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Reset E2E admin user '{UserName}' credentials for local automation.", normalizedUserName);
+    }
 }

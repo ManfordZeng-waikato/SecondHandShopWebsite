@@ -279,6 +279,12 @@ if (seedAdminOnStartup)
     await AdminSeedService.SeedAdminUserAsync(app.Services);
 }
 
+var ensureE2EAdminOnStartup = builder.Configuration.GetValue("Database:EnsureE2EAdminOnStartup", false);
+if (ensureE2EAdminOnStartup)
+{
+    await AdminSeedService.EnsureE2EAdminUserAsync(app.Services);
+}
+
 var seedCatalogOnStartup = builder.Configuration.GetValue("Database:SeedCatalogOnStartup", true);
 if (seedCatalogOnStartup)
 {
