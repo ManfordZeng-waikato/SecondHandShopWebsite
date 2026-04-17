@@ -19,7 +19,10 @@
       "Bash(curl -s https://api.nuget.org/v3-flatcontainer/npgsql.entityframeworkcore.postgresql/index.json)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(dotnet user-secrets:*)"
+      "Bash(dotnet user-secrets:*)",
+      "Bash(dotnet test *)",
+      "Bash(node -e \"require\\('dotenv'\\)\")",
+      "Bash(npx playwright *)"
     ]
   }
 }

@@ -1,9 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+
+// Load E2E defaults (admin credentials, API base URL) from .env.e2e;
+// any env vars already set by the user or CI take precedence.
+config({ path: '.env.e2e', override: false });
 
 const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS === 'true';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/global-setup.ts',
   timeout: 30_000,
   expect: {
     timeout: 5_000,
