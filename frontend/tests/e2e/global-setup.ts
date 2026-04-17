@@ -5,7 +5,7 @@ import { request, type FullConfig } from '@playwright/test';
  * Discovers a valid product ID from the public API so E2E inquiry tests
  * don't need a hardcoded PLAYWRIGHT_INQUIRY_PRODUCT_ID.
  */
-export default async function globalSetup(config: FullConfig) {
+export default async function globalSetup(_config: FullConfig) {
   const apiBase =
     process.env.PLAYWRIGHT_API_BASE_URL ?? 'https://localhost:7266';
 

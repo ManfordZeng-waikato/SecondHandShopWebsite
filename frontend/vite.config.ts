@@ -21,6 +21,8 @@ export default defineConfig({
       },
     },
   },
+  // Vitest merges `test` into Vite config at runtime; Vite's types omit it.
+  // @ts-expect-error TS2769 — `test` is not on Vite's UserConfigExport
   test: {
     globals: true,
     environment: 'jsdom',
