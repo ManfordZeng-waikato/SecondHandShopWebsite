@@ -22,6 +22,9 @@ export default async function globalSetup(_config: FullConfig) {
       if (firstProduct?.id) {
         process.env.PLAYWRIGHT_INQUIRY_PRODUCT_ID = firstProduct.id;
       }
+      if (firstProduct?.slug) {
+        process.env.PLAYWRIGHT_INQUIRY_PRODUCT_SLUG = firstProduct.slug;
+      }
     }
   } catch {
     // API not reachable — tests that need the product ID will skip gracefully
