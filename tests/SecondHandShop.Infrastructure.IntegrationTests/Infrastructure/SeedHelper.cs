@@ -13,9 +13,12 @@ internal static class SeedHelper
 {
     private static readonly DateTime UtcNow = new(2026, 4, 17, 0, 0, 0, DateTimeKind.Utc);
 
-    public static async Task<AdminUser> SeedAdminUserAsync(SecondHandShopDbContext db)
+    public static async Task<AdminUser> SeedAdminUserAsync(
+        SecondHandShopDbContext db,
+        string? userName = null)
     {
-        var admin = AdminUser.CreateWithCredentials("testadmin", "Test Admin", "hashed");
+        var effectiveUserName = userName ?? UniqueSlug("admin");
+        var admin = AdminUser.CreateWithCredentials(effectiveUserName, "Test Admin", "hashed");
         await db.AdminUsers.AddAsync(admin);
         await db.SaveChangesAsync();
         return admin;

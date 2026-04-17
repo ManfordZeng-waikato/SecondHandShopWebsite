@@ -424,8 +424,9 @@ public class AnalyticsService(
             inquiriesQuery = inquiriesQuery.Where(i => i.CreatedAt >= startValue && i.CreatedAt <= nowUtc);
         }
 
-        // Pre-aggregated inquiry counts per product. Left-joined below so products with zero
-        // in-range inquiries still show up (the whole point of a stale-stock list).
+        // Pre-aggregated inquiry counts per product. Use a correlated subquery instead of a
+        // left join so products with zero inquiries stay in the result set without tripping
+        // nullable materialization edge-cases in Npgsql/EF translation.
         var inquiryCounts = inquiriesQuery
             .GroupBy(i => i.ProductId)
             .Select(g => new { ProductId = g.Key, InquiryCount = g.Count() });
@@ -434,8 +435,6 @@ public class AnalyticsService(
             from p in dbContext.Products.AsNoTracking()
             where p.Status == ProductStatus.Available
             join c in dbContext.Categories.AsNoTracking() on p.CategoryId equals c.Id
-            join ic in inquiryCounts on p.Id equals ic.ProductId into icj
-            from ic in icj.DefaultIfEmpty()
             orderby p.CreatedAt // oldest listing first
             select new
             {
@@ -444,7 +443,10 @@ public class AnalyticsService(
                 p.Slug,
                 CategoryId = c.Id,
                 CategoryName = c.Name,
-                InquiryCount = (int?)(ic == null ? 0 : ic.InquiryCount) ?? 0,
+                InquiryCount = inquiryCounts
+                    .Where(ic => ic.ProductId == p.Id)
+                    .Select(ic => (int?)ic.InquiryCount)
+                    .FirstOrDefault() ?? 0,
                 ListedPrice = p.Price,
                 p.CreatedAt
             })
