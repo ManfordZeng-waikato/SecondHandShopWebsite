@@ -8,9 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using MediatR;
 using Moq;
+using SecondHandShop.Application.Abstractions.Storage;
+using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Security;
+using SecondHandShop.Application.UseCases.Catalog;
 using SecondHandShop.Domain.Entities;
 
 namespace SecondHandShop.WebApi.IntegrationTests.Infrastructure;
@@ -20,6 +24,12 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
     private const string AdminCookieName = "shs.admin.token";
 
     public Guid ActiveAdminId { get; private set; }
+    public Mock<IAdminCatalogService> AdminCatalogServiceMock { get; } = new();
+    public Mock<IAdminSaleService> AdminSaleServiceMock { get; } = new();
+    public Mock<IInquiryRepository> InquiryRepositoryMock { get; } = new();
+    public Mock<IProductRepository> ProductRepositoryMock { get; } = new();
+    public Mock<IObjectStorageService> ObjectStorageServiceMock { get; } = new();
+    public Mock<IMediator> MediatorMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -57,6 +67,12 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<IHostedService>();
             services.RemoveAll<IAdminUserRepository>();
+            services.RemoveAll<IAdminCatalogService>();
+            services.RemoveAll<IAdminSaleService>();
+            services.RemoveAll<IInquiryRepository>();
+            services.RemoveAll<IProductRepository>();
+            services.RemoveAll<IObjectStorageService>();
+            services.RemoveAll<IMediator>();
 
             var activeAdmin = AdminUser.CreateWithCredentials("lord", "Lord", "hashed-password");
             ActiveAdminId = activeAdmin.Id;
@@ -73,6 +89,12 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 .ReturnsAsync(true);
 
             services.AddScoped<IAdminUserRepository>(_ => repository.Object);
+            services.AddScoped<IAdminCatalogService>(_ => AdminCatalogServiceMock.Object);
+            services.AddScoped<IAdminSaleService>(_ => AdminSaleServiceMock.Object);
+            services.AddScoped<IInquiryRepository>(_ => InquiryRepositoryMock.Object);
+            services.AddScoped<IProductRepository>(_ => ProductRepositoryMock.Object);
+            services.AddScoped<IObjectStorageService>(_ => ObjectStorageServiceMock.Object);
+            services.AddScoped<IMediator>(_ => MediatorMock.Object);
         });
     }
 
@@ -107,4 +129,14 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     public static string CreateCookieHeader(string jwt)
         => $"{AdminCookieName}={jwt}";
+
+    public void ResetAppMocks()
+    {
+        AdminCatalogServiceMock.Reset();
+        AdminSaleServiceMock.Reset();
+        InquiryRepositoryMock.Reset();
+        ProductRepositoryMock.Reset();
+        ObjectStorageServiceMock.Reset();
+        MediatorMock.Reset();
+    }
 }

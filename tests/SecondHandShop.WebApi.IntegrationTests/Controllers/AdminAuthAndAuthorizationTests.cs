@@ -4,7 +4,8 @@ using SecondHandShop.WebApi.IntegrationTests.Infrastructure;
 
 namespace SecondHandShop.WebApi.IntegrationTests.Controllers;
 
-public class AdminAuthAndAuthorizationTests : IClassFixture<TestWebApplicationFactory>
+[Collection("WebApiIntegration")]
+public class AdminAuthAndAuthorizationTests
 {
     private readonly TestWebApplicationFactory _factory;
 

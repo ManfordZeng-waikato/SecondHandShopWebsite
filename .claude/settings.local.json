@@ -22,7 +22,8 @@
       "Bash(dotnet user-secrets:*)",
       "Bash(dotnet test *)",
       "Bash(node -e \"require\\('dotenv'\\)\")",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(docker *)"
     ]
   }
 }
