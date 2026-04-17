@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Backend build + unit tests (no Docker needed) ──────────────
+  backend-build:
+    name: Backend Build & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore SecondHandShopWebsite.slnx
+
+      - name: Build solution
+        run: dotnet build SecondHandShopWebsite.slnx --no-restore --configuration Release
+
+      - name: Run Domain unit tests
+        run: dotnet test tests/SecondHandShop.Domain.UnitTests --no-build --configuration Release --verbosity normal
+
+      - name: Run Application unit tests
+        run: dotnet test tests/SecondHandShop.Application.UnitTests --no-build --configuration Release --verbosity normal
+
+      - name: Run WebApi integration tests
+        run: dotnet test tests/SecondHandShop.WebApi.IntegrationTests --no-build --configuration Release --verbosity normal
+
+  # ── Database integration tests (requires Docker for Testcontainers) ─
+  backend-db-tests:
+    name: Database Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run Infrastructure integration tests
+        run: dotnet test tests/SecondHandShop.Infrastructure.IntegrationTests --verbosity normal
+
+  # ── Frontend build + lint + unit tests ─────────────────────────
+  frontend:
+    name: Frontend Build & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: TypeScript check & build
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
