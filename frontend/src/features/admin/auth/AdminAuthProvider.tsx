@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, type PropsWithChildren } from 'react';
 import { useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';

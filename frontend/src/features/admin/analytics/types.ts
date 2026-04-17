@@ -60,7 +60,7 @@ export interface HotUnsoldProduct {
 }
 
 export interface AnalyticsOverview {
-  range: number;
+  range: AnalyticsRangeKey;
   rangeStartUtc: string | null;
   rangeEndUtc: string;
   summary: AnalyticsSummary;

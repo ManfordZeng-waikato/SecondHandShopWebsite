@@ -30,38 +30,41 @@ vi.mock('../../features/admin/analytics/components/HotUnsoldTable', () => ({
 describe('AdminAnalyticsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAnalyticsOverview).mockImplementation((range) => ({
-      data: {
-        range,
-        rangeStartUtc: '2026-04-01T00:00:00Z',
-        rangeEndUtc: '2026-04-17T00:00:00Z',
-        summary: {
-          totalSoldItems: 1,
-          totalRevenue: 220,
-          averageSalePrice: 220,
-          totalInquiries: 2,
-          inquiryToSaleConversionRate: 0.5,
-          cohortConversionRate: 0.5,
-          cohortInquiryCount: 2,
-          cohortConversionCount: 1,
-          cohortAttributionWindowDays: 30,
-          cohortWindowFullyElapsed: false,
-          bestSellingCategoryName: 'Bags',
-          bestSellingCategoryId: 'cat-1',
-          mostInquiredCategoryName: 'Bags',
-          mostInquiredCategoryId: 'cat-1',
-        },
-        salesByCategory: [],
-        demandByCategory: [],
-        salesTrend: [],
-        hotUnsoldProducts: [],
-        staleStockProducts: [],
-      },
-      isLoading: false,
-      isError: false,
-      error: null,
-      isFetching: false,
-    }));
+    vi.mocked(useAnalyticsOverview).mockImplementation(
+      (range) =>
+        ({
+          data: {
+            range,
+            rangeStartUtc: '2026-04-01T00:00:00Z',
+            rangeEndUtc: '2026-04-17T00:00:00Z',
+            summary: {
+              totalSoldItems: 1,
+              totalRevenue: 220,
+              averageSalePrice: 220,
+              totalInquiries: 2,
+              inquiryToSaleConversionRate: 0.5,
+              cohortConversionRate: 0.5,
+              cohortInquiryCount: 2,
+              cohortConversionCount: 1,
+              cohortAttributionWindowDays: 30,
+              cohortWindowFullyElapsed: false,
+              bestSellingCategoryName: 'Bags',
+              bestSellingCategoryId: 'cat-1',
+              mostInquiredCategoryName: 'Bags',
+              mostInquiredCategoryId: 'cat-1',
+            },
+            salesByCategory: [],
+            demandByCategory: [],
+            salesTrend: [],
+            hotUnsoldProducts: [],
+            staleStockProducts: [],
+          },
+          isLoading: false,
+          isError: false,
+          error: null,
+          isFetching: false,
+        }) as unknown as ReturnType<typeof useAnalyticsOverview>,
+    );
   });
 
   it('renders analytics content when the overview query succeeds', async () => {

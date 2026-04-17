@@ -253,7 +253,7 @@ export function AdminProductsPage() {
     },
   });
 
-  const categoryTree = categoryTreeQuery.data ?? [];
+  const categoryTree = useMemo(() => categoryTreeQuery.data ?? [], [categoryTreeQuery.data]);
 
   const activeCategoryRoot = useMemo(() => {
     if (!selectedCategoryId) return null;

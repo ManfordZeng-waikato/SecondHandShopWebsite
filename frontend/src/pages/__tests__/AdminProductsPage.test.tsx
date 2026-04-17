@@ -63,7 +63,7 @@ describe('AdminProductsPage', () => {
           status: 'Available',
           categoryName: 'Bags',
           imageCount: 1,
-          primaryImageUrl: null,
+          primaryImageUrl: undefined,
           isFeatured: false,
           featuredSortOrder: null,
           createdAt: '2026-04-16T01:00:00Z',

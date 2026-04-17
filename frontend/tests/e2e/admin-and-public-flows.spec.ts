@@ -6,6 +6,13 @@ const inquiryProductId = process.env.PLAYWRIGHT_INQUIRY_PRODUCT_ID;
 const inquiryProductSlug = process.env.PLAYWRIGHT_INQUIRY_PRODUCT_SLUG;
 const apiBase = process.env.PLAYWRIGHT_API_BASE_URL ?? 'https://localhost:7266';
 
+function requireEnv(value: string | undefined): string {
+  if (!value) {
+    throw new Error('Expected environment variable to be defined.');
+  }
+  return value;
+}
+
 async function ensureApiAvailable(request: APIRequestContext): Promise<boolean> {
   try {
     const response = await request.get(`${apiBase}/api/products/search?pageSize=1`, {
@@ -47,8 +54,8 @@ test.describe('critical storefront and admin flows', () => {
     test.skip(!(await canLoginWithSeedCredentials(request)), 'Configured admin seed credentials are not valid in the current database.');
 
     await page.goto('/lord/login');
-    await page.getByLabel('Username').fill(adminUser);
-    await page.getByLabel('Password').fill(adminPassword);
+    await page.getByLabel('Username').fill(requireEnv(adminUser));
+    await page.getByLabel('Password').fill(requireEnv(adminPassword));
     await page.getByRole('button', { name: 'Sign in' }).click();
 
     await expect(page).toHaveURL(/\/lord\/products$/);
@@ -68,8 +75,8 @@ test.describe('critical storefront and admin flows', () => {
     test.skip(!(await canLoginWithSeedCredentials(request)), 'Configured admin seed credentials are not valid in the current database.');
 
     await page.goto('/lord/login');
-    await page.getByLabel('Username').fill(adminUser);
-    await page.getByLabel('Password').fill(adminPassword);
+    await page.getByLabel('Username').fill(requireEnv(adminUser));
+    await page.getByLabel('Password').fill(requireEnv(adminPassword));
     await page.getByRole('button', { name: 'Sign in' }).click();
 
     await expect(page).toHaveURL(/\/lord\/products$/);
