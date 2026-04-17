@@ -15,6 +15,9 @@ using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Security;
 using SecondHandShop.Application.UseCases.Catalog;
+using SecondHandShop.Application.UseCases.Customers;
+using SecondHandShop.Application.UseCases.Inquiries;
+using SecondHandShop.Application.UseCases.Analytics;
 using SecondHandShop.Domain.Entities;
 
 namespace SecondHandShop.WebApi.IntegrationTests.Infrastructure;
@@ -25,9 +28,15 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     public Guid ActiveAdminId { get; private set; }
     public Mock<IAdminCatalogService> AdminCatalogServiceMock { get; } = new();
+    public Mock<IAdminCustomerService> AdminCustomerServiceMock { get; } = new();
     public Mock<IAdminSaleService> AdminSaleServiceMock { get; } = new();
+    public Mock<IAnalyticsService> AnalyticsServiceMock { get; } = new();
+    public Mock<ICategoryRepository> CategoryRepositoryMock { get; } = new();
+    public Mock<ICustomerRepository> CustomerRepositoryMock { get; } = new();
+    public Mock<IInquiryService> InquiryServiceMock { get; } = new();
     public Mock<IInquiryRepository> InquiryRepositoryMock { get; } = new();
     public Mock<IProductRepository> ProductRepositoryMock { get; } = new();
+    public Mock<IProductImageRepository> ProductImageRepositoryMock { get; } = new();
     public Mock<IObjectStorageService> ObjectStorageServiceMock { get; } = new();
     public Mock<IMediator> MediatorMock { get; } = new();
 
@@ -68,9 +77,15 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IHostedService>();
             services.RemoveAll<IAdminUserRepository>();
             services.RemoveAll<IAdminCatalogService>();
+            services.RemoveAll<IAdminCustomerService>();
             services.RemoveAll<IAdminSaleService>();
+            services.RemoveAll<IAnalyticsService>();
+            services.RemoveAll<ICategoryRepository>();
+            services.RemoveAll<ICustomerRepository>();
+            services.RemoveAll<IInquiryService>();
             services.RemoveAll<IInquiryRepository>();
             services.RemoveAll<IProductRepository>();
+            services.RemoveAll<IProductImageRepository>();
             services.RemoveAll<IObjectStorageService>();
             services.RemoveAll<IMediator>();
 
@@ -90,9 +105,15 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddScoped<IAdminUserRepository>(_ => repository.Object);
             services.AddScoped<IAdminCatalogService>(_ => AdminCatalogServiceMock.Object);
+            services.AddScoped<IAdminCustomerService>(_ => AdminCustomerServiceMock.Object);
             services.AddScoped<IAdminSaleService>(_ => AdminSaleServiceMock.Object);
+            services.AddScoped<IAnalyticsService>(_ => AnalyticsServiceMock.Object);
+            services.AddScoped<ICategoryRepository>(_ => CategoryRepositoryMock.Object);
+            services.AddScoped<ICustomerRepository>(_ => CustomerRepositoryMock.Object);
+            services.AddScoped<IInquiryService>(_ => InquiryServiceMock.Object);
             services.AddScoped<IInquiryRepository>(_ => InquiryRepositoryMock.Object);
             services.AddScoped<IProductRepository>(_ => ProductRepositoryMock.Object);
+            services.AddScoped<IProductImageRepository>(_ => ProductImageRepositoryMock.Object);
             services.AddScoped<IObjectStorageService>(_ => ObjectStorageServiceMock.Object);
             services.AddScoped<IMediator>(_ => MediatorMock.Object);
         });
@@ -133,9 +154,15 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
     public void ResetAppMocks()
     {
         AdminCatalogServiceMock.Reset();
+        AdminCustomerServiceMock.Reset();
         AdminSaleServiceMock.Reset();
+        AnalyticsServiceMock.Reset();
+        CategoryRepositoryMock.Reset();
+        CustomerRepositoryMock.Reset();
+        InquiryServiceMock.Reset();
         InquiryRepositoryMock.Reset();
         ProductRepositoryMock.Reset();
+        ProductImageRepositoryMock.Reset();
         ObjectStorageServiceMock.Reset();
         MediatorMock.Reset();
     }

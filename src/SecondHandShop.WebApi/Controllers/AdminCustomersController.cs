@@ -107,9 +107,8 @@ public class AdminCustomersController(
                     request.Notes),
                 cancellationToken);
 
-            return CreatedAtAction(
-                nameof(GetDetailAsync),
-                new { customerId = newId },
+            return Created(
+                $"/api/lord/customers/{newId}",
                 new CreateCustomerApiResponse(newId));
         }
         catch (CustomerConflictException ex)
