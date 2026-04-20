@@ -8,6 +8,7 @@ using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Sales;
 
@@ -221,7 +222,7 @@ public class AdminSaleServiceTests
             inquiryRepository ?? Mock.Of<IInquiryRepository>(),
             customerResolutionService ?? Mock.Of<ICustomerResolutionService>(),
             unitOfWork ?? Mock.Of<IUnitOfWork>(),
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
     }
 
     private static Product CreateProduct()
@@ -237,8 +238,4 @@ public class AdminSaleServiceTests
             ProductCondition.Good);
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

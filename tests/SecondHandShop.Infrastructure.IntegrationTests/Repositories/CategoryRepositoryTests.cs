@@ -6,7 +6,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task GetBySlugAsync_ShouldReturnCategory_WhenSlugExists()
     {
         EnsureDatabase();
@@ -22,7 +22,7 @@ public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Name.Should().Be("Test Category");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetBySlugAsync_ShouldReturnNull_WhenSlugDoesNotExist()
     {
         EnsureDatabase();
@@ -34,7 +34,7 @@ public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SlugExistsAsync_ShouldReturnTrue_WhenSlugExists()
     {
         EnsureDatabase();
@@ -48,7 +48,7 @@ public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeTrue();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListActiveAsync_ShouldExcludeInactiveCategories()
     {
         EnsureDatabase();
@@ -65,7 +65,7 @@ public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().NotContain(c => c.Slug == inactiveSlug);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListByIdsAsync_ShouldReturnOnlyMatchingCategories()
     {
         EnsureDatabase();
@@ -81,7 +81,7 @@ public class CategoryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Select(c => c.Id).Should().BeEquivalentTo([c1.Id, c2.Id]);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistCategory()
     {
         EnsureDatabase();

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SecondHandShop.Application\SecondHandShop.Application.csproj" />
     <ProjectReference Include="..\..\src\SecondHandShop.Domain\SecondHandShop.Domain.csproj" />
+    <ProjectReference Include="..\SecondHandShop.TestCommon\SecondHandShop.TestCommon.csproj" />
   </ItemGroup>
 
   <ItemGroup>

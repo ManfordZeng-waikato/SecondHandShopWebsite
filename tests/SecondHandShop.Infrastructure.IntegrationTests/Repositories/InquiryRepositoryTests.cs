@@ -6,7 +6,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task CountRecentByIpAndProductAsync_ShouldCountMatchingInquiries()
     {
         EnsureDatabase();
@@ -25,7 +25,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         count.Should().Be(2);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task CountRecentByEmailAndProductAsync_ShouldCountMatchingInquiries()
     {
         EnsureDatabase();
@@ -43,7 +43,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         count.Should().Be(1);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ExistsRecentByMessageHashAsync_ShouldDetectDuplicateHashes()
     {
         EnsureDatabase();
@@ -65,7 +65,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         exists.Should().BeTrue();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task UpsertIpCooldownAsync_ShouldInsertNewCooldown()
     {
         EnsureDatabase();
@@ -81,7 +81,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         cooldownUntil.Should().BeCloseTo(blockedUntil, TimeSpan.FromSeconds(1));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task UpsertIpCooldownAsync_ShouldUpdateExistingCooldown()
     {
         EnsureDatabase();
@@ -100,7 +100,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         cooldownUntil.Should().BeCloseTo(extendedUntil, TimeSpan.FromSeconds(1));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetIpCooldownUntilAsync_ShouldReturnNull_WhenNoCooldownExists()
     {
         EnsureDatabase();
@@ -112,7 +112,7 @@ public class InquiryRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistInquiry()
     {
         EnsureDatabase();

@@ -4,7 +4,6 @@
     <ProjectReference Include="..\..\src\SecondHandShop.Application\SecondHandShop.Application.csproj" />
     <ProjectReference Include="..\..\src\SecondHandShop.Domain\SecondHandShop.Domain.csproj" />
     <ProjectReference Include="..\..\src\SecondHandShop.Infrastructure\SecondHandShop.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\SecondHandShop.WebApi\SecondHandShop.WebApi.csproj" />
     <ProjectReference Include="..\SecondHandShop.TestCommon\SecondHandShop.TestCommon.csproj" />
   </ItemGroup>
 
@@ -14,10 +13,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="xunit" Version="2.9.2" />

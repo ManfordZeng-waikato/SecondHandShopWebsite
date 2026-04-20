@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- This is a support library, not a test project — drop the Xunit global using inherited from tests/Directory.Build.props. -->
+    <Using Remove="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SecondHandShop.Application\SecondHandShop.Application.csproj" />
+    <ProjectReference Include="..\..\src\SecondHandShop.Domain\SecondHandShop.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

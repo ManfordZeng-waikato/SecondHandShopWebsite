@@ -6,6 +6,7 @@ using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.UseCases.Categories.CreateCategory;
 using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Categories;
 
@@ -143,11 +144,7 @@ public class CreateCategoryCommandHandlerTests
             categoryRepository ?? Mock.Of<ICategoryRepository>(),
             unitOfWork ?? Mock.Of<IUnitOfWork>(),
             categoryHierarchyCache ?? Mock.Of<ICategoryHierarchyCache>(),
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

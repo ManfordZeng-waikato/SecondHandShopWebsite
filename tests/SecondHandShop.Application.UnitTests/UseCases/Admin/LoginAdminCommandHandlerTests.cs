@@ -8,6 +8,7 @@ using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Contracts.Admin;
 using SecondHandShop.Application.UseCases.Admin.Login;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Admin;
 
@@ -35,7 +36,7 @@ public class LoginAdminCommandHandlerTests
             .ReturnsAsync(1);
 
         var sut = new LoginAdminCommandHandler(
-            new StubClock(UtcNow),
+            new FakeClock(UtcNow),
             Mock.Of<IAdminLoginNotificationQueue>(),
             repository.Object,
             passwordHasher.Object,
@@ -77,7 +78,7 @@ public class LoginAdminCommandHandlerTests
             .ReturnsAsync(1);
 
         var sut = new LoginAdminCommandHandler(
-            new StubClock(UtcNow),
+            new FakeClock(UtcNow),
             notificationQueue.Object,
             repository.Object,
             passwordHasher.Object,
@@ -121,7 +122,7 @@ public class LoginAdminCommandHandlerTests
             .ReturnsAsync(1);
 
         var sut = new LoginAdminCommandHandler(
-            new StubClock(UtcNow),
+            new FakeClock(UtcNow),
             Mock.Of<IAdminLoginNotificationQueue>(),
             repository.Object,
             passwordHasher.Object,
@@ -136,8 +137,4 @@ public class LoginAdminCommandHandlerTests
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

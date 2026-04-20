@@ -7,7 +7,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task GetByIdAsync_ShouldReturnProduct_WhenIdExists()
     {
         EnsureDatabase();
@@ -22,7 +22,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.Id.Should().Be(product.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetBySlugAsync_ShouldReturnProduct_WhenSlugExists()
     {
         EnsureDatabase();
@@ -38,7 +38,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.Slug.Should().Be(slug);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetPublicByIdAsync_ShouldExcludeOffShelfProducts()
     {
         EnsureDatabase();
@@ -54,7 +54,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetPublicByIdAsync_ShouldExcludeProducts_WhenCategoryIsInactive()
     {
         EnsureDatabase();
@@ -68,7 +68,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListPagedForPublicAsync_ShouldReturnAvailableProducts()
     {
         EnsureDatabase();
@@ -84,7 +84,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Items.Should().Contain(x => x.Id == p2.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListPagedForPublicAsync_ShouldFilterBySearchTitle()
     {
         EnsureDatabase();
@@ -103,7 +103,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Items.Should().Contain(x => x.Id == p.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListPagedForPublicAsync_ShouldFilterByPriceRange()
     {
         EnsureDatabase();
@@ -123,7 +123,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Items.Should().NotContain(x => x.Id == cheap.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListPagedForPublicAsync_ShouldFilterByCategoryIds()
     {
         EnsureDatabase();
@@ -146,7 +146,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Items.Should().NotContain(x => x.Id == pB.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListFeaturedForPublicAsync_ShouldReturnOnlyFeaturedAvailableProducts()
     {
         EnsureDatabase();
@@ -165,7 +165,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().NotContain(x => x.Id == notFeatured.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistProduct()
     {
         EnsureDatabase();
@@ -185,7 +185,7 @@ public class ProductRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         found.Price.Should().Be(55m);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByIdWithCategoriesAsync_ShouldIncludeProductCategories()
     {
         EnsureDatabase();

@@ -10,6 +10,7 @@ using SecondHandShop.Application.UseCases.Inquiries;
 using SecondHandShop.Domain.Common;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Inquiries;
 
@@ -83,7 +84,7 @@ public class InquiryServiceTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var clock = new StubClock(UtcNow);
+        var clock = new FakeClock(UtcNow);
 
         var sut = new InquiryService(
             productRepository.Object,
@@ -139,7 +140,7 @@ public class InquiryServiceTests
             turnstileValidator.Object,
             Mock.Of<IInquiryDispatchSignal>(),
             Mock.Of<IUnitOfWork>(),
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
 
         var act = () => sut.CreateInquiryAsync(new CreateInquiryCommand(
             product.Id,
@@ -204,7 +205,7 @@ public class InquiryServiceTests
             turnstileValidator.Object,
             Mock.Of<IInquiryDispatchSignal>(),
             unitOfWork.Object,
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
 
         var act = () => sut.CreateInquiryAsync(new CreateInquiryCommand(
             product.Id,
@@ -242,8 +243,4 @@ public class InquiryServiceTests
         return Category.Create("Bags", "bags", null, 1, isActive, null, UtcNow);
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

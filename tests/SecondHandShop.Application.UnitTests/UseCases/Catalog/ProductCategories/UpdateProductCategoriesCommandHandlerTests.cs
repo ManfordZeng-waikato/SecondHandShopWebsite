@@ -6,6 +6,7 @@ using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.UseCases.Catalog.ProductCategories;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Catalog.ProductCategories;
 
@@ -40,7 +41,7 @@ public class UpdateProductCategoriesCommandHandlerTests
             productRepository.Object,
             categoryRepository.Object,
             unitOfWork.Object,
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
 
         var result = await sut.Handle(new UpdateProductCategoriesCommand(
             product.Id,
@@ -74,7 +75,7 @@ public class UpdateProductCategoriesCommandHandlerTests
             productRepository.Object,
             categoryRepository.Object,
             Mock.Of<IUnitOfWork>(),
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
 
         var act = () => sut.Handle(new UpdateProductCategoriesCommand(
             product.Id,
@@ -110,7 +111,7 @@ public class UpdateProductCategoriesCommandHandlerTests
             productRepository.Object,
             categoryRepository.Object,
             Mock.Of<IUnitOfWork>(),
-            new StubClock(UtcNow));
+            new FakeClock(UtcNow));
 
         var result = await sut.Handle(new UpdateProductCategoriesCommand(
             product.Id,
@@ -136,8 +137,4 @@ public class UpdateProductCategoriesCommandHandlerTests
             ProductCondition.Good);
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

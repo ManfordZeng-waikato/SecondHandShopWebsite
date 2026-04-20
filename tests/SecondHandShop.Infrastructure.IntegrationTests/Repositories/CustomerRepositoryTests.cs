@@ -7,7 +7,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task GetByEmailAsync_ShouldReturnCustomer_WhenEmailExists()
     {
         EnsureDatabase();
@@ -22,7 +22,7 @@ public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.Id.Should().Be(customer.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByEmailAsync_ShouldReturnNull_WhenEmailDoesNotExist()
     {
         EnsureDatabase();
@@ -34,7 +34,7 @@ public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeNull();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByPhoneNumberAsync_ShouldReturnCustomer_WhenPhoneExists()
     {
         EnsureDatabase();
@@ -49,7 +49,7 @@ public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.Id.Should().Be(customer.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistCustomer()
     {
         EnsureDatabase();
@@ -68,7 +68,7 @@ public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         found.PrimarySource.Should().Be(CustomerSource.Sale);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task UniqueEmailConstraint_ShouldPreventDuplicateEmails()
     {
         EnsureDatabase();
@@ -84,7 +84,7 @@ public class CustomerRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         await act.Should().ThrowAsync<Exception>();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetDetailForAdminAsync_ShouldReturnProjectedDetail()
     {
         EnsureDatabase();

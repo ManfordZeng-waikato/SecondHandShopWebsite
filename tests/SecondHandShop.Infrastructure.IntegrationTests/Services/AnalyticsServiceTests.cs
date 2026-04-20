@@ -7,6 +7,7 @@ using SecondHandShop.Domain.Enums;
 using SecondHandShop.Infrastructure.IntegrationTests.Infrastructure;
 using SecondHandShop.Infrastructure.Persistence;
 using SecondHandShop.Infrastructure.Services.Analytics;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Infrastructure.IntegrationTests.Services;
 
@@ -14,7 +15,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
 {
     private static readonly DateTime UtcNow = new(2026, 4, 17, 0, 0, 0, DateTimeKind.Utc);
 
-    [Fact]
+    [SkippableFact]
     public async Task GetOverviewAsync_ShouldReturnZeroSummary_WhenDatabaseIsEmpty()
     {
         EnsureDatabase();
@@ -34,7 +35,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
         result.StaleStockProducts.Should().BeEmpty();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetOverviewAsync_ShouldComputeLast30DaysAggregates()
     {
         EnsureDatabase();
@@ -85,7 +86,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
         result.StaleStockProducts.Should().Contain(x => x.Title == "Stale Unsold");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetOverviewAsync_ShouldIncludeOlderData_ForAllTimeRange()
     {
         EnsureDatabase();
@@ -111,7 +112,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         return new AnalyticsService(
             new TestDbContextFactory(connectionString),
-            new StubClock(utcNow),
+            new FakeClock(utcNow),
             new AnalyticsOptions { AttributionWindowDays = 30 });
     }
 
@@ -157,11 +158,6 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
         await dbContext.ProductSales.AddAsync(sale);
         await dbContext.SaveChangesAsync();
         return sale;
-    }
-
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
     }
 
     private sealed class TestDbContextFactory(string connectionString) : IDbContextFactory<SecondHandShopDbContext>

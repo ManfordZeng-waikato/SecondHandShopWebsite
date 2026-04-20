@@ -8,7 +8,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class ProductSaleRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task GetCurrentByProductIdAsync_ShouldReturnCompletedSale()
     {
         EnsureDatabase();
@@ -25,7 +25,7 @@ public class ProductSaleRepositoryTests(PostgresFixture db) : DatabaseTestBase(d
         result.Status.Should().Be(SaleRecordStatus.Completed);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByIdAsync_ShouldReturnSale_WhenItExists()
     {
         EnsureDatabase();
@@ -41,7 +41,7 @@ public class ProductSaleRepositoryTests(PostgresFixture db) : DatabaseTestBase(d
         result!.Id.Should().Be(sale.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListHistoryByProductIdAsync_ShouldReturnNewestSaleFirst()
     {
         EnsureDatabase();
@@ -77,7 +77,7 @@ public class ProductSaleRepositoryTests(PostgresFixture db) : DatabaseTestBase(d
         result.Select(x => x.Id).Should().Equal(newerSale.Id, olderSale.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ListByCustomerIdAsync_ShouldExcludeCancelledSales()
     {
         EnsureDatabase();
@@ -119,7 +119,7 @@ public class ProductSaleRepositoryTests(PostgresFixture db) : DatabaseTestBase(d
         result[0].PaymentMethod.Should().Be("Cash");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistSale()
     {
         EnsureDatabase();

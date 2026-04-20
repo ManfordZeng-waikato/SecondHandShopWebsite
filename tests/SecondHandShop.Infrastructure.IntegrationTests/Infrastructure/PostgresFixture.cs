@@ -53,10 +53,31 @@ public sealed class PostgresFixture : IAsyncLifetime
             await _container.DisposeAsync();
     }
 
+    /// <summary>
+    /// Skip the current test when Docker/Postgres is unavailable.
+    /// When the <c>REQUIRE_DOCKER</c> environment variable is set to a truthy value
+    /// (e.g. in CI), the test hard-fails instead of skipping.
+    /// </summary>
     public void SkipIfUnavailable()
     {
-        if (!IsAvailable)
-            Assert.Fail(UnavailableReason ?? "Docker is not available — skipping database integration test.");
+        if (IsAvailable)
+            return;
+
+        var reason = UnavailableReason ?? "Docker is not available — skipping database integration test.";
+
+        if (IsDockerRequired())
+            Assert.Fail(reason + " (REQUIRE_DOCKER=true; refusing to skip.)");
+
+        Skip.If(true, reason);
+    }
+
+    private static bool IsDockerRequired()
+    {
+        var value = Environment.GetEnvironmentVariable("REQUIRE_DOCKER");
+        return !string.IsNullOrWhiteSpace(value)
+            && (value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("1", StringComparison.Ordinal)
+                || value.Equals("yes", StringComparison.OrdinalIgnoreCase));
     }
 
     public SecondHandShopDbContext CreateDbContext()

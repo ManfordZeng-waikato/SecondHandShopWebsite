@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\SecondHandShop.Application\SecondHandShop.Application.csproj" />
     <ProjectReference Include="..\..\src\SecondHandShop.Domain\SecondHandShop.Domain.csproj" />
     <ProjectReference Include="..\..\src\SecondHandShop.Infrastructure\SecondHandShop.Infrastructure.csproj" />
+    <ProjectReference Include="..\SecondHandShop.TestCommon\SecondHandShop.TestCommon.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +18,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.5.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

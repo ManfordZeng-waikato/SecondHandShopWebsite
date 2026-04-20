@@ -6,9 +6,11 @@
     <Project Path="src/SecondHandShop.WebApi/SecondHandShop.WebApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SecondHandShop.TestCommon/SecondHandShop.TestCommon.csproj" />
     <Project Path="tests/SecondHandShop.Domain.UnitTests/SecondHandShop.Domain.UnitTests.csproj" />
     <Project Path="tests/SecondHandShop.Application.UnitTests/SecondHandShop.Application.UnitTests.csproj" />
     <Project Path="tests/SecondHandShop.WebApi.IntegrationTests/SecondHandShop.WebApi.IntegrationTests.csproj" />
     <Project Path="tests/SecondHandShop.Infrastructure.IntegrationTests/SecondHandShop.Infrastructure.IntegrationTests.csproj" />
+    <Project Path="tests/SecondHandShop.Infrastructure.UnitTests/SecondHandShop.Infrastructure.UnitTests.csproj" />
   </Folder>
 </Solution>

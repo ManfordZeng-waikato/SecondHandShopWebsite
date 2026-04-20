@@ -6,6 +6,7 @@ using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Customers;
 
@@ -22,7 +23,7 @@ public class CustomerResolutionServiceTests
             .Setup(x => x.GetByEmailAsync("alice@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var sut = new CustomerResolutionService(repository.Object, new StubClock(UtcNow.AddMinutes(5)));
+        var sut = new CustomerResolutionService(repository.Object, new FakeClock(UtcNow.AddMinutes(5)));
 
         var result = await sut.GetOrCreateCustomerAsync(
             " Alice Updated ",
@@ -48,7 +49,7 @@ public class CustomerResolutionServiceTests
             .Setup(x => x.GetByPhoneNumberAsync("021 123 4567", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Customer.Create("Bob", null, "021 123 4567", CustomerSource.Sale, UtcNow));
 
-        var sut = new CustomerResolutionService(repository.Object, new StubClock(UtcNow));
+        var sut = new CustomerResolutionService(repository.Object, new FakeClock(UtcNow));
 
         var act = () => sut.GetOrCreateCustomerAsync(
             "Conflict",
@@ -70,7 +71,7 @@ public class CustomerResolutionServiceTests
             .Callback<Customer, CancellationToken>((customer, _) => added = customer)
             .Returns(Task.CompletedTask);
 
-        var sut = new CustomerResolutionService(repository.Object, new StubClock(UtcNow));
+        var sut = new CustomerResolutionService(repository.Object, new FakeClock(UtcNow));
 
         var result = await sut.GetOrCreateCustomerAsync(
             "Alice",
@@ -83,8 +84,4 @@ public class CustomerResolutionServiceTests
         added.Should().BeSameAs(result);
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }

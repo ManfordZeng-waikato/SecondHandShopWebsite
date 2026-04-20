@@ -8,7 +8,7 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Repositories;
 
 public class AdminUserRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
 {
-    [Fact]
+    [SkippableFact]
     public async Task GetByUserNameAsync_ShouldTrimUserName_AndReturnUser()
     {
         EnsureDatabase();
@@ -22,7 +22,7 @@ public class AdminUserRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.Id.Should().Be(admin.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetByIdAsync_ShouldReturnUser_WhenItExists()
     {
         EnsureDatabase();
@@ -36,7 +36,7 @@ public class AdminUserRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result!.UserName.Should().Be(admin.UserName);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AnyAsync_ShouldReturnFalse_WhenNoAdminsExist()
     {
         EnsureDatabase();
@@ -50,7 +50,7 @@ public class AdminUserRepositoryTests(PostgresFixture db) : DatabaseTestBase(db)
         result.Should().BeFalse();
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task AddAsync_ShouldPersistUser()
     {
         EnsureDatabase();

@@ -6,6 +6,7 @@ using SecondHandShop.Application.Common.Exceptions;
 using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Domain.Entities;
 using SecondHandShop.Domain.Enums;
+using SecondHandShop.TestCommon.Time;
 
 namespace SecondHandShop.Application.UnitTests.UseCases.Customers;
 
@@ -28,7 +29,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new FakeClock(UtcNow));
 
         var id = await sut.CreateCustomerAsync(new CreateCustomerRequest(
             " Alice ",
@@ -54,7 +55,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.GetByEmailAsync("alice@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new FakeClock(UtcNow));
 
         var act = () => sut.CreateCustomerAsync(new CreateCustomerRequest(
             "Alice",
@@ -77,7 +78,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.GetByPhoneNumberAsync("021 123 4567", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new FakeClock(UtcNow));
 
         var act = () => sut.CreateCustomerAsync(new CreateCustomerRequest(
             "Alice",
@@ -106,7 +107,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new FakeClock(UtcNow));
 
         await sut.CreateCustomerAsync(new CreateCustomerRequest(
             "Alice",
@@ -137,7 +138,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new StubClock(UtcNow.AddMinutes(5)));
+        var sut = new AdminCustomerService(repository.Object, unitOfWork.Object, new FakeClock(UtcNow.AddMinutes(5)));
 
         await sut.UpdateCustomerAsync(customer.Id, new UpdateCustomerRequest(
             " Alice Updated ",
@@ -164,7 +165,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.GetByPhoneNumberAsync("021 765 4321", It.IsAny<CancellationToken>()))
             .ReturnsAsync(other);
 
-        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new FakeClock(UtcNow));
 
         var act = () => sut.UpdateCustomerAsync(customer.Id, new UpdateCustomerRequest(
             null,
@@ -184,7 +185,7 @@ public class AdminCustomerServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Customer?)null);
 
-        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new StubClock(UtcNow));
+        var sut = new AdminCustomerService(repository.Object, Mock.Of<IUnitOfWork>(), new FakeClock(UtcNow));
 
         var customerId = Guid.NewGuid();
         var act = () => sut.UpdateCustomerAsync(customerId, new UpdateCustomerRequest(
@@ -197,8 +198,4 @@ public class AdminCustomerServiceTests
             .WithMessage($"Customer '{customerId}' was not found.");
     }
 
-    private sealed class StubClock(DateTime utcNow) : IClock
-    {
-        public DateTime UtcNow { get; } = utcNow;
-    }
 }
