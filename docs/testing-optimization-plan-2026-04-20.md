@@ -92,7 +92,6 @@
 **验收标准**：Line coverage ≥ 90%，包含 catch 分支。
 
 ### 2.4 限流与安全头契约测试 [M]
-
 **目标**：验证 `/api/lord/auth/login`（5/min）与 `/api/products/search`（30/min）的限流语义，以及安全头存在性。
 
 **改动点**：在 `WebApi.IntegrationTests` 新增 `Controllers/RateLimitingTests.cs` 与 `Middleware/SecurityHeadersTests.cs`：
