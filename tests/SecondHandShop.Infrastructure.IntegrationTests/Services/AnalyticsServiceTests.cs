@@ -87,6 +87,61 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     }
 
     [SkippableFact]
+    public async Task GetOverviewAsync_ShouldExcludeCancelledSales_FromRevenueAndCount()
+    {
+        EnsureDatabase();
+        await using var dbContext = Db.CreateDbContext();
+        var category = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
+        var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("cancelled"));
+        var productA = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Keeps", SeedHelper.UniqueSlug("keeps"), 200m);
+        var productB = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Cancelled", SeedHelper.UniqueSlug("cancelled"), 300m);
+
+        await SeedSaleAtAsync(dbContext, productA, customer.Id, null, 180m, new DateTime(2026, 4, 10, 0, 0, 0, DateTimeKind.Utc));
+        var cancelledSale = await SeedSaleAtAsync(dbContext, productB, customer.Id, null, 250m, new DateTime(2026, 4, 11, 0, 0, 0, DateTimeKind.Utc));
+
+        cancelledSale.Cancel(SaleCancellationReason.BuyerBackedOut, "buyer-pulled-out", adminUserId: null, utcNow: new DateTime(2026, 4, 12, 0, 0, 0, DateTimeKind.Utc));
+        await dbContext.SaveChangesAsync();
+
+        var sut = CreateSut(Db.ConnectionString, UtcNow);
+
+        var result = await sut.GetOverviewAsync(AnalyticsDateRange.Last30Days);
+
+        result.Summary.TotalSoldItems.Should().Be(1,
+            "cancelled sales are excluded from the completed-sale count");
+        result.Summary.TotalRevenue.Should().Be(180m,
+            "cancelled sale revenue must never be counted in summary totals");
+        result.SalesByCategory.Should().ContainSingle(x => x.CategoryName == "Bags")
+            .Which.TotalRevenue.Should().Be(180m);
+    }
+
+    [SkippableFact]
+    public async Task GetOverviewAsync_Last7Days_ShouldUseUtcWindow_IgnoringLocalTimeZone()
+    {
+        EnsureDatabase();
+        await using var dbContext = Db.CreateDbContext();
+        var category = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
+        var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("window"));
+
+        // UtcNow = 2026-04-17 00:00 UTC → Last7Days window ≈ 2026-04-10 00:00 UTC .. 2026-04-17 00:00 UTC.
+        var insideProduct = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Inside", SeedHelper.UniqueSlug("inside"), 200m);
+        var outsideProduct = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Outside", SeedHelper.UniqueSlug("outside"), 200m);
+
+        await SeedSaleAtAsync(dbContext, insideProduct, customer.Id, null, 180m,
+            new DateTime(2026, 4, 12, 23, 0, 0, DateTimeKind.Utc));
+        // Clearly outside the 7-day window even for a +14h time zone.
+        await SeedSaleAtAsync(dbContext, outsideProduct, customer.Id, null, 150m,
+            new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var sut = CreateSut(Db.ConnectionString, UtcNow);
+
+        var result = await sut.GetOverviewAsync(AnalyticsDateRange.Last7Days);
+
+        result.Summary.TotalSoldItems.Should().Be(1,
+            "the sliding window is anchored to UtcNow and must not expand/contract with local time zone");
+        result.Summary.TotalRevenue.Should().Be(180m);
+    }
+
+    [SkippableFact]
     public async Task GetOverviewAsync_ShouldIncludeOlderData_ForAllTimeRange()
     {
         EnsureDatabase();
