@@ -40,6 +40,25 @@ jobs:
       - name: Run Infrastructure unit tests
         run: dotnet test tests/SecondHandShop.Infrastructure.UnitTests --no-build --configuration Release --verbosity normal
 
+  backend-coverage:
+    name: Backend Coverage Gate
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_DOCKER: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Verify Docker is available
+        run: docker info
+
+      - name: Run backend coverage gate
+        run: bash ./scripts/coverage.sh Release
+
   backend-integration:
     name: Backend Integration Tests
     runs-on: ubuntu-latest

@@ -1,215 +1,137 @@
-# SecondHandShop Testing Strategy
+﻿# SecondHandShop Testing Strategy
 
-## Goals
+## Current Status
 
-- Follow the existing Clean Architecture boundaries: `Domain -> Application -> Infrastructure -> WebApi`.
-- Stay close to the current service-based style instead of forcing feature-slice test conventions that do not match the codebase.
-- Optimize for maintainability: reusable fixtures, clear project boundaries, and business-oriented test names.
-
-## Proposed Test Tree
+The project uses a layered test suite that follows the Clean Architecture boundaries in `src/` and keeps browser coverage separate from backend integration coverage.
 
 ```text
 SecondHandShopWebsite
-|-- src
-|   |-- SecondHandShop.Domain
-|   |-- SecondHandShop.Application
-|   |-- SecondHandShop.Infrastructure
-|   `-- SecondHandShop.WebApi
 |-- tests
-|   |-- Directory.Build.props
+|   |-- SecondHandShop.TestCommon
+|   |   `-- Time/FakeClock.cs
 |   |-- SecondHandShop.Domain.UnitTests
-|   |   `-- Entities
-|   |       |-- CustomerTests.cs
-|   |       `-- ProductTests.cs
 |   |-- SecondHandShop.Application.UnitTests
-|   |   `-- UseCases
-|   |       |-- Admin
-|   |       |   `-- LoginAdminCommandHandlerTests.cs
-|   |       |-- Customers
-|   |       |   `-- CustomerResolutionServiceTests.cs
-|   |       `-- Inquiries
-|   |           `-- InquiryServiceTests.cs
+|   |-- SecondHandShop.Infrastructure.UnitTests
+|   |-- SecondHandShop.Infrastructure.IntegrationTests
 |   `-- SecondHandShop.WebApi.IntegrationTests
 |       |-- Controllers
-|       |   `-- AdminAuthAndAuthorizationTests.cs
-|       `-- Infrastructure
-|           `-- TestWebApplicationFactory.cs
+|       |-- Middleware
+|       `-- RealStack
 |-- frontend
-|   |-- playwright.config.ts
-|   |-- src
-|   |   |-- features
-|   |   |   `-- admin
-|   |   |       `-- components
-|   |   |           `-- __tests__
-|   |   |               `-- ProductSaleDialog.test.tsx
-|   |   `-- test
-|   |       |-- renderWithProviders.tsx
-|   |       `-- setup.ts
+|   |-- src/**/__tests__
 |   `-- tests
+|       |-- journey
 |       `-- e2e
-|           `-- admin-and-public-flows.spec.ts
-`-- docs
-    `-- testing-strategy.md
+|-- scripts
+|   |-- coverage.ps1
+|   |-- coverage.sh
+|   |-- check-coverage-thresholds.ps1
+|   `-- check-coverage-thresholds.sh
+`-- .github/workflows/ci.yml
 ```
 
 ## Layer Responsibilities
 
-### 1. Domain Unit Tests
+### Domain Unit Tests
 
 Scope:
-- Pure business rules inside aggregates and entities.
-- No EF Core, no DI container, no HTTP, no external services.
-- Fastest test layer and first safety net for product/customer lifecycle rules.
+- Pure entity and domain helper behavior.
+- No EF Core, DI container, HTTP, or external services.
+- Current coverage includes `AdminUser`, `Category`, `Customer`, `Inquiry`, `InquiryIpCooldown`, `Product`, `ProductCategory`, `ProductImage`, `ProductSale`, `SlugValidator`, and `EmailAddressSyntaxValidator`.
 
-Business examples:
-- Product marked as sold should create a sale history row, clear featured state, and point `CurrentSaleId` to the new sale.
-- Reverting a sold product should cancel the current sale and move the product back to `Available`.
-- A sold product must not be moved directly to `OffShelf`.
-
-### 2. Application Unit Tests
+### Application Unit Tests
 
 Scope:
-- Service/handler behavior in `Application` with repository and gateway mocks.
-- Validate orchestration, branching rules, and side effects such as `SaveChangesAsync`, notifications, or conflict handling.
-- Best place for `InquiryService`, `CustomerResolutionService`, `AdminSaleService`, `LoginAdminCommandHandler`.
+- Service and handler orchestration using repository/gateway mocks.
+- Covers auth/session handlers, inquiry creation/rate limiting, customer resolution, catalog/category handlers, and sales service behavior.
+- Shared deterministic time comes from `SecondHandShop.TestCommon.Time.FakeClock`.
 
-Business examples:
-- Valid inquiry should pass Turnstile, create or resolve a customer, persist inquiry, commit transaction, and notify dispatcher.
-- Repeated inquiry from the same IP/product window should create cooldown state and block submission.
-- Successful admin login should reset lockout counters, persist audit fields, create JWT, and enqueue login notification.
-
-### 3. Web API Integration Tests
+### Infrastructure Unit Tests
 
 Scope:
-- Real ASP.NET Core request pipeline via `WebApplicationFactory<Program>`.
-- Covers routing, filters, auth, authorization policies, cookie behavior, model binding, and response contracts.
-- Replace only unstable infrastructure dependencies through DI overrides.
+- Pure infrastructure services without Docker.
+- Current coverage includes `JwtTokenService`, `PasswordHasherService`, `TurnstileValidator`, `CategoryHierarchyCache`, `AdminSeedService`, and `CatalogSeedService`.
 
-Business examples:
-- `/api/lord/products` should return `401` when there is no admin session.
-- `AdminFullAccess` endpoints should return `403` for tokens marked with `pwd_chg_req=true`.
-- `/api/lord/auth/logout` should return `204` and clear the admin auth cookie.
-
-### 4. Frontend Component Tests
+### Infrastructure Integration Tests
 
 Scope:
-- React component behavior with Vitest + Testing Library.
-- Focus on business interaction, validation, and API contract wiring instead of CSS snapshots.
-- Mock network adapters, keep React Query provider real.
+- EF Core repositories and database-backed services against PostgreSQL via Testcontainers.
+- Local Docker/Postgres unavailability skips tests; CI sets `REQUIRE_DOCKER=true` so Docker failures are hard failures.
+- Covers repository behavior, analytics aggregation, and `RowVersion` concurrency behavior.
 
-Business examples:
-- `ProductSaleDialog` should block submit when final sold price is negative.
-- Entering buyer email/phone without selecting an existing customer should show auto-create/match guidance.
-- Successful sale submission should send trimmed payload and trigger `onSaved`.
-
-### 5. E2E Tests
+### Web API Integration Tests
 
 Scope:
-- Critical cross-layer flows through the browser with Playwright.
-- Run against an explicitly configured local/staging environment.
-- Keep the set small and business-critical to avoid brittle suites.
+- ASP.NET Core request pipeline via `WebApplicationFactory<Program>`.
+- Covers controller contracts, cookies, auth/authorization policies, rate limiting, security headers, correlation IDs, and image-processing validation.
+- `RealStack/` smoke tests keep MediatR, EF, repositories, JWT/password hashing, and hosted dispatchers real while replacing only unstable external services.
 
-Business examples:
-- Admin can sign in and land on `/lord/products`.
-- Public catalog page loads browse/search surface successfully.
-- Inquiry page blocks submission until the user provides at least one contact method.
+### Frontend Unit Tests
 
-## Recommended Tooling
+Scope:
+- Vitest + Testing Library for page/component behavior and adapter tests for shared/API modules.
+- Key `shared/` and `features/*/api/` modules have direct coverage, including auth bootstrap, `httpClient`, image URL handling, public catalog/home/inquiry API adapters, admin API adapters, and analytics helpers.
 
-### Backend
+### Browser Tests
 
-- `xUnit`
-- `Moq`
-- `FluentAssertions`
-- `coverlet.collector`
+Scope:
+- Playwright `journey` project mocks backend routes in the browser and runs in PR CI.
+- Playwright `smoke` project targets a real backend and is scheduled/manual because it depends on configured environment secrets.
 
-### API Integration
+## Coverage Gates
 
-- `Microsoft.AspNetCore.Mvc.Testing`
-- `WebApplicationFactory<Program>`
+Backend coverage is generated by `scripts/coverage.ps1` or `scripts/coverage.sh` and enforced by the threshold scripts.
 
-### Frontend
+Required line coverage:
 
-- `Vitest`
-- `@testing-library/react`
-- `@testing-library/user-event`
-- `@testing-library/jest-dom`
+| Assembly | Required |
+|---|---:|
+| `SecondHandShop.Domain` | 85% |
+| `SecondHandShop.Application` | 80% |
+| `SecondHandShop.Infrastructure` | 65% |
+| `SecondHandShop.WebApi` | 70% |
 
-### E2E
+Frontend coverage uses V8 via Vitest with these minimums:
 
-- `@playwright/test`
+| Metric | Required |
+|---|---:|
+| Lines | 50% |
+| Branches | 45% |
+| Functions | 50% |
+| Statements | 50% |
 
-## Priority Backlog By Module
+The frontend total line coverage target is at least 60%; the current suite exceeds that while keeping key shared/API modules directly tested.
 
-### Product
+## CI Jobs
 
-P0:
-- create product with unique slug and active category
-- edit product detail fields without breaking slug normalization
-- `Available -> OffShelf -> Available` status path
-- mark sold via sale flow instead of direct status update
-- revert sale preserves immutable sale history
+`.github/workflows/ci.yml` separates the suite into:
 
-P1:
-- featuring allowed only for `Available`
-- image denormalization updates cover key and image count
+- `backend-unit`: build and backend unit tests without Docker.
+- `backend-coverage`: full backend coverage gate with Docker required because WebApi/Infrastructure integration tests contribute to WebApi and Infrastructure coverage.
+- `backend-integration`: PostgreSQL/Testcontainers integration tests with `REQUIRE_DOCKER=true`.
+- `frontend-unit`: lint, build, unit tests, frontend coverage.
+- `frontend-journey`: Playwright journey tests with a managed Vite server.
+- `nightly-e2e`: scheduled/manual smoke tests against a real backend.
 
-P2:
-- soft delete
+PRs should keep `backend-unit`, `backend-coverage`, `backend-integration`, `frontend-unit`, and `frontend-journey` green before merge.
 
-Note:
-- I did not find a current product soft delete implementation in `Domain`, `Application`, or `WebApi`.
-- Treat soft delete as a planned contract: add failing tests first when the feature is introduced, instead of inventing behavior that the current codebase does not implement.
-
-### Inquiry
-
-P0:
-- submit inquiry for available product in active category
-- reject inquiry when Turnstile fails
-- enforce IP/email/message anti-spam windows
-- create or merge customer from inquiry contact data
-
-P1:
-- persist cooldown after repeated rate-limit violations
-- notify dispatcher after successful persistence
-
-### Admin
-
-P0:
-- login success path with audit fields and notification
-- invalid password increments failed count
-- lockout after repeated failed logins
-- full-access endpoints reject password-change-required tokens
-
-P1:
-- refresh session renews cookie/header
-- logout clears cookie
-
-### Customer
-
-P0:
-- inquiry source creates customer with `PrimarySource = Inquiry`
-- sale source creates customer with `PrimarySource = Sale`
-- email + phone collision across two customers returns conflict
-- merge fills blank contact fields without overwriting known data
-
-P1:
-- admin edit flow updates status/notes without breaking contact validation
-- customer detail aggregates inquiry + sale history correctly
-
-## Execution Order
-
-1. Keep expanding `Domain.UnitTests` and `Application.UnitTests` first. They are the cheapest regression net.
-2. Add `WebApi.IntegrationTests` around auth, product sale endpoints, and inquiry submission contracts.
-3. Cover high-churn admin dialogs and inquiry form with component tests.
-4. Keep Playwright focused on 3-5 golden paths only.
-
-## Suggested CI Commands
+## Local Commands
 
 ```powershell
-dotnet test tests\SecondHandShop.Domain.UnitTests\SecondHandShop.Domain.UnitTests.csproj
-dotnet test tests\SecondHandShop.Application.UnitTests\SecondHandShop.Application.UnitTests.csproj
-dotnet test tests\SecondHandShop.WebApi.IntegrationTests\SecondHandShop.WebApi.IntegrationTests.csproj
-npm --prefix frontend run test
+dotnet test SecondHandShopWebsite.slnx --configuration Debug --verbosity minimal
+powershell -ExecutionPolicy Bypass -File scripts\coverage.ps1 Release
+npm --prefix frontend run lint
+npm --prefix frontend run build
+npm --prefix frontend run test:coverage
+$env:PLAYWRIGHT_MANAGED_SERVERS="true"; $env:PLAYWRIGHT_SKIP_GLOBAL_SETUP="true"; npm --prefix frontend run test:journey
+```
+
+Smoke E2E needs a configured backend and credentials:
+
+```powershell
 npm --prefix frontend run test:e2e
 ```
+
+## Review Checklist
+
+The PR template includes the test review checklist. Reviewers should verify that new business logic has tests, boundary/error paths are covered where relevant, unit tests remain deterministic, integration seed helpers are updated when schema/setup changes, and coverage gates do not regress.

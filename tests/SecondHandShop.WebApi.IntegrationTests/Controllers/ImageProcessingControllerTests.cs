@@ -57,7 +57,7 @@ public class ImageProcessingControllerTests
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("Invalid file signature");
+        body.Should().Contain("Only valid JPEG, PNG, or WEBP image data is allowed");
     }
 
     [Fact]

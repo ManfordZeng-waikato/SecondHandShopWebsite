@@ -162,6 +162,10 @@
 - 有取消销售（`SaleRecordStatus.Cancelled`）时不计入收入。
 - 热度榜去重（同一产品多 inquiry 合并计数）。
 
+**Current status (2026-04-25)**: Completed and verified.
+- Added boundary coverage for cancelled sales, UTC Last7Days windows, all-time ranges, and hot-unsold demand.
+- Analytics integration tests now reset analytics data per test so the shared PostgreSQL fixture remains deterministic.
+
 ---
 
 ## 4. Phase 3 — Web API 端到端冒烟与遗漏控制器
@@ -203,6 +207,9 @@ claude --resume "test-optimization-execution-plan"
 
 - `Product.UpdateDetails` 场景：两个并发请求基于同一 `RowVersion` 更新，后一个期望抛 `DbUpdateConcurrencyException` → 映射为 409。
 - 需在 `ProductRepository` 集成测试里模拟（两个 DbContext 同步保存）。
+
+**Current status (2026-04-25)**: Completed in
+`tests/SecondHandShop.Infrastructure.IntegrationTests/Repositories/ProductConcurrencyTests.cs`.
 
 ---
 
@@ -311,6 +318,14 @@ frontend/
 - Added backend coverage scripts: `scripts/coverage.ps1` and `scripts/coverage.sh`, using `coverlet.collector` plus `reportgenerator`.
 - CI now separates `backend-unit`, `backend-integration`, `frontend-unit`, `frontend-journey`, and scheduled/manual `nightly-e2e`.
 
+**Current status (2026-04-25 update)**: Coverage gates and missing Phase 2 service tests are completed.
+- Added `CategoryHierarchyCache`, `AdminSeedService`, and `CatalogSeedService` unit tests.
+- Added focused frontend API/helper tests for public catalog/home/inquiry adapters, admin analytics helpers, and admin API wrappers.
+- Backend coverage thresholds are enforced by `scripts/check-coverage-thresholds.ps1` and `scripts/check-coverage-thresholds.sh`.
+- Latest measured backend line coverage: Domain 88.8%, Application 83.6%, Infrastructure 92.2%, WebApi 73.8%.
+- Latest measured frontend line coverage: 67.7%, with `shared/` and key `features/*/api/` modules directly covered.
+- Added `.github/pull_request_template.md` with the testing review checklist.
+
 ---
 
 ## 7. 跨阶段的工程化约定
@@ -388,3 +403,6 @@ frontend/
 5. Docker skip 策略在本地与 CI 行为明确可预测。
 6. 所有 20 条任务关闭，关联 PR 合并入 main。
 7. `docs/testing-strategy.md` 的现状章节与实际一致。
+
+**Current status (2026-04-25 update)**: Implementation work for T01-T20 is complete in the working tree.
+Final closure still requires review and merge into `main`.

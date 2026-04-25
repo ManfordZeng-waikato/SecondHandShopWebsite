@@ -20,6 +20,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         EnsureDatabase();
         await using var dbContext = Db.CreateDbContext();
+        await ResetAnalyticsDataAsync(dbContext);
         var sut = CreateSut(Db.ConnectionString, UtcNow);
 
         var result = await sut.GetOverviewAsync(AnalyticsDateRange.Last30Days);
@@ -40,6 +41,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         EnsureDatabase();
         await using var dbContext = Db.CreateDbContext();
+        await ResetAnalyticsDataAsync(dbContext);
         var bagCategory = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
         var coatCategory = await SeedHelper.SeedCategoryAsync(dbContext, "Coats", SeedHelper.UniqueSlug("coats"));
         var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("analytics"));
@@ -91,6 +93,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         EnsureDatabase();
         await using var dbContext = Db.CreateDbContext();
+        await ResetAnalyticsDataAsync(dbContext);
         var category = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
         var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("cancelled"));
         var productA = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Keeps", SeedHelper.UniqueSlug("keeps"), 200m);
@@ -119,6 +122,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         EnsureDatabase();
         await using var dbContext = Db.CreateDbContext();
+        await ResetAnalyticsDataAsync(dbContext);
         var category = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
         var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("window"));
 
@@ -146,6 +150,7 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
     {
         EnsureDatabase();
         await using var dbContext = Db.CreateDbContext();
+        await ResetAnalyticsDataAsync(dbContext);
         var category = await SeedHelper.SeedCategoryAsync(dbContext, "Bags", SeedHelper.UniqueSlug("bags"));
         var customer = await SeedHelper.SeedCustomerAsync(dbContext, email: SeedHelper.UniqueEmail("alltime"));
         var product = await SeedHelper.SeedProductAsync(dbContext, category.Id, "Old Sale", SeedHelper.UniqueSlug("oldsale"), 200m);
@@ -169,6 +174,19 @@ public class AnalyticsServiceTests(PostgresFixture db) : DatabaseTestBase(db)
             new TestDbContextFactory(connectionString),
             new FakeClock(utcNow),
             new AnalyticsOptions { AttributionWindowDays = 30 });
+    }
+
+    private static async Task ResetAnalyticsDataAsync(SecondHandShopDbContext dbContext)
+    {
+        await dbContext.ProductSales.ExecuteDeleteAsync();
+        await dbContext.Inquiries.ExecuteDeleteAsync();
+        await dbContext.InquiryIpCooldowns.ExecuteDeleteAsync();
+        await dbContext.ProductImages.ExecuteDeleteAsync();
+        await dbContext.ProductCategories.ExecuteDeleteAsync();
+        await dbContext.Products.ExecuteDeleteAsync();
+        await dbContext.Categories.ExecuteDeleteAsync();
+        await dbContext.Customers.ExecuteDeleteAsync();
+        await dbContext.AdminUsers.ExecuteDeleteAsync();
     }
 
     private static async Task<Inquiry> SeedInquiryAtAsync(

@@ -4,7 +4,8 @@ namespace SecondHandShop.Infrastructure.IntegrationTests.Infrastructure;
 /// Base class for tests that require a running PostgreSQL container.
 /// Automatically skips all tests when Docker is unavailable.
 /// </summary>
-public abstract class DatabaseTestBase(PostgresFixture db) : IClassFixture<PostgresFixture>
+[Collection(DatabaseIntegrationCollection.Name)]
+public abstract class DatabaseTestBase(PostgresFixture db)
 {
     protected PostgresFixture Db { get; } = db;
 
