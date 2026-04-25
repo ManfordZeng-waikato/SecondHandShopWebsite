@@ -165,12 +165,19 @@ export async function registerJourneyApi(page: Page) {
 
 export async function passTurnstileAutomatically(page: Page) {
   await page.addInitScript(() => {
+    const callbacks = new Map<string, (token: string) => void>();
+
     window.turnstile = {
       render: (_container, options) => {
-        window.setTimeout(() => options.callback?.('journey-turnstile-token'), 0);
-        return 'journey-widget';
+        const widgetId = 'journey-widget';
+        if (options.callback) {
+          callbacks.set(widgetId, options.callback);
+        }
+        return widgetId;
       },
-      execute: () => undefined,
+      execute: (widgetId = 'journey-widget') => {
+        window.setTimeout(() => callbacks.get(widgetId)?.('journey-turnstile-token'), 0);
+      },
       reset: () => undefined,
       remove: () => undefined,
     };

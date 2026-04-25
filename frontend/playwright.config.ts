@@ -9,6 +9,11 @@ const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS === 'true';
 const useManagedBackendServer = process.env.PLAYWRIGHT_MANAGED_BACKEND === 'true';
 const defaultFrontendBaseUrl = process.env.CI === 'true' ? 'http://localhost:5173' : 'https://localhost:5173';
 const frontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? defaultFrontendBaseUrl;
+
+if (useManagedServers) {
+  process.env.VITE_TURNSTILE_SITE_KEY ??= 'journey-turnstile-site-key';
+}
+
 const frontendDevCommand =
   process.platform === 'win32'
     ? 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -Command "npm.cmd run dev"'
