@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,6 +10,7 @@ using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Application.Abstractions.Messaging;
 using SecondHandShop.Application.Abstractions.Security;
 using SecondHandShop.Application.Abstractions.Storage;
+using SecondHandShop.Infrastructure.Persistence;
 
 namespace SecondHandShop.WebApi.IntegrationTests.RealStack;
 
@@ -68,6 +70,14 @@ public sealed class RealStackWebApplicationFactory : WebApplicationFactory<Progr
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<DbContextOptions<SecondHandShopDbContext>>();
+            services.RemoveAll<IDbContextFactory<SecondHandShopDbContext>>();
+            services.AddDbContext<SecondHandShopDbContext>(options =>
+                options.UseNpgsql(ConnectionString));
+            services.AddDbContextFactory<SecondHandShopDbContext>(
+                options => options.UseNpgsql(ConnectionString),
+                ServiceLifetime.Scoped);
+
             services.RemoveAll<ITurnstileValidator>();
             services.AddSingleton<ITurnstileValidator>(TurnstileValidator);
 

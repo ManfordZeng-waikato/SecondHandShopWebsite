@@ -58,6 +58,7 @@ build/
 .next/
 .nuxt/
 .svelte-kit/
+.coverage/
 coverage/
 *.tsbuildinfo
 npm-debug.log*
