@@ -26,9 +26,11 @@ export const journeyProduct = {
 };
 
 export async function registerJourneyApi(page: Page) {
+  let isAdminAuthenticated = false;
+
   await page.route('**/api/lord/auth/me', async (route) => {
     const cookie = route.request().headers().cookie ?? '';
-    if (!cookie.includes('journey-admin=1')) {
+    if (!isAdminAuthenticated && !cookie.includes('journey-admin=1')) {
       await route.fulfill({ status: 401, json: { message: 'Unauthorized' } });
       return;
     }
@@ -53,10 +55,11 @@ export async function registerJourneyApi(page: Page) {
       return;
     }
 
+    isAdminAuthenticated = true;
     await route.fulfill({
       status: 200,
       headers: {
-        'set-cookie': 'journey-admin=1; Path=/; SameSite=Lax',
+        'set-cookie': 'journey-admin=1; Path=/; SameSite=None; Secure',
       },
       json: {
         expiresAt: '2026-04-25T01:00:00Z',
@@ -66,6 +69,7 @@ export async function registerJourneyApi(page: Page) {
   });
 
   await page.route('**/api/lord/auth/logout', async (route) => {
+    isAdminAuthenticated = false;
     await route.fulfill({ status: 204 });
   });
 

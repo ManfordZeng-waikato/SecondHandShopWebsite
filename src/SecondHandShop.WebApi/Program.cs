@@ -259,7 +259,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .Enrich.WithProperty("Application", "SecondHandShop.WebApi");
-});
+}, preserveStaticLogger: true);
 
 var app = builder.Build();
 

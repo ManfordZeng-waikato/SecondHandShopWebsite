@@ -7,6 +7,8 @@ config({ path: '.env.e2e', override: false });
 
 const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS === 'true';
 const useManagedBackendServer = process.env.PLAYWRIGHT_MANAGED_BACKEND === 'true';
+const defaultFrontendBaseUrl = process.env.CI === 'true' ? 'http://localhost:5173' : 'https://localhost:5173';
+const frontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? defaultFrontendBaseUrl;
 const frontendDevCommand =
   process.platform === 'win32'
     ? 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -Command "npm.cmd run dev"'
@@ -27,7 +29,7 @@ export default defineConfig({
     ? [
         {
           command: frontendDevCommand,
-          url: 'https://localhost:5173',
+          url: frontendBaseUrl,
           cwd: '.',
           ignoreHTTPSErrors: true,
           reuseExistingServer: !process.env.CI,
@@ -48,7 +50,7 @@ export default defineConfig({
       ]
     : undefined,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:5173',
+    baseURL: frontendBaseUrl,
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
