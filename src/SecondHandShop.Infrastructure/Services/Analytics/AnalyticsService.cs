@@ -445,8 +445,7 @@ public class AnalyticsService(
                 CategoryName = c.Name,
                 InquiryCount = inquiryCounts
                     .Where(ic => ic.ProductId == p.Id)
-                    .Select(ic => (int?)ic.InquiryCount)
-                    .FirstOrDefault() ?? 0,
+                    .Sum(ic => (int?)ic.InquiryCount) ?? 0,
                 ListedPrice = p.Price,
                 p.CreatedAt
             })

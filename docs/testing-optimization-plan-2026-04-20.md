@@ -181,6 +181,19 @@
 
 **验收标准**：冒烟套件在本地 < 30s，CI < 60s。
 
+**Current status (2026-04-25)**: Added real-pipeline smoke coverage under
+`tests/SecondHandShop.WebApi.IntegrationTests/RealStack/`:
+- Admin login -> create category -> create product -> product is visible in public search.
+- Public Inquiry submission -> database persistence -> fake SMTP receives via the real hosted dispatcher.
+- MarkAsSold -> 30-day Analytics summary includes the sold item and revenue.
+- Forced password change -> restricted token lacks `AdminFullAccess`, old token is revoked, new login token works.
+
+`RealStackWebApplicationFactory` only replaces Turnstile, R2, remove.bg, and SMTP. MediatR,
+repositories, EF, JWT/password hashing, and hosted dispatchers remain real. The suite skips when
+local Docker/Postgres is unavailable; CI can set `REQUIRE_DOCKER=true` to fail hard instead.
+Resume this session with:
+claude --resume "test-optimization-execution-plan"
+
 ### 4.2 遗漏控制器 [S]
 
 - `AdminPingController`：1 条 — 带合法 cookie 返回 200、无 cookie 返回 401。
@@ -225,6 +238,12 @@
 2. Presigned URL 请求失败时的错误呈现
 3. 移除背景被拒（API key 无效）时仍允许跳过
 4. 成功流程调用 `addProductImage` 的参数
+
+**Current status (2026-04-25)**: Phase 4 frontend coverage is in place.
+- Shared tests cover admin 401 handling in `httpClient`, auth bootstrap/session helpers, and image URL fallback/relative/absolute behavior.
+- Public page tests cover Home featured products, Products URL filters/category/pagination/empty/error states, ProductDetail image switching/inquiry availability, and NotFound home navigation.
+- `AdminNewProductPage` tests cover required validation, presigned upload failure, remove.bg failure with original-image continuation, and cutout upload metadata.
+- A small behavior fix now keeps sold product detail pages from rendering an inquiry link.
 
 ---
 

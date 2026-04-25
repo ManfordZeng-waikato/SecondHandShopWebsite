@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using MediatR;
 using Moq;
+using SecondHandShop.Application.Abstractions.ImageProcessing;
 using SecondHandShop.Application.Abstractions.Storage;
 using SecondHandShop.Application.UseCases.Sales;
 using SecondHandShop.Application.Abstractions.Persistence;
@@ -38,6 +39,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
     public Mock<IProductRepository> ProductRepositoryMock { get; } = new();
     public Mock<IProductImageRepository> ProductImageRepositoryMock { get; } = new();
     public Mock<IObjectStorageService> ObjectStorageServiceMock { get; } = new();
+    public Mock<IBackgroundRemovalService> BackgroundRemovalServiceMock { get; } = new();
     public Mock<IMediator> MediatorMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -87,6 +89,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IProductRepository>();
             services.RemoveAll<IProductImageRepository>();
             services.RemoveAll<IObjectStorageService>();
+            services.RemoveAll<IBackgroundRemovalService>();
             services.RemoveAll<IMediator>();
 
             var activeAdmin = AdminUser.CreateWithCredentials("lord", "Lord", "hashed-password");
@@ -115,6 +118,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IProductRepository>(_ => ProductRepositoryMock.Object);
             services.AddScoped<IProductImageRepository>(_ => ProductImageRepositoryMock.Object);
             services.AddScoped<IObjectStorageService>(_ => ObjectStorageServiceMock.Object);
+            services.AddScoped<IBackgroundRemovalService>(_ => BackgroundRemovalServiceMock.Object);
             services.AddScoped<IMediator>(_ => MediatorMock.Object);
         });
     }
@@ -164,6 +168,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         ProductRepositoryMock.Reset();
         ProductImageRepositoryMock.Reset();
         ObjectStorageServiceMock.Reset();
+        BackgroundRemovalServiceMock.Reset();
         MediatorMock.Reset();
     }
 }

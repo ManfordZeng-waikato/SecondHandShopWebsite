@@ -148,17 +148,28 @@ export function ProductDetailPage() {
           </Typography>
         )}
 
-        <Button
-          variant="contained"
-          size="large"
-          component={RouterLink}
-          to={`/products/${product.id}/inquiry`}
-          endIcon={<ArrowForwardIcon />}
-          disabled={product.status === 'Sold'}
-          sx={{ px: 4, py: 1.5, fontSize: '1rem', borderRadius: 2 }}
-        >
-          {product.status === 'Sold' ? 'Item Sold' : 'Send Inquiry'}
-        </Button>
+        {product.status === 'Sold' ? (
+          <Button
+            variant="contained"
+            size="large"
+            endIcon={<ArrowForwardIcon />}
+            disabled
+            sx={{ px: 4, py: 1.5, fontSize: '1rem', borderRadius: 2 }}
+          >
+            Item Sold
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            size="large"
+            component={RouterLink}
+            to={`/products/${product.id}/inquiry`}
+            endIcon={<ArrowForwardIcon />}
+            sx={{ px: 4, py: 1.5, fontSize: '1rem', borderRadius: 2 }}
+          >
+            Send Inquiry
+          </Button>
+        )}
 
         <Typography
           color="text.secondary"
