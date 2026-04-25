@@ -10,8 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:auto": "set PLAYWRIGHT_MANAGED_SERVERS=true && playwright test"
+    "test:coverage": "vitest run --coverage",
+    "test:journey": "playwright test --project=journey",
+    "test:e2e": "playwright test --project=smoke",
+    "test:e2e:auto": "set PLAYWRIGHT_MANAGED_SERVERS=true && playwright test --project=smoke"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -35,12 +37,14 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^2.1.9",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^26.0.0",
+    "msw": "^2.13.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",

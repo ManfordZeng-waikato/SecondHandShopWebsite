@@ -36,6 +36,26 @@ export default defineConfig(({ command, mode }) => {
       restoreMocks: true,
       clearMocks: true,
       exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'html', 'cobertura'],
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: [
+          'src/**/*.d.ts',
+          'src/**/*.types.ts',
+          'src/**/__tests__/**',
+          'src/test/**',
+          'src/main.tsx',
+          'src/app/**',
+          'src/entities/**',
+        ],
+        thresholds: {
+          lines: 50,
+          branches: 45,
+          functions: 50,
+          statements: 50,
+        },
+      },
     },
   }
 })

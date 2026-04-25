@@ -303,6 +303,14 @@ frontend/
   - `nightly-e2e`（独立触发）
 - PR 合并前必须 `backend-unit` + `backend-integration` + `frontend-unit` + `frontend-journey` 全绿。
 
+**Current status (2026-04-25)**: Phase 5 groundwork is implemented.
+- Playwright is split into `journey` and `smoke` projects. Journey tests mock API routes in the browser and run without a backend; smoke tests target the real backend and fail fast when required environment/backing services are unavailable.
+- Added `frontend/tests/journey/admin-login.journey.ts`, `frontend/tests/journey/public-inquiry.journey.ts`, and shared route handlers in `frontend/tests/journey/server.ts`.
+- Replaced the old all-in-one E2E spec with `admin-login.smoke.spec.ts` and `public-catalog.smoke.spec.ts`.
+- Added frontend coverage config and `npm run test:coverage` using V8 coverage with initial thresholds.
+- Added backend coverage scripts: `scripts/coverage.ps1` and `scripts/coverage.sh`, using `coverlet.collector` plus `reportgenerator`.
+- CI now separates `backend-unit`, `backend-integration`, `frontend-unit`, `frontend-journey`, and scheduled/manual `nightly-e2e`.
+
 ---
 
 ## 7. 跨阶段的工程化约定

@@ -5,15 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 16 * * *"
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── Backend build + unit tests (no Docker needed) ──────────────
-  backend-build:
-    name: Backend Build & Unit Tests
+  backend-unit:
+    name: Backend Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,13 +37,14 @@ jobs:
       - name: Run Application unit tests
         run: dotnet test tests/SecondHandShop.Application.UnitTests --no-build --configuration Release --verbosity normal
 
-      - name: Run WebApi integration tests
-        run: dotnet test tests/SecondHandShop.WebApi.IntegrationTests --no-build --configuration Release --verbosity normal
+      - name: Run Infrastructure unit tests
+        run: dotnet test tests/SecondHandShop.Infrastructure.UnitTests --no-build --configuration Release --verbosity normal
 
-  # ── Database integration tests (requires Docker for Testcontainers) ─
-  backend-db-tests:
-    name: Database Integration Tests
+  backend-integration:
+    name: Backend Integration Tests
     runs-on: ubuntu-latest
+    env:
+      REQUIRE_DOCKER: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -53,9 +56,11 @@ jobs:
       - name: Run Infrastructure integration tests
         run: dotnet test tests/SecondHandShop.Infrastructure.IntegrationTests --verbosity normal
 
-  # ── Frontend build + lint + unit tests ─────────────────────────
-  frontend:
-    name: Frontend Build & Tests
+      - name: Run WebApi integration tests
+        run: dotnet test tests/SecondHandShop.WebApi.IntegrationTests --verbosity normal
+
+  frontend-unit:
+    name: Frontend Unit Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -81,3 +86,65 @@ jobs:
 
       - name: Run unit tests
         run: npm test
+
+      - name: Run coverage
+        run: npm run test:coverage
+
+  frontend-journey:
+    name: Frontend Journey Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run journey tests
+        env:
+          PLAYWRIGHT_MANAGED_SERVERS: "true"
+          PLAYWRIGHT_SKIP_GLOBAL_SETUP: "true"
+        run: npm run test:journey
+
+  nightly-e2e:
+    name: Nightly Smoke E2E
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke E2E tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+          PLAYWRIGHT_API_BASE_URL: ${{ secrets.PLAYWRIGHT_API_BASE_URL }}
+          PLAYWRIGHT_ADMIN_USER: ${{ secrets.PLAYWRIGHT_ADMIN_USER }}
+          PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
+        run: npm run test:e2e

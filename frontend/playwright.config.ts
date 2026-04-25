@@ -18,8 +18,6 @@ const backendDevCommand =
     : 'dotnet run --launch-profile https --project src/SecondHandShop.WebApi/SecondHandShop.WebApi.csproj';
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  globalSetup: './tests/e2e/global-setup.ts',
   timeout: 30_000,
   expect: {
     timeout: 5_000,
@@ -58,7 +56,15 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'journey',
+      testDir: './tests/journey',
+      testMatch: /.*\.journey\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'smoke',
+      testDir: './tests/e2e',
+      testMatch: /.*\.smoke\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
