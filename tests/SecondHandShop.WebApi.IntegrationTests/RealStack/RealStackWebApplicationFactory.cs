@@ -33,6 +33,8 @@ public sealed class RealStackWebApplicationFactory : WebApplicationFactory<Progr
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        EnsureTestcontainerConnectionString(ConnectionString);
+
         builder.UseEnvironment(Environments.Development);
 
         builder.ConfigureAppConfiguration((_, config) =>
@@ -70,6 +72,11 @@ public sealed class RealStackWebApplicationFactory : WebApplicationFactory<Progr
 
         builder.ConfigureServices(services =>
         {
+            // Eject the production DbContext registrations entirely before rewiring
+            // them at the testcontainer URL. Removing only DbContextOptions<TContext>
+            // leaves the scoped TContext from AddInfrastructure in place, which can
+            // resolve against stale options under future DI refactors.
+            services.RemoveAll<SecondHandShopDbContext>();
             services.RemoveAll<DbContextOptions<SecondHandShopDbContext>>();
             services.RemoveAll<IDbContextFactory<SecondHandShopDbContext>>();
             services.AddDbContext<SecondHandShopDbContext>(options =>
@@ -90,6 +97,38 @@ public sealed class RealStackWebApplicationFactory : WebApplicationFactory<Progr
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(EmailSender);
         });
+    }
+
+    // Real-stack tests own a throwaway Postgres container. Refuse to run against the
+    // developer dev DB or any Supabase host, since a leak there persists test fixtures
+    // (e.g. randomly-suffixed "Inquiry Product"/"Real Stack Product" rows) into the
+    // running site.
+    private static void EnsureTestcontainerConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "RealStackWebApplicationFactory.ConnectionString must be set before CreateClient(). " +
+                "Pass RealStackPostgresFixture.ConnectionString.");
+        }
+
+        string[] forbiddenFragments =
+        [
+            ".supabase.com",
+            ".supabase.co",
+            "Database=SecondHandShopDb"
+        ];
+
+        foreach (var fragment in forbiddenFragments)
+        {
+            if (connectionString.Contains(fragment, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"RealStackWebApplicationFactory refused to start: ConnectionString contains " +
+                    $"'{fragment}'. Real-stack smoke tests must point at a Testcontainers-managed " +
+                    $"Postgres only.");
+            }
+        }
     }
 }
 
