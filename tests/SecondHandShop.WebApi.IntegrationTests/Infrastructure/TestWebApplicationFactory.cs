@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,6 +21,7 @@ using SecondHandShop.Application.UseCases.Customers;
 using SecondHandShop.Application.UseCases.Inquiries;
 using SecondHandShop.Application.UseCases.Analytics;
 using SecondHandShop.Domain.Entities;
+using SecondHandShop.Infrastructure.Persistence;
 
 namespace SecondHandShop.WebApi.IntegrationTests.Infrastructure;
 
@@ -59,6 +61,13 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 ["Database:ApplyMigrationsOnStartup"] = "false",
                 ["Database:SeedAdminOnStartup"] = "false",
                 ["Database:SeedCatalogOnStartup"] = "false",
+                // Inherits "true" from appsettings.Development.json otherwise. Without
+                // this override Program.cs runs EnsureE2EAdminUserAsync at startup, which
+                // resolves the DbContext registered by AddInfrastructure - that closure
+                // captured the user-secrets connection string (e.g. Supabase) before any
+                // test override applied, so the seed silently writes the e2e.admin row
+                // into the developer's real database on every test run.
+                ["Database:EnsureE2EAdminOnStartup"] = "false",
                 ["AdminAuth:Cookie:SameSite"] = "Strict",
                 ["AdminAuth:Cookie:Secure"] = "true",
                 ["AdminAuth:Cookie:Path"] = "/api/lord",
@@ -76,6 +85,17 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            // Belt-and-braces: even though every repository below is mocked, AddInfrastructure
+            // already registered SecondHandShopDbContext with a closure capturing the dev
+            // connection string. Eject it and rebind to an unreachable sentinel so any
+            // residual code path that accidentally resolves DbContext fails loudly instead
+            // of writing to the developer's real database.
+            services.RemoveAll<SecondHandShopDbContext>();
+            services.RemoveAll<DbContextOptions<SecondHandShopDbContext>>();
+            services.RemoveAll<IDbContextFactory<SecondHandShopDbContext>>();
+            services.AddDbContext<SecondHandShopDbContext>(options =>
+                options.UseNpgsql("Host=test-no-real-db.invalid;Database=ignored;Username=ignored;Password=ignored"));
+
             services.RemoveAll<IHostedService>();
             services.RemoveAll<IAdminUserRepository>();
             services.RemoveAll<IAdminCatalogService>();

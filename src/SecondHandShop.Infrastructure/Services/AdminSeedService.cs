@@ -18,12 +18,6 @@ public static class AdminSeedService
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<SecondHandShopDbContext>>();
 
-        if (await dbContext.AdminUsers.AnyAsync())
-        {
-            logger.LogInformation("Admin users already exist, skipping seed.");
-            return;
-        }
-
         var userName = configuration["AdminSeed:UserName"];
         var password = configuration["AdminSeed:Password"];
 
@@ -33,12 +27,25 @@ public static class AdminSeedService
             return;
         }
 
+        var normalizedUserName = userName.Trim();
+        var e2eUserName = configuration["E2EAdminSeed:UserName"]?.Trim();
+        var seedUserExists = await dbContext.AdminUsers.AnyAsync(x => x.UserName == normalizedUserName);
+        var nonAutomationAdminExists = string.IsNullOrWhiteSpace(e2eUserName)
+            ? await dbContext.AdminUsers.AnyAsync()
+            : await dbContext.AdminUsers.AnyAsync(x => x.UserName != e2eUserName);
+
+        if (seedUserExists || nonAutomationAdminExists)
+        {
+            logger.LogInformation("Admin users already exist, skipping seed.");
+            return;
+        }
+
         var hash = passwordHasher.Hash(password);
-        var admin = AdminUser.CreateWithCredentials(userName, userName, hash, "Admin", mustChangePassword: true);
+        var admin = AdminUser.CreateWithCredentials(normalizedUserName, normalizedUserName, hash, "Admin", mustChangePassword: true);
         await dbContext.AdminUsers.AddAsync(admin);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Seeded admin user '{UserName}'.", userName);
+        logger.LogInformation("Seeded admin user '{UserName}'.", normalizedUserName);
     }
 
     public static async Task EnsureE2EAdminUserAsync(IServiceProvider serviceProvider)

@@ -68,6 +68,38 @@ public class AdminSeedServiceTests
     }
 
     [Fact]
+    public async Task SeedAdminUserAsync_ShouldCreateAdmin_WhenOnlyE2EAdminExists()
+    {
+        var passwordHasher = new Mock<IPasswordHasher>();
+        passwordHasher.Setup(x => x.Hash("e2e-password")).Returns("e2e-hash");
+        passwordHasher.Setup(x => x.Hash("secret-password")).Returns("hashed-secret");
+        await using var provider = BuildProvider(
+            new Dictionary<string, string?>
+            {
+                ["AdminSeed:UserName"] = "lord",
+                ["AdminSeed:Password"] = "secret-password",
+                ["E2EAdminSeed:UserName"] = "playwright-admin",
+                ["E2EAdminSeed:Password"] = "e2e-password"
+            },
+            passwordHasher.Object);
+
+        await AdminSeedService.EnsureE2EAdminUserAsync(provider);
+        await AdminSeedService.SeedAdminUserAsync(provider);
+
+        var admins = await AllAdminsAsync(provider);
+        admins.Should().HaveCount(2);
+        admins.Should().Contain(admin =>
+            admin.UserName == "playwright-admin" &&
+            admin.DisplayName == "Playwright E2E Admin" &&
+            admin.MustChangePassword == false);
+        admins.Should().Contain(admin =>
+            admin.UserName == "lord" &&
+            admin.DisplayName == "lord" &&
+            admin.PasswordHash == "hashed-secret" &&
+            admin.MustChangePassword);
+    }
+
+    [Fact]
     public async Task EnsureE2EAdminUserAsync_ShouldCreateAutomationAdmin_WhenMissing()
     {
         var passwordHasher = new Mock<IPasswordHasher>();
@@ -148,5 +180,12 @@ public class AdminSeedServiceTests
         await using var scope = provider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SecondHandShopDbContext>();
         return await dbContext.AdminUsers.SingleAsync();
+    }
+
+    private static async Task<List<AdminUser>> AllAdminsAsync(ServiceProvider provider)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<SecondHandShopDbContext>();
+        return await dbContext.AdminUsers.OrderBy(x => x.UserName).ToListAsync();
     }
 }

@@ -25,7 +25,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = PostgresConnectionStringResolver.Resolve(configuration);
         var smtpOptions = SmtpEmailOptions.FromConfiguration(configuration);
         var r2Options = R2Options.FromConfiguration(configuration);
         var removeBgOptions = RemoveBgOptions.FromConfiguration(configuration);
@@ -35,10 +34,17 @@ public static class DependencyInjection
             .Get<AnalyticsOptions>()
             ?? new AnalyticsOptions();
 
-        services.AddDbContext<SecondHandShopDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        services.AddDbContext<SecondHandShopDbContext>((provider, options) =>
+        {
+            var currentConfiguration = provider.GetRequiredService<IConfiguration>();
+            options.UseNpgsql(PostgresConnectionStringResolver.Resolve(currentConfiguration));
+        });
         services.AddDbContextFactory<SecondHandShopDbContext>(
-            options => options.UseNpgsql(connectionString),
+            (provider, options) =>
+            {
+                var currentConfiguration = provider.GetRequiredService<IConfiguration>();
+                options.UseNpgsql(PostgresConnectionStringResolver.Resolve(currentConfiguration));
+            },
             ServiceLifetime.Scoped);
 
         services.AddMemoryCache();
