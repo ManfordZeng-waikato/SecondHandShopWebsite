@@ -1,8 +1,42 @@
 # SecondHandShopWebsite
 
-A full-stack second-hand marketplace for browsing pre-owned products, submitting purchase inquiries, and managing back-office inventory, customers, sales, images, and analytics.
+A production-style full-stack second-hand marketplace built to demonstrate practical product engineering across frontend, backend, database, cloud storage, authentication, admin workflows, and automated testing.
 
-The project combines an ASP.NET Core clean-architecture backend, a React/Vite single-page application, PostgreSQL persistence, and a small Cloudflare Worker used as the public image delivery layer.
+The application has two main experiences: a public storefront where customers browse second-hand products and submit inquiries, and a private admin dashboard where staff manage inventory, customers, sales, product images, and business analytics.
+
+## Executive Summary
+
+This project is not a simple CRUD demo. It models a realistic small-business commerce workflow with public browsing, customer inquiry capture, protected admin operations, image storage, sale lifecycle management, analytics, rate limiting, bot protection, email notification support, and layered automated tests.
+
+At a technical level, the system combines:
+
+- A .NET 10 / ASP.NET Core Web API backend using clean architecture.
+- A React 19 / TypeScript / Vite SPA with a feature-oriented frontend structure.
+- PostgreSQL persistence through Entity Framework Core migrations and repositories.
+- Cloudflare R2 object storage plus a Cloudflare Worker for public image delivery.
+- Secure admin authentication using JWTs in HttpOnly cookies.
+- Unit, integration, component, and Playwright browser tests.
+
+## At a Glance
+
+- **Project type**: Full-stack marketplace / inventory management system.
+- **Primary users**: Public shoppers and private admin users.
+- **Public capabilities**: Product discovery, category navigation, product detail browsing, inquiry submission, and brand story pages.
+- **Admin capabilities**: Authentication, product management, image upload, category assignment, customer management, sale tracking, sale reversal, and analytics.
+- **Backend architecture**: Domain, Application, Infrastructure, and WebApi projects with clear dependency direction.
+- **Frontend architecture**: Route pages, feature modules, shared API clients, reusable UI components, and typed domain models.
+- **Data layer**: PostgreSQL, EF Core, migrations, repository abstractions, and concurrency support.
+- **Cloud integrations**: Cloudflare R2, Cloudflare Worker, Turnstile, remove.bg, and SMTP.
+- **Quality coverage**: xUnit backend tests, Testcontainers-backed integration tests, Vitest frontend tests, and Playwright E2E/journey tests.
+
+## What This Project Demonstrates
+
+- End-to-end product thinking: the code supports a complete workflow from public product browsing to inquiry handling, customer follow-up, product sale, and analytics.
+- Backend engineering: clean architecture, domain modeling, CQRS-style use cases, validation, repository abstractions, API controllers, authentication, authorization, rate limiting, caching, logging, and security headers.
+- Frontend engineering: typed React UI, feature-based organization, route protection, React Query server state, Material UI composition, form flows, loading states, and browser-level tests.
+- Data and infrastructure awareness: PostgreSQL migrations, optimistic concurrency, object storage, presigned upload URLs, image CDN behavior, and Docker-backed integration tests.
+- Security awareness: HttpOnly cookie auth, password hashing, forced initial password change, explicit CORS origins, Turnstile validation, per-IP rate limits, and session revocation through token versions.
+- Testability: separate tests for domain rules, application services, infrastructure services, API controllers/middleware, React pages/components, API clients, smoke flows, and longer user journeys.
 
 ## Project Goals
 
@@ -63,7 +97,7 @@ High-level request flow:
 ```text
 Browser
   |
-  |-- React SPA (public pages and  admin pages)
+  |-- React SPA (public pages and /lord admin pages)
   |
   |-- HTTPS API calls with credentials
   v
@@ -211,6 +245,73 @@ Developer tooling:
 - Wrangler for Worker development and deployment
 - EF Core migrations
 
+## Testing
+
+The project has both backend and frontend test coverage, with separate test layers for domain logic, application use cases, infrastructure behavior, API endpoints, UI components, and browser journeys.
+
+### Backend Tests
+
+Backend tests live under `tests/` and are included in `SecondHandShopWebsite.slnx`.
+
+- `SecondHandShop.Domain.UnitTests`: domain entity behavior, value validation, status transitions, slug validation, and email syntax validation.
+- `SecondHandShop.Application.UnitTests`: MediatR handlers and application services for admin auth, catalog, categories, customers, inquiries, and sales.
+- `SecondHandShop.Infrastructure.UnitTests`: infrastructure services such as JWT, password hashing, admin seeding, catalog seeding, Turnstile validation, category hierarchy cache, and dependency injection.
+- `SecondHandShop.Infrastructure.IntegrationTests`: EF Core repository and service tests against PostgreSQL using Testcontainers.
+- `SecondHandShop.WebApi.IntegrationTests`: controller, middleware, authorization, rate limiting, security header, and real-stack smoke tests using ASP.NET Core test hosting.
+- `SecondHandShop.TestCommon`: shared fixtures and helpers, including test clocks and reusable test infrastructure.
+
+Primary backend testing tools:
+
+- xUnit
+- FluentAssertions
+- Moq
+- Microsoft.AspNetCore.Mvc.Testing
+- Testcontainers for PostgreSQL-backed integration tests
+- coverlet.collector for coverage collection
+
+Common backend commands:
+
+```bash
+dotnet test SecondHandShopWebsite.slnx
+dotnet test tests/SecondHandShop.Domain.UnitTests
+dotnet test tests/SecondHandShop.Application.UnitTests
+dotnet test tests/SecondHandShop.Infrastructure.UnitTests
+dotnet test tests/SecondHandShop.Infrastructure.IntegrationTests
+dotnet test tests/SecondHandShop.WebApi.IntegrationTests
+```
+
+The infrastructure and Web API integration tests may require Docker because PostgreSQL is started through Testcontainers.
+
+### Frontend Tests
+
+Frontend tests live under `frontend/src/**/__tests__/` and `frontend/tests/`.
+
+- Unit and component tests use Vitest, jsdom, Testing Library, jest-dom, and user-event.
+- API/client tests cover admin, analytics, catalog, home, inquiry, shared HTTP client behavior, and image URL utilities.
+- Page and component tests cover public pages, admin pages, auth provider behavior, and sale dialogs.
+- MSW is available for request mocking in frontend tests.
+- Coverage uses the V8 provider with text, HTML, and Cobertura reports.
+- Coverage thresholds are configured in `frontend/vite.config.ts`.
+
+Playwright browser tests are split by project:
+
+- `smoke`: end-to-end smoke tests under `frontend/tests/e2e`.
+- `journey`: longer user journeys under `frontend/tests/journey`.
+
+Common frontend commands:
+
+```bash
+cd frontend
+npm run test
+npm run test:watch
+npm run test:coverage
+npm run test:e2e
+npm run test:journey
+npm run test:e2e:auto
+```
+
+`npm run test:e2e:auto` starts Playwright with managed frontend server support. The Playwright config can also start the backend when `PLAYWRIGHT_MANAGED_BACKEND=true` is provided.
+
 ## Data Model Overview
 
 Core relationships:
@@ -272,8 +373,10 @@ SecondHandShopWebsite/
       features/
       entities/
       shared/
+    tests/
   worker/
     src/
+  tests/
   docs/
   scripts/
   SecondHandShopWebsite.slnx
