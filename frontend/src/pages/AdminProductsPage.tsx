@@ -1045,6 +1045,7 @@ export function AdminProductsPage() {
       />
 
       <EditPriceDialog
+        key={priceTarget?.id ?? 'edit-price-dialog-closed'}
         open={Boolean(priceTarget)}
         productId={priceTarget?.id ?? null}
         productTitle={priceTarget?.title ?? ''}

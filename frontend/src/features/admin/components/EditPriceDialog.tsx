@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Button,
@@ -44,13 +44,6 @@ export function EditPriceDialog({
   const queryClient = useQueryClient();
   const [priceInput, setPriceInput] = useState<string>(String(currentPrice));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setPriceInput(String(currentPrice));
-      setErrorMessage(null);
-    }
-  }, [open, currentPrice]);
 
   const mutation = useMutation({
     mutationFn: ({ id, price }: { id: string; price: number }) => updateProductPrice(id, price),
