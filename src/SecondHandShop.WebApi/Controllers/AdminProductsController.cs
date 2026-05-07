@@ -97,6 +97,22 @@ public class AdminProductsController(
         return NoContent();
     }
 
+    [HttpPut("{productId:guid}/price")]
+    public async Task<IActionResult> UpdatePriceAsync(
+        Guid productId,
+        [FromBody] UpdateProductPriceRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Price <= 0m)
+        {
+            return BadRequest(new ErrorResponse("Price must be greater than zero."));
+        }
+
+        var adminUserId = GetAdminUserId();
+        await adminCatalogService.UpdateProductPriceAsync(productId, request.Price, adminUserId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("{productId:guid}/featured")]
     public async Task<IActionResult> UpdateFeaturedAsync(
         Guid productId,
@@ -227,6 +243,8 @@ public sealed record CreateProductResponse(Guid Id);
 
 public sealed record UpdateProductStatusRequest(
     string Status);
+
+public sealed record UpdateProductPriceRequest(decimal Price);
 
 public sealed record UpdateAdminProductFeaturedRequest(
     bool IsFeatured,
