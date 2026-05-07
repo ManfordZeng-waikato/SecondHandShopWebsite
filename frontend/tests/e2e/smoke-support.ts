@@ -1,6 +1,19 @@
 import { request } from '@playwright/test';
 
-const apiBase = process.env.PLAYWRIGHT_API_BASE_URL ?? 'https://localhost:7266';
+function resolveSmokeApiBaseUrl(): string {
+  const fromEnv = process.env.PLAYWRIGHT_API_BASE_URL?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  if (process.env.CI === 'true') {
+    throw new Error(
+      'PLAYWRIGHT_API_BASE_URL is missing or empty on CI. Set the repository secret to your deployed API origin (e.g. https://api.example.com). An unset GitHub secret becomes an empty string, which is not a valid base URL.',
+    );
+  }
+  return 'https://localhost:7266';
+}
+
+const apiBase = resolveSmokeApiBaseUrl();
 
 export interface SmokeBackendState {
   productId: string;
