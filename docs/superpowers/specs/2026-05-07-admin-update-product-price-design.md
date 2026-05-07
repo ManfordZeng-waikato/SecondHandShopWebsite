@@ -89,8 +89,9 @@ Errors:
 - `price <= 0` or missing → 400 Bad Request via existing model validation /
   controller guard.
 - Product not found → handled by existing global mapping (404).
-- `DomainRuleViolationException` (Sold) → 409 Conflict via existing global
-  exception mapping. Controller does not special-case.
+- `DomainRuleViolationException` (Sold) → 422 Unprocessable Entity via existing
+  global exception mapping (`ApiExceptionFilter`). Controller does not
+  special-case.
 
 New DTO:
 
@@ -123,7 +124,7 @@ calling `PUT /api/lord/products/{productId}/price`.
   - On save: React Query mutation → on success
     `queryClient.invalidateQueries` for the admin product list, close dialog,
     show success snackbar.
-  - Backend 409 → display the server `ErrorResponse.message` in the dialog
+  - Backend 4xx → display the server `ErrorResponse.message` in the dialog
     (do not close).
 
 ## Testing / verification
