@@ -139,7 +139,9 @@ jobs:
 
   nightly-e2e:
     name: Nightly Smoke E2E
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Schedule only when vars.ENABLE_NIGHTLY_SMOKE_E2E == 'true' (requires public URLs + PLAYWRIGHT_* secrets).
+    # workflow_dispatch always runs this job so you can test with staging / tunnel before go-live.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.ENABLE_NIGHTLY_SMOKE_E2E == 'true')
     runs-on: ubuntu-latest
     defaults:
       run:
