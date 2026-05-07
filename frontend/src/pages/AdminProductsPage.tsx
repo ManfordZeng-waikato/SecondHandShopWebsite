@@ -42,6 +42,7 @@ import { ProductSaleDialog } from '../features/admin/components/ProductSaleDialo
 import { RevertSaleDialog } from '../features/admin/components/RevertSaleDialog';
 import { ProductSaleHistoryDialog } from '../features/admin/components/ProductSaleHistoryDialog';
 import { ProductCategoryDialog } from '../features/admin/components/ProductCategoryDialog';
+import { EditPriceDialog } from '../features/admin/components/EditPriceDialog';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // Filter options (what the admin can search for).
@@ -164,6 +165,7 @@ export function AdminProductsPage() {
   const [revertTarget, setRevertTarget] = useState<AdminProductListItem | null>(null);
   const [historyTarget, setHistoryTarget] = useState<AdminProductListItem | null>(null);
   const [categoryTarget, setCategoryTarget] = useState<AdminProductListItem | null>(null);
+  const [priceTarget, setPriceTarget] = useState<AdminProductListItem | null>(null);
 
   const featuredFilterParam = useMemo<boolean | undefined>(() => {
     if (featuredFilter === 'all') {
@@ -867,6 +869,17 @@ export function AdminProductsPage() {
                           History
                         </Button>
 
+                        {product.status !== 'Sold' && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => setPriceTarget(product)}
+                            sx={{ minWidth: 130, alignSelf: { xs: 'stretch', sm: 'center' } }}
+                          >
+                            Modify price
+                          </Button>
+                        )}
+
                         <Button
                           size="small"
                           variant="outlined"
@@ -1029,6 +1042,18 @@ export function AdminProductsPage() {
         productTitle={categoryTarget?.title ?? ''}
         categoryTree={categoryTree}
         onClose={() => setCategoryTarget(null)}
+      />
+
+      <EditPriceDialog
+        open={Boolean(priceTarget)}
+        productId={priceTarget?.id ?? null}
+        productTitle={priceTarget?.title ?? ''}
+        currentPrice={priceTarget?.price ?? 0}
+        onClose={() => setPriceTarget(null)}
+        onSaved={() => {
+          setPriceTarget(null);
+          setFeedback({ severity: 'success', message: 'Price updated.' });
+        }}
       />
 
       <Snackbar
