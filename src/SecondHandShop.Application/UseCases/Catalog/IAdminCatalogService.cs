@@ -13,6 +13,12 @@ public interface IAdminCatalogService
         Guid? adminUserId,
         CancellationToken cancellationToken = default);
 
+    Task UpdateProductPriceAsync(
+        Guid productId,
+        decimal newPrice,
+        Guid? adminUserId,
+        CancellationToken cancellationToken = default);
+
     Task<CreateProductImageUploadUrlResponse> CreateProductImageUploadUrlAsync(
         CreateProductImageUploadUrlRequest request,
         CancellationToken cancellationToken = default);

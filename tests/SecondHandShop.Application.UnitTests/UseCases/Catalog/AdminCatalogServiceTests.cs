@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
@@ -167,7 +168,8 @@ public class AdminCatalogServiceTests
             productImageRepository ?? Mock.Of<IProductImageRepository>(),
             objectStorageService ?? Mock.Of<IObjectStorageService>(),
             unitOfWork ?? Mock.Of<IUnitOfWork>(),
-            new FakeClock(UtcNow));
+            new FakeClock(UtcNow),
+            NullLogger<AdminCatalogService>.Instance);
     }
 
     private static Product CreateProduct()

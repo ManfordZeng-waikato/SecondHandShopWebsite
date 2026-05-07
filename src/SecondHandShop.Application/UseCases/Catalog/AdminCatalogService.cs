@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SecondHandShop.Application.Abstractions.Common;
 using SecondHandShop.Application.Abstractions.Persistence;
 using SecondHandShop.Application.Abstractions.Storage;
@@ -14,7 +15,8 @@ public class AdminCatalogService(
     IProductImageRepository productImageRepository,
     IObjectStorageService objectStorageService,
     IUnitOfWork unitOfWork,
-    IClock clock) : IAdminCatalogService
+    IClock clock,
+    ILogger<AdminCatalogService> logger) : IAdminCatalogService
 {
     private const int MaxImagesPerProduct = 5;
     private const int PresignExpiryMinutes = 5;
@@ -115,6 +117,34 @@ public class AdminCatalogService(
 
         product.UpdateFeaturedSettings(isFeatured, featuredSortOrder, adminUserId, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateProductPriceAsync(
+        Guid productId,
+        decimal newPrice,
+        Guid? adminUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var product = await productRepository.GetByIdAsync(productId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Product '{productId}' was not found.");
+
+        var oldPrice = product.Price;
+        product.UpdatePrice(newPrice, adminUserId, clock.UtcNow);
+
+        if (oldPrice == newPrice)
+        {
+            return;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Admin {AdminUserId} changed price of product {ProductId} ({Slug}) from {OldPrice} to {NewPrice}.",
+            adminUserId,
+            product.Id,
+            product.Slug,
+            oldPrice,
+            newPrice);
     }
 
     public async Task<CreateProductImageUploadUrlResponse> CreateProductImageUploadUrlAsync(
