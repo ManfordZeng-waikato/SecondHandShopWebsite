@@ -168,6 +168,10 @@ export async function updateProductStatus(productId: string, status: ProductStat
   await httpClient.put(`/api/lord/products/${productId}/status`, { status });
 }
 
+export async function updateProductPrice(productId: string, price: number): Promise<void> {
+  await httpClient.put(`/api/lord/products/${productId}/price`, { price });
+}
+
 export interface UpdateProductFeaturedInput {
   isFeatured: boolean;
   featuredSortOrder: number | null;
