@@ -155,6 +155,69 @@ public class AdminCatalogServiceTests
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task UpdateProductPriceAsync_ShouldUpdatePriceAndPersist()
+    {
+        var product = CreateProduct();
+
+        var productRepository = new Mock<IProductRepository>();
+        productRepository
+            .Setup(x => x.GetByIdAsync(product.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(product);
+
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var sut = CreateSut(
+            productRepository: productRepository.Object,
+            unitOfWork: unitOfWork.Object);
+
+        await sut.UpdateProductPriceAsync(product.Id, 275m, Guid.NewGuid());
+
+        product.Price.Should().Be(275m);
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateProductPriceAsync_ShouldThrow_WhenProductMissing()
+    {
+        var productRepository = new Mock<IProductRepository>();
+        productRepository
+            .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Product?)null);
+
+        var sut = CreateSut(productRepository: productRepository.Object);
+
+        var act = () => sut.UpdateProductPriceAsync(Guid.NewGuid(), 100m, Guid.NewGuid());
+
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
+    public async Task UpdateProductPriceAsync_ShouldNotPersist_WhenPriceUnchanged()
+    {
+        var product = CreateProduct();
+
+        var productRepository = new Mock<IProductRepository>();
+        productRepository
+            .Setup(x => x.GetByIdAsync(product.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(product);
+
+        var unitOfWork = new Mock<IUnitOfWork>();
+
+        var sut = CreateSut(
+            productRepository: productRepository.Object,
+            unitOfWork: unitOfWork.Object);
+
+        await sut.UpdateProductPriceAsync(product.Id, product.Price, Guid.NewGuid());
+
+        unitOfWork.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static AdminCatalogService CreateSut(
         IProductRepository? productRepository = null,
         ICategoryRepository? categoryRepository = null,
