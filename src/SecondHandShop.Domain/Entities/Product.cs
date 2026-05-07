@@ -131,6 +131,25 @@ public class Product : AuditableEntity
         Touch(updatedByAdminUserId, utcNow);
     }
 
+    public void UpdatePrice(decimal newPrice, Guid? updatedByAdminUserId, DateTime utcNow)
+    {
+        if (Status == ProductStatus.Sold)
+        {
+            throw new DomainRuleViolationException(
+                "Cannot modify price of a sold product. Revert the sale first.");
+        }
+
+        ValidatePrice(newPrice);
+
+        if (Price == newPrice)
+        {
+            return;
+        }
+
+        Price = newPrice;
+        Touch(updatedByAdminUserId, utcNow);
+    }
+
     /// <summary>
     /// Transitions the product to Sold and returns a newly created <see cref="ProductSale"/>
     /// history record. Only valid from Available or OffShelf — reverting a Sold product must
